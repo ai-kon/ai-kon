@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>파일 탐색기 - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .file-item {
+            transition: all 0.2s;
+        }
+        .file-item:hover {
+            transform: translateX(5px);
+        }
+        .context-menu {
+            display: none;
+            position: absolute;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-4">
+                    <a href="../" class="text-blue-600 hover:text-blue-800 transition">
+                        <i class="fas fa-arrow-left text-2xl"></i>
+                    </a>
+                    <h1 class="text-3xl font-bold text-gray-800">
+                        <i class="fas fa-folder-open text-blue-600"></i> 파일 탐색기
+                    </h1>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="createFolder()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-folder-plus"></i> 새 폴더
+                    </button>
+                    <label class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition cursor-pointer">
+                        <i class="fas fa-upload"></i> 파일 업로드
+                        <input type="file" id="fileInput" multiple class="hidden" onchange="uploadFiles(event)">
+                    </label>
+                    <button onclick="clearStorage()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                        <i class="fas fa-trash"></i> 전체 삭제
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-4 gap-4 text-center">
+                <div class="bg-blue-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-blue-600" id="totalFiles">0</div>
+                    <div class="text-sm text-gray-600">파일</div>
+                </div>
+                <div class="bg-blue-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-blue-600" id="totalFolders">0</div>
+                    <div class="text-sm text-gray-600">폴더</div>
+                </div>
+                <div class="bg-blue-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-blue-600" id="totalSize">0</div>
+                    <div class="text-sm text-gray-600">KB</div>
+                </div>
+                <div class="bg-blue-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-blue-600" id="currentPath">/</div>
+                    <div class="text-sm text-gray-600">현재 위치</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- File Browser -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <!-- Breadcrumb -->
+                    <div class="mb-4 flex items-center gap-2 text-sm">
+                        <i class="fas fa-home text-blue-600"></i>
+                        <span id="breadcrumb" class="text-gray-600"></span>
+                    </div>
+
+                    <!-- File List -->
+                    <div id="fileList" class="space-y-2 max-h-[600px] overflow-y-auto">
+                        <p class="text-gray-500 text-center py-8">파일이 없습니다</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Panel -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-eye text-blue-600"></i> 미리보기
+                    </h2>
+                    <div id="previewPanel">
+                        <p class="text-gray-500 text-center py-8">파일을 선택하세요</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="contextMenu" class="context-menu">
+        <div class="p-2">
+            <button onclick="renameItem()" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg">
+                <i class="fas fa-edit text-blue-600"></i> 이름 바꾸기
+            </button>
+            <button onclick="deleteItem()" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg">
+                <i class="fas fa-trash text-red-600"></i> 삭제
+            </button>
+            <button onclick="downloadItem()" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg">
+                <i class="fas fa-download text-green-600"></i> 다운로드
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let fileSystem = JSON.parse(localStorage.getItem('fileSystem') || '{"folders": {"/": []}, "files": {}}');
+        let currentPath = '/';
+        let selectedItem = null;
+
+        function updateBreadcrumb() {
+            const parts = currentPath.split('/').filter(p => p);
+            document.getElementById('breadcrumb').innerHTML =
+                '<a href="#" onclick="navigateTo(\'/\')" class="hover:text-blue-600">Home</a>' +
+                (parts.length > 0 ? ' / ' : '') +
+                parts.map((part, i) => {
+                    const path = '/' + parts.slice(0, i + 1).join('/');
+                    return `<a href="#" onclick="navigateTo('${path}')" class="hover:text-blue-600">${part}</a>`;
+                }).join(' / ');
+
+            document.getElementById('currentPath').textContent = currentPath || '/';
+        }
+
+        function updateStats() {
+            let totalFiles = 0;
+            let totalSize = 0;
+            Object.values(fileSystem.files).forEach(file => {
+                totalFiles++;
+                totalSize += file.size || 0;
+            });
+
+            const totalFolders = Object.keys(fileSystem.folders).length - 1; // -1 for root
+
+            document.getElementById('totalFiles').textContent = totalFiles;
+            document.getElementById('totalFolders').textContent = totalFolders;
+            document.getElementById('totalSize').textContent = Math.round(totalSize / 1024);
+        }
+
+        function updateFileList() {
+            const items = fileSystem.folders[currentPath] || [];
+            const fileList = document.getElementById('fileList');
+
+            if (items.length === 0) {
+                fileList.innerHTML = '<p class="text-gray-500 text-center py-8">파일이 없습니다</p>';
+                return;
+            }
+
+            fileList.innerHTML = items.map(item => {
+                const isFolder = item.type === 'folder';
+                const icon = isFolder ? 'fa-folder' : getFileIcon(item.name);
+                const color = isFolder ? 'text-blue-600' : 'text-gray-600';
+
+                return `
+                    <div class="file-item bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition flex items-center justify-between"
+                         onclick="${isFolder ? `navigateTo('${item.path}')` : `previewFile('${item.id}')`}"
+                         oncontextmenu="showContextMenu(event, '${item.id}', ${isFolder})">
+                        <div class="flex items-center gap-3 flex-1">
+                            <i class="fas ${icon} ${color} text-2xl"></i>
+                            <div>
+                                <div class="font-semibold text-gray-800">${item.name}</div>
+                                <div class="text-xs text-gray-500">
+                                    ${isFolder ? '폴더' : formatFileSize(item.size)} • ${new Date(item.modified).toLocaleString('ko-KR')}
+                                </div>
+                            </div>
+                        </div>
+                        ${!isFolder ? `<button onclick="downloadFile('${item.id}', event)" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
+                            <i class="fas fa-download"></i>
+                        </button>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            updateStats();
+            updateBreadcrumb();
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const iconMap = {
+                'jpg': 'fa-file-image',
+                'jpeg': 'fa-file-image',
+                'png': 'fa-file-image',
+                'gif': 'fa-file-image',
+                'pdf': 'fa-file-pdf',
+                'doc': 'fa-file-word',
+                'docx': 'fa-file-word',
+                'xls': 'fa-file-excel',
+                'xlsx': 'fa-file-excel',
+                'txt': 'fa-file-alt',
+                'zip': 'fa-file-archive',
+                'rar': 'fa-file-archive',
+                'mp3': 'fa-file-audio',
+                'mp4': 'fa-file-video',
+                'js': 'fa-file-code',
+                'html': 'fa-file-code',
+                'css': 'fa-file-code',
+            };
+            return iconMap[ext] || 'fa-file';
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function createFolder() {
+            const name = prompt('폴더 이름을 입력하세요:');
+            if (!name) return;
+
+            const folderPath = currentPath === '/' ? `/${name}` : `${currentPath}/${name}`;
+
+            if (fileSystem.folders[folderPath]) {
+                alert('이미 존재하는 폴더입니다.');
+                return;
+            }
+
+            fileSystem.folders[folderPath] = [];
+            fileSystem.folders[currentPath].push({
+                id: generateId(),
+                name: name,
+                type: 'folder',
+                path: folderPath,
+                modified: new Date().toISOString()
+            });
+
+            saveFileSystem();
+            updateFileList();
+        }
+
+        function uploadFiles(event) {
+            const files = event.target.files;
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const id = generateId();
+                    const fileData = {
+                        id: id,
+                        name: file.name,
+                        type: 'file',
+                        size: file.size,
+                        content: e.target.result,
+                        modified: new Date().toISOString()
+                    };
+
+                    fileSystem.files[id] = fileData;
+                    fileSystem.folders[currentPath].push({
+                        id: id,
+                        name: file.name,
+                        type: 'file',
+                        size: file.size,
+                        modified: fileData.modified
+                    });
+
+                    saveFileSystem();
+                    updateFileList();
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function previewFile(id) {
+            const file = fileSystem.files[id];
+            if (!file) return;
+
+            selectedItem = id;
+            const previewPanel = document.getElementById('previewPanel');
+            const ext = file.name.split('.').pop().toLowerCase();
+
+            if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
+                previewPanel.innerHTML = `
+                    <div class="text-center">
+                        <img src="${file.content}" class="max-w-full rounded-lg mb-4">
+                        <div class="text-sm text-gray-600">
+                            <div class="font-semibold">${file.name}</div>
+                            <div>${formatFileSize(file.size)}</div>
+                            <div>${new Date(file.modified).toLocaleString('ko-KR')}</div>
+                        </div>
+                    </div>
+                `;
+            } else if (['txt', 'js', 'html', 'css', 'json'].includes(ext)) {
+                fetch(file.content)
+                    .then(r => r.text())
+                    .then(text => {
+                        previewPanel.innerHTML = `
+                            <div>
+                                <div class="font-semibold mb-2">${file.name}</div>
+                                <pre class="bg-gray-100 p-4 rounded-lg text-xs overflow-auto max-h-96">${text}</pre>
+                                <div class="text-sm text-gray-600 mt-2">
+                                    ${formatFileSize(file.size)} • ${new Date(file.modified).toLocaleString('ko-KR')}
+                                </div>
+                            </div>
+                        `;
+                    });
+            } else {
+                previewPanel.innerHTML = `
+                    <div class="text-center">
+                        <i class="fas ${getFileIcon(file.name)} text-6xl text-gray-400 mb-4"></i>
+                        <div class="text-sm text-gray-600">
+                            <div class="font-semibold">${file.name}</div>
+                            <div>${formatFileSize(file.size)}</div>
+                            <div>${new Date(file.modified).toLocaleString('ko-KR')}</div>
+                            <button onclick="downloadFile('${id}')" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                <i class="fas fa-download"></i> 다운로드
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function downloadFile(id, event) {
+            if (event) event.stopPropagation();
+
+            const file = fileSystem.files[id];
+            if (!file) return;
+
+            const a = document.createElement('a');
+            a.href = file.content;
+            a.download = file.name;
+            a.click();
+        }
+
+        function navigateTo(path) {
+            currentPath = path;
+            updateFileList();
+        }
+
+        function showContextMenu(event, id, isFolder) {
+            event.preventDefault();
+            selectedItem = id;
+
+            const menu = document.getElementById('contextMenu');
+            menu.style.display = 'block';
+            menu.style.left = event.pageX + 'px';
+            menu.style.top = event.pageY + 'px';
+        }
+
+        function renameItem() {
+            if (!selectedItem) return;
+
+            const newName = prompt('새 이름을 입력하세요:');
+            if (!newName) return;
+
+            const items = fileSystem.folders[currentPath];
+            const item = items.find(i => i.id === selectedItem);
+            if (item) {
+                item.name = newName;
+                if (item.type === 'file') {
+                    fileSystem.files[selectedItem].name = newName;
+                }
+                saveFileSystem();
+                updateFileList();
+            }
+
+            hideContextMenu();
+        }
+
+        function deleteItem() {
+            if (!selectedItem) return;
+
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+
+            const items = fileSystem.folders[currentPath];
+            const itemIndex = items.findIndex(i => i.id === selectedItem);
+
+            if (itemIndex !== -1) {
+                const item = items[itemIndex];
+                if (item.type === 'file') {
+                    delete fileSystem.files[selectedItem];
+                } else {
+                    delete fileSystem.folders[item.path];
+                }
+                items.splice(itemIndex, 1);
+                saveFileSystem();
+                updateFileList();
+            }
+
+            hideContextMenu();
+        }
+
+        function downloadItem() {
+            if (!selectedItem) {
+                hideContextMenu();
+                return;
+            }
+            downloadFile(selectedItem);
+            hideContextMenu();
+        }
+
+        function hideContextMenu() {
+            document.getElementById('contextMenu').style.display = 'none';
+        }
+
+        function clearStorage() {
+            if (confirm('모든 파일과 폴더를 삭제하시겠습니까?')) {
+                fileSystem = { folders: { '/': [] }, files: {} };
+                saveFileSystem();
+                currentPath = '/';
+                updateFileList();
+            }
+        }
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function saveFileSystem() {
+            localStorage.setItem('fileSystem', JSON.stringify(fileSystem));
+        }
+
+        // Click outside to hide context menu
+        document.addEventListener('click', hideContextMenu);
+
+        // Initialize
+        updateFileList();
+    </script>
+</body>
+</html>

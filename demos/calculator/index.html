@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>계산기 - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .calc-button {
+            transition: all 0.2s;
+        }
+        .calc-button:active {
+            transform: scale(0.95);
+        }
+        .history-item {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-4">
+                    <a href="../" class="text-purple-600 hover:text-purple-800 transition">
+                        <i class="fas fa-arrow-left text-2xl"></i>
+                    </a>
+                    <h1 class="text-3xl font-bold text-gray-800">
+                        <i class="fas fa-calculator text-purple-600"></i> 계산기
+                    </h1>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="toggleMode()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-sync-alt"></i> <span id="modeText">과학용</span>
+                    </button>
+                    <button onclick="clearHistory()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                        <i class="fas fa-trash"></i> 기록 삭제
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-3 gap-4 text-center">
+                <div class="bg-purple-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-purple-600" id="calcCount">0</div>
+                    <div class="text-sm text-gray-600">계산 횟수</div>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-purple-600" id="historyCount">0</div>
+                    <div class="text-sm text-gray-600">기록</div>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-purple-600" id="lastUsed">-</div>
+                    <div class="text-sm text-gray-600">마지막 사용</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Calculator -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <!-- Display -->
+                    <div class="mb-4">
+                        <div class="bg-gray-100 rounded-lg p-4 text-right">
+                            <div class="text-gray-500 text-sm min-h-6" id="expression"></div>
+                            <div class="text-3xl font-bold text-gray-800 min-h-10" id="display">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Basic Calculator -->
+                    <div id="basicCalc">
+                        <div class="grid grid-cols-4 gap-2">
+                            <button onclick="clearDisplay()" class="calc-button bg-red-500 text-white p-4 rounded-lg hover:bg-red-600 text-xl font-bold col-span-2">C</button>
+                            <button onclick="backspace()" class="calc-button bg-gray-300 text-gray-800 p-4 rounded-lg hover:bg-gray-400 text-xl font-bold"><i class="fas fa-backspace"></i></button>
+                            <button onclick="inputOperator('/')" class="calc-button bg-purple-500 text-white p-4 rounded-lg hover:bg-purple-600 text-xl font-bold">÷</button>
+
+                            <button onclick="inputNumber('7')" class="calc-button bg-gray-200 text-gray-800 p-4 rounded-lg hover:bg-gray-300 text-xl font-bold">7</button>
+                            <button onclick="inputNumber('8')" class="calc-button bg-gray-200 text-gray-800 p-4 rounded-lg hover:bg-gray-300 text-xl font-bold">8</button>
+                            <button onclick="inputNumber('9')" class="calc-button bg-gray-200 text-gray-800 p-4 rounded-lg hover:bg-gray-300 text-xl font-bold">9</button>
+                            <button onclick="inputOperator('*')" class="calc-button bg-purple-500 text-white p-4 rounded-lg hover:bg-purple-600 text-xl font-bold">×</button>
+
+                            <button onclick="inputNumber('4')" class="calc-button bg-gray-200 text-gray-800 p-4 rounded-lg hover:bg-gray-300 text-xl font-bold">4</button>
+                            <button onclick="inputNumber('5')" class="calc-button bg-gray-200 text-gray-800 p-4 rounded-lg hover:bg-gray-300 text-xl font-bold">5</button>
+                            <button onclick="inputNumber('6')" class="calc-button bg-gray-200 text-gray-800 p-4 rounded-lg hover:bg-gray-300 text-xl font-bold">6</button>
+                            <button onclick="inputOperator('-')" class="calc-button bg-purple-500 text-white p-4 rounded-lg hover:bg-purple-600 text-xl font-bold">−</button>
+
+                            <button onclick="inputNumber('1')" class="calc-button bg-gray-200 text-gray-800 p-4 rounded-lg hover:bg-gray-300 text-xl font-bold">1</button>
+                            <button onclick="inputNumber('2')" class="calc-button bg-gray-200 text-gray-800 p-4 rounded-lg hover:bg-gray-300 text-xl font-bold">2</button>
+                            <button onclick="inputNumber('3')" class="calc-button bg-gray-200 text-gray-800 p-4 rounded-lg hover:bg-gray-300 text-xl font-bold">3</button>
+                            <button onclick="inputOperator('+')" class="calc-button bg-purple-500 text-white p-4 rounded-lg hover:bg-purple-600 text-xl font-bold">+</button>
+
+                            <button onclick="inputNumber('0')" class="calc-button bg-gray-200 text-gray-800 p-4 rounded-lg hover:bg-gray-300 text-xl font-bold col-span-2">0</button>
+                            <button onclick="inputNumber('.')" class="calc-button bg-gray-200 text-gray-800 p-4 rounded-lg hover:bg-gray-300 text-xl font-bold">.</button>
+                            <button onclick="calculate()" class="calc-button bg-green-500 text-white p-4 rounded-lg hover:bg-green-600 text-xl font-bold">=</button>
+                        </div>
+                    </div>
+
+                    <!-- Scientific Calculator -->
+                    <div id="scientificCalc" class="hidden mt-4">
+                        <div class="grid grid-cols-4 gap-2">
+                            <button onclick="scientificFunc('sin')" class="calc-button bg-indigo-500 text-white p-3 rounded-lg hover:bg-indigo-600 font-bold">sin</button>
+                            <button onclick="scientificFunc('cos')" class="calc-button bg-indigo-500 text-white p-3 rounded-lg hover:bg-indigo-600 font-bold">cos</button>
+                            <button onclick="scientificFunc('tan')" class="calc-button bg-indigo-500 text-white p-3 rounded-lg hover:bg-indigo-600 font-bold">tan</button>
+                            <button onclick="scientificFunc('log')" class="calc-button bg-indigo-500 text-white p-3 rounded-lg hover:bg-indigo-600 font-bold">log</button>
+
+                            <button onclick="scientificFunc('sqrt')" class="calc-button bg-indigo-500 text-white p-3 rounded-lg hover:bg-indigo-600 font-bold">√</button>
+                            <button onclick="scientificFunc('pow')" class="calc-button bg-indigo-500 text-white p-3 rounded-lg hover:bg-indigo-600 font-bold">x²</button>
+                            <button onclick="inputOperator('^')" class="calc-button bg-indigo-500 text-white p-3 rounded-lg hover:bg-indigo-600 font-bold">x^y</button>
+                            <button onclick="scientificFunc('ln')" class="calc-button bg-indigo-500 text-white p-3 rounded-lg hover:bg-indigo-600 font-bold">ln</button>
+
+                            <button onclick="inputNumber('(')" class="calc-button bg-gray-300 text-gray-800 p-3 rounded-lg hover:bg-gray-400 font-bold">(</button>
+                            <button onclick="inputNumber(')')" class="calc-button bg-gray-300 text-gray-800 p-3 rounded-lg hover:bg-gray-400 font-bold">)</button>
+                            <button onclick="inputNumber('Math.PI')" class="calc-button bg-gray-300 text-gray-800 p-3 rounded-lg hover:bg-gray-400 font-bold">π</button>
+                            <button onclick="inputNumber('Math.E')" class="calc-button bg-gray-300 text-gray-800 p-3 rounded-lg hover:bg-gray-400 font-bold">e</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-history text-purple-600"></i> 계산 기록
+                    </h2>
+                    <div id="historyList" class="space-y-2 max-h-96 overflow-y-auto">
+                        <p class="text-gray-500 text-center py-4">기록이 없습니다</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let display = '0';
+        let expression = '';
+        let history = JSON.parse(localStorage.getItem('calcHistory') || '[]');
+        let stats = JSON.parse(localStorage.getItem('calcStats') || '{"count": 0, "lastUsed": null}');
+        let isScientific = false;
+
+        function updateDisplay() {
+            document.getElementById('display').textContent = display;
+            document.getElementById('expression').textContent = expression;
+        }
+
+        function updateStats() {
+            document.getElementById('calcCount').textContent = stats.count;
+            document.getElementById('historyCount').textContent = history.length;
+            document.getElementById('lastUsed').textContent = stats.lastUsed || '-';
+        }
+
+        function updateHistory() {
+            const historyList = document.getElementById('historyList');
+            if (history.length === 0) {
+                historyList.innerHTML = '<p class="text-gray-500 text-center py-4">기록이 없습니다</p>';
+                return;
+            }
+
+            historyList.innerHTML = history.slice(-20).reverse().map(item => `
+                <div class="history-item bg-purple-50 rounded-lg p-3 cursor-pointer hover:bg-purple-100 transition" onclick="loadHistory('${item.result}')">
+                    <div class="text-sm text-gray-600">${item.expression}</div>
+                    <div class="text-lg font-bold text-purple-600">= ${item.result}</div>
+                    <div class="text-xs text-gray-400">${item.time}</div>
+                </div>
+            `).join('');
+        }
+
+        function inputNumber(num) {
+            if (display === '0' || display === 'Error') {
+                display = num;
+            } else {
+                display += num;
+            }
+            updateDisplay();
+        }
+
+        function inputOperator(op) {
+            if (expression && !expression.endsWith(' ')) {
+                expression = display + ' ' + op + ' ';
+                display = '0';
+            } else {
+                expression += op + ' ';
+            }
+            updateDisplay();
+        }
+
+        function clearDisplay() {
+            display = '0';
+            expression = '';
+            updateDisplay();
+        }
+
+        function backspace() {
+            if (display.length > 1) {
+                display = display.slice(0, -1);
+            } else {
+                display = '0';
+            }
+            updateDisplay();
+        }
+
+        function calculate() {
+            try {
+                const fullExpression = expression + display;
+                let result = eval(fullExpression.replace(/÷/g, '/').replace(/×/g, '*').replace(/−/g, '-').replace(/\^/g, '**'));
+
+                if (typeof result === 'number') {
+                    result = Math.round(result * 1000000000) / 1000000000;
+                }
+
+                // Save to history
+                history.push({
+                    expression: fullExpression,
+                    result: result.toString(),
+                    time: new Date().toLocaleString('ko-KR')
+                });
+
+                stats.count++;
+                stats.lastUsed = new Date().toLocaleTimeString('ko-KR');
+
+                localStorage.setItem('calcHistory', JSON.stringify(history));
+                localStorage.setItem('calcStats', JSON.stringify(stats));
+
+                display = result.toString();
+                expression = '';
+                updateDisplay();
+                updateStats();
+                updateHistory();
+            } catch (error) {
+                display = 'Error';
+                updateDisplay();
+            }
+        }
+
+        function scientificFunc(func) {
+            try {
+                let value = parseFloat(display);
+                let result;
+
+                switch(func) {
+                    case 'sin':
+                        result = Math.sin(value * Math.PI / 180);
+                        break;
+                    case 'cos':
+                        result = Math.cos(value * Math.PI / 180);
+                        break;
+                    case 'tan':
+                        result = Math.tan(value * Math.PI / 180);
+                        break;
+                    case 'log':
+                        result = Math.log10(value);
+                        break;
+                    case 'ln':
+                        result = Math.log(value);
+                        break;
+                    case 'sqrt':
+                        result = Math.sqrt(value);
+                        break;
+                    case 'pow':
+                        result = Math.pow(value, 2);
+                        break;
+                }
+
+                result = Math.round(result * 1000000000) / 1000000000;
+
+                history.push({
+                    expression: `${func}(${value})`,
+                    result: result.toString(),
+                    time: new Date().toLocaleString('ko-KR')
+                });
+
+                stats.count++;
+                stats.lastUsed = new Date().toLocaleTimeString('ko-KR');
+
+                localStorage.setItem('calcHistory', JSON.stringify(history));
+                localStorage.setItem('calcStats', JSON.stringify(stats));
+
+                display = result.toString();
+                expression = '';
+                updateDisplay();
+                updateStats();
+                updateHistory();
+            } catch (error) {
+                display = 'Error';
+                updateDisplay();
+            }
+        }
+
+        function toggleMode() {
+            isScientific = !isScientific;
+            document.getElementById('scientificCalc').classList.toggle('hidden');
+            document.getElementById('modeText').textContent = isScientific ? '기본' : '과학용';
+        }
+
+        function clearHistory() {
+            if (confirm('모든 계산 기록을 삭제하시겠습니까?')) {
+                history = [];
+                localStorage.setItem('calcHistory', JSON.stringify(history));
+                updateHistory();
+                updateStats();
+            }
+        }
+
+        function loadHistory(value) {
+            display = value;
+            expression = '';
+            updateDisplay();
+        }
+
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= '0' && e.key <= '9' || e.key === '.') {
+                inputNumber(e.key);
+            } else if (e.key === '+' || e.key === '-' || e.key === '*' || e.key === '/') {
+                inputOperator(e.key);
+            } else if (e.key === 'Enter') {
+                calculate();
+            } else if (e.key === 'Escape') {
+                clearDisplay();
+            } else if (e.key === 'Backspace') {
+                backspace();
+            }
+        });
+
+        // Initialize
+        updateDisplay();
+        updateStats();
+        updateHistory();
+    </script>
+</body>
+</html>

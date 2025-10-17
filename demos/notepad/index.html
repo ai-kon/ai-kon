@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메모장 - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+        }
+        .note-item {
+            transition: all 0.2s;
+        }
+        .note-item:hover {
+            transform: translateX(5px);
+        }
+        #editor {
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-4">
+                    <a href="../" class="text-green-600 hover:text-green-800 transition">
+                        <i class="fas fa-arrow-left text-2xl"></i>
+                    </a>
+                    <h1 class="text-3xl font-bold text-gray-800">
+                        <i class="fas fa-sticky-note text-green-600"></i> 메모장
+                    </h1>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="newNote()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                        <i class="fas fa-plus"></i> 새 메모
+                    </button>
+                    <button onclick="downloadNote()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-download"></i> 다운로드
+                    </button>
+                    <button onclick="toggleFindReplace()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-search"></i> 찾기/바꾸기
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-4 gap-4 text-center">
+                <div class="bg-green-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-green-600" id="noteCount">0</div>
+                    <div class="text-sm text-gray-600">메모 개수</div>
+                </div>
+                <div class="bg-green-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-green-600" id="charCount">0</div>
+                    <div class="text-sm text-gray-600">글자 수</div>
+                </div>
+                <div class="bg-green-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-green-600" id="wordCount">0</div>
+                    <div class="text-sm text-gray-600">단어 수</div>
+                </div>
+                <div class="bg-green-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-green-600" id="lineCount">0</div>
+                    <div class="text-sm text-gray-600">줄 수</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Notes List -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-folder text-green-600"></i> 메모 목록
+                    </h2>
+                    <div id="notesList" class="space-y-2 max-h-[600px] overflow-y-auto">
+                        <p class="text-gray-500 text-center py-4">메모가 없습니다</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Editor -->
+            <div class="lg:col-span-3">
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <!-- Note Title -->
+                    <div class="mb-4 flex gap-2">
+                        <input type="text" id="noteTitle" placeholder="메모 제목"
+                               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                               onchange="saveCurrentNote()">
+                        <button onclick="deleteNote()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                            <i class="fas fa-trash"></i> 삭제
+                        </button>
+                    </div>
+
+                    <!-- Find & Replace -->
+                    <div id="findReplacePanel" class="mb-4 bg-gray-50 rounded-lg p-4 hidden">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">찾기</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="findText" placeholder="검색어"
+                                           class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                                    <button onclick="findNext()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">바꾸기</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="replaceText" placeholder="바꿀 내용"
+                                           class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                                    <button onclick="replaceAll()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                                        <i class="fas fa-exchange-alt"></i> 모두
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Editor -->
+                    <textarea id="editor"
+                              class="w-full h-[500px] p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                              placeholder="여기에 메모를 입력하세요..."
+                              oninput="updateStats(); autoSave()"></textarea>
+
+                    <!-- Auto-save indicator -->
+                    <div class="mt-2 text-sm text-gray-500 flex items-center justify-between">
+                        <span id="autoSaveStatus">
+                            <i class="fas fa-check-circle text-green-600"></i> 자동 저장됨
+                        </span>
+                        <span id="lastModified">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let notes = JSON.parse(localStorage.getItem('notes') || '[]');
+        let currentNoteId = null;
+        let autoSaveTimeout = null;
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function updateNotesList() {
+            const notesList = document.getElementById('notesList');
+            if (notes.length === 0) {
+                notesList.innerHTML = '<p class="text-gray-500 text-center py-4">메모가 없습니다</p>';
+                return;
+            }
+
+            notesList.innerHTML = notes.map(note => `
+                <div class="note-item bg-green-50 rounded-lg p-3 cursor-pointer hover:bg-green-100 transition ${note.id === currentNoteId ? 'ring-2 ring-green-500' : ''}"
+                     onclick="loadNote('${note.id}')">
+                    <div class="font-bold text-gray-800 truncate">${note.title || '제목 없음'}</div>
+                    <div class="text-sm text-gray-600 truncate">${note.content.substring(0, 50)}...</div>
+                    <div class="text-xs text-gray-400 mt-1">${new Date(note.modified).toLocaleString('ko-KR')}</div>
+                </div>
+            `).join('');
+
+            document.getElementById('noteCount').textContent = notes.length;
+        }
+
+        function updateStats() {
+            const content = document.getElementById('editor').value;
+            const chars = content.length;
+            const words = content.trim() ? content.trim().split(/\s+/).length : 0;
+            const lines = content ? content.split('\n').length : 0;
+
+            document.getElementById('charCount').textContent = chars;
+            document.getElementById('wordCount').textContent = words;
+            document.getElementById('lineCount').textContent = lines;
+        }
+
+        function newNote() {
+            const note = {
+                id: generateId(),
+                title: '새 메모',
+                content: '',
+                created: new Date().toISOString(),
+                modified: new Date().toISOString()
+            };
+
+            notes.unshift(note);
+            localStorage.setItem('notes', JSON.stringify(notes));
+
+            currentNoteId = note.id;
+            loadNote(note.id);
+            updateNotesList();
+        }
+
+        function loadNote(id) {
+            const note = notes.find(n => n.id === id);
+            if (note) {
+                currentNoteId = id;
+                document.getElementById('noteTitle').value = note.title;
+                document.getElementById('editor').value = note.content;
+                document.getElementById('lastModified').textContent = '마지막 수정: ' + new Date(note.modified).toLocaleString('ko-KR');
+                updateStats();
+                updateNotesList();
+            }
+        }
+
+        function saveCurrentNote() {
+            if (!currentNoteId) return;
+
+            const note = notes.find(n => n.id === currentNoteId);
+            if (note) {
+                note.title = document.getElementById('noteTitle').value || '제목 없음';
+                note.content = document.getElementById('editor').value;
+                note.modified = new Date().toISOString();
+
+                localStorage.setItem('notes', JSON.stringify(notes));
+                document.getElementById('lastModified').textContent = '마지막 수정: ' + new Date(note.modified).toLocaleString('ko-KR');
+                updateNotesList();
+
+                showAutoSaveStatus();
+            }
+        }
+
+        function autoSave() {
+            clearTimeout(autoSaveTimeout);
+            document.getElementById('autoSaveStatus').innerHTML = '<i class="fas fa-spinner fa-spin text-yellow-600"></i> 저장 중...';
+
+            autoSaveTimeout = setTimeout(() => {
+                saveCurrentNote();
+            }, 1000);
+        }
+
+        function showAutoSaveStatus() {
+            document.getElementById('autoSaveStatus').innerHTML = '<i class="fas fa-check-circle text-green-600"></i> 자동 저장됨';
+        }
+
+        function deleteNote() {
+            if (!currentNoteId) return;
+
+            if (confirm('이 메모를 삭제하시겠습니까?')) {
+                notes = notes.filter(n => n.id !== currentNoteId);
+                localStorage.setItem('notes', JSON.stringify(notes));
+
+                currentNoteId = null;
+                document.getElementById('noteTitle').value = '';
+                document.getElementById('editor').value = '';
+                document.getElementById('lastModified').textContent = '-';
+
+                updateNotesList();
+                updateStats();
+            }
+        }
+
+        function downloadNote() {
+            if (!currentNoteId) {
+                alert('다운로드할 메모를 선택해주세요.');
+                return;
+            }
+
+            const note = notes.find(n => n.id === currentNoteId);
+            if (note) {
+                const blob = new Blob([note.content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = (note.title || '메모') + '.txt';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        function toggleFindReplace() {
+            const panel = document.getElementById('findReplacePanel');
+            panel.classList.toggle('hidden');
+        }
+
+        function findNext() {
+            const findText = document.getElementById('findText').value;
+            const editor = document.getElementById('editor');
+            const content = editor.value;
+
+            if (!findText) return;
+
+            const index = content.indexOf(findText, editor.selectionEnd);
+            if (index !== -1) {
+                editor.focus();
+                editor.setSelectionRange(index, index + findText.length);
+            } else {
+                alert('더 이상 찾을 수 없습니다.');
+            }
+        }
+
+        function replaceAll() {
+            const findText = document.getElementById('findText').value;
+            const replaceText = document.getElementById('replaceText').value;
+            const editor = document.getElementById('editor');
+
+            if (!findText) return;
+
+            const newContent = editor.value.split(findText).join(replaceText);
+            editor.value = newContent;
+
+            saveCurrentNote();
+            updateStats();
+
+            alert('바꾸기 완료');
+        }
+
+        // Keyboard shortcuts
+        document.getElementById('editor').addEventListener('keydown', (e) => {
+            // Ctrl+S: Save
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveCurrentNote();
+            }
+            // Ctrl+N: New note
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                newNote();
+            }
+            // Ctrl+F: Find
+            if (e.ctrlKey && e.key === 'f') {
+                e.preventDefault();
+                toggleFindReplace();
+                document.getElementById('findText').focus();
+            }
+        });
+
+        // Initialize
+        if (notes.length === 0) {
+            newNote();
+        } else {
+            loadNote(notes[0].id);
+        }
+        updateNotesList();
+        updateStats();
+    </script>
+</body>
+</html>

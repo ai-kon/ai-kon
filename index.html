@@ -275,6 +275,14 @@
         { id: 'kurly', name: 'Market Kurly', iconClass: 'icon-world', icon: 'fas fa-shopping-basket', url: './demos/kurly/' },
         { id: 'yes24', name: 'YES24 Books', iconClass: 'icon-code', icon: 'fas fa-book-reader', url: './demos/yes24/' },
         { id: 'discord', name: 'Discord', iconClass: 'icon-about', icon: 'fab fa-discord', url: './demos/discord/' },
+        { id: 'paint', name: 'Paint', iconClass: 'icon-chat', icon: 'fas fa-paint-brush', url: './demos/paint/' },
+        { id: 'calculator', name: 'Calculator', iconClass: 'icon-code', icon: 'fas fa-calculator', url: './demos/calculator/' },
+        { id: 'notepad', name: 'Notepad', iconClass: 'icon-world', icon: 'fas fa-sticky-note', url: './demos/notepad/' },
+        { id: 'filemanager', name: 'File Manager', iconClass: 'icon-vision', icon: 'fas fa-folder-open', url: './demos/filemanager/' },
+        { id: 'terminal', name: 'Terminal', iconClass: 'icon-code', icon: 'fas fa-terminal', url: './demos/terminal/' },
+        { id: 'clock', name: 'Clock', iconClass: 'icon-about', icon: 'fas fa-clock', url: './demos/clock/' },
+        { id: 'calendar', name: 'Calendar', iconClass: 'icon-chat', icon: 'fas fa-calendar-alt', url: './demos/calendar/' },
+        { id: 'settings', name: 'Settings', iconClass: 'icon-world', icon: 'fas fa-cog', url: './demos/settings/' },
         { id: 'about', name: 'About', iconClass: 'icon-about', icon: 'fas fa-info-circle' }
     ];
 
@@ -638,6 +646,38 @@
                 <div class="app-card" onclick="window.open('./games/cards/', '_blank')">
                     <div class="app-icon-large icon-about"><i class="fas fa-cards"></i></div>
                     <div class="app-label">Cards</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('paint')">
+                    <div class="app-icon-large icon-chat"><i class="fas fa-paint-brush"></i></div>
+                    <div class="app-label">Paint</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('calculator')">
+                    <div class="app-icon-large icon-code"><i class="fas fa-calculator"></i></div>
+                    <div class="app-label">Calculator</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('notepad')">
+                    <div class="app-icon-large icon-world"><i class="fas fa-sticky-note"></i></div>
+                    <div class="app-label">Notepad</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('filemanager')">
+                    <div class="app-icon-large icon-vision"><i class="fas fa-folder-open"></i></div>
+                    <div class="app-label">File Manager</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('terminal')">
+                    <div class="app-icon-large icon-code"><i class="fas fa-terminal"></i></div>
+                    <div class="app-label">Terminal</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('clock')">
+                    <div class="app-icon-large icon-about"><i class="fas fa-clock"></i></div>
+                    <div class="app-label">Clock</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('calendar')">
+                    <div class="app-icon-large icon-chat"><i class="fas fa-calendar-alt"></i></div>
+                    <div class="app-label">Calendar</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('settings')">
+                    <div class="app-icon-large icon-world"><i class="fas fa-cog"></i></div>
+                    <div class="app-label">Settings</div>
                 </div>
                 <div class="app-card" onclick="wm.openApp('about')">
                     <div class="app-icon-large icon-about"><i class="fas fa-info-circle"></i></div>

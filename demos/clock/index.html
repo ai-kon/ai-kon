@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시계 - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .analog-clock {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: white;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .hand {
+            position: absolute;
+            background: #333;
+            transform-origin: bottom center;
+            bottom: 50%;
+            left: 50%;
+            border-radius: 10px;
+        }
+        .hour {
+            width: 8px;
+            height: 80px;
+            margin-left: -4px;
+        }
+        .minute {
+            width: 6px;
+            height: 110px;
+            margin-left: -3px;
+        }
+        .second {
+            width: 3px;
+            height: 120px;
+            margin-left: -1.5px;
+            background: #f5576c;
+        }
+        .center-dot {
+            width: 20px;
+            height: 20px;
+            background: #333;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .clock-number {
+            position: absolute;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .tab-button.active {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-4">
+                    <a href="../" class="text-pink-600 hover:text-pink-800 transition">
+                        <i class="fas fa-arrow-left text-2xl"></i>
+                    </a>
+                    <h1 class="text-3xl font-bold text-gray-800">
+                        <i class="fas fa-clock text-pink-600"></i> 시계
+                    </h1>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-4 gap-4 text-center">
+                <div class="bg-pink-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-pink-600" id="alarmCount">0</div>
+                    <div class="text-sm text-gray-600">알람</div>
+                </div>
+                <div class="bg-pink-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-pink-600" id="timerCount">0</div>
+                    <div class="text-sm text-gray-600">타이머 사용</div>
+                </div>
+                <div class="bg-pink-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-pink-600" id="stopwatchCount">0</div>
+                    <div class="text-sm text-gray-600">스톱워치 사용</div>
+                </div>
+                <div class="bg-pink-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-pink-600" id="currentTime">00:00:00</div>
+                    <div class="text-sm text-gray-600">현재 시간</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex gap-2 mt-4">
+                <button onclick="switchTab('clock')" class="tab-button active flex-1 px-4 py-2 bg-gray-200 rounded-lg transition">
+                    <i class="fas fa-clock"></i> 시계
+                </button>
+                <button onclick="switchTab('worldtime')" class="tab-button flex-1 px-4 py-2 bg-gray-200 rounded-lg transition">
+                    <i class="fas fa-globe"></i> 세계시간
+                </button>
+                <button onclick="switchTab('stopwatch')" class="tab-button flex-1 px-4 py-2 bg-gray-200 rounded-lg transition">
+                    <i class="fas fa-stopwatch"></i> 스톱워치
+                </button>
+                <button onclick="switchTab('timer')" class="tab-button flex-1 px-4 py-2 bg-gray-200 rounded-lg transition">
+                    <i class="fas fa-hourglass"></i> 타이머
+                </button>
+                <button onclick="switchTab('alarm')" class="tab-button flex-1 px-4 py-2 bg-gray-200 rounded-lg transition">
+                    <i class="fas fa-bell"></i> 알람
+                </button>
+            </div>
+        </div>
+
+        <!-- Clock Tab -->
+        <div id="clockTab" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-lg shadow-lg p-6 text-center">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">디지털 시계</h2>
+                    <div class="text-6xl font-bold text-pink-600 mb-2" id="digitalTime">00:00:00</div>
+                    <div class="text-2xl text-gray-600" id="digitalDate">2024년 1월 1일</div>
+                    <div class="text-lg text-gray-500 mt-2" id="digitalDay">월요일</div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-lg p-6 flex items-center justify-center">
+                    <div class="analog-clock">
+                        <div class="hand hour" id="hourHand"></div>
+                        <div class="hand minute" id="minuteHand"></div>
+                        <div class="hand second" id="secondHand"></div>
+                        <div class="center-dot"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- World Time Tab -->
+        <div id="worldtimeTab" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">세계 시간</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="worldClocks"></div>
+            </div>
+        </div>
+
+        <!-- Stopwatch Tab -->
+        <div id="stopwatchTab" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow-lg p-6 text-center">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">스톱워치</h2>
+                <div class="text-7xl font-bold text-pink-600 mb-8" id="stopwatchDisplay">00:00:00.00</div>
+                <div class="flex gap-4 justify-center mb-4">
+                    <button onclick="startStopwatch()" id="startStopBtn" class="px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-xl">
+                        <i class="fas fa-play"></i> 시작
+                    </button>
+                    <button onclick="resetStopwatch()" class="px-8 py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-xl">
+                        <i class="fas fa-redo"></i> 리셋
+                    </button>
+                    <button onclick="lapStopwatch()" class="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-xl">
+                        <i class="fas fa-flag"></i> 랩타임
+                    </button>
+                </div>
+                <div class="max-h-60 overflow-y-auto">
+                    <div id="lapTimes" class="space-y-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timer Tab -->
+        <div id="timerTab" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow-lg p-6 text-center">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">타이머</h2>
+                <div class="text-7xl font-bold text-pink-600 mb-8" id="timerDisplay">00:00</div>
+                <div class="flex gap-4 justify-center mb-4">
+                    <input type="number" id="timerMinutes" placeholder="분" class="w-24 px-4 py-2 border border-gray-300 rounded-lg text-center text-xl" min="0">
+                    <input type="number" id="timerSeconds" placeholder="초" class="w-24 px-4 py-2 border border-gray-300 rounded-lg text-center text-xl" min="0" max="59">
+                </div>
+                <div class="flex gap-4 justify-center">
+                    <button onclick="startTimer()" id="startTimerBtn" class="px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-xl">
+                        <i class="fas fa-play"></i> 시작
+                    </button>
+                    <button onclick="resetTimer()" class="px-8 py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-xl">
+                        <i class="fas fa-redo"></i> 리셋
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alarm Tab -->
+        <div id="alarmTab" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">알람</h2>
+                    <button onclick="addAlarm()" class="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition">
+                        <i class="fas fa-plus"></i> 알람 추가
+                    </button>
+                </div>
+                <div id="alarmList" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stopwatchInterval = null;
+        let stopwatchTime = 0;
+        let timerInterval = null;
+        let timerTime = 0;
+        let alarms = JSON.parse(localStorage.getItem('alarms') || '[]');
+        let stats = JSON.parse(localStorage.getItem('clockStats') || '{"timer": 0, "stopwatch": 0}');
+
+        const worldTimezones = [
+            { city: '서울', timezone: 'Asia/Seoul', flag: '🇰🇷' },
+            { city: '도쿄', timezone: 'Asia/Tokyo', flag: '🇯🇵' },
+            { city: '뉴욕', timezone: 'America/New_York', flag: '🇺🇸' },
+            { city: '런던', timezone: 'Europe/London', flag: '🇬🇧' },
+            { city: '파리', timezone: 'Europe/Paris', flag: '🇫🇷' },
+            { city: '두바이', timezone: 'Asia/Dubai', flag: '🇦🇪' }
+        ];
+
+        function updateClock() {
+            const now = new Date();
+
+            // Digital clock
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('digitalTime').textContent = `${hours}:${minutes}:${seconds}`;
+            document.getElementById('currentTime').textContent = `${hours}:${minutes}:${seconds}`;
+
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            const date = now.getDate();
+            const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+            document.getElementById('digitalDate').textContent = `${year}년 ${month}월 ${date}일`;
+            document.getElementById('digitalDay').textContent = days[now.getDay()];
+
+            // Analog clock
+            const secondAngle = (now.getSeconds() / 60) * 360;
+            const minuteAngle = ((now.getMinutes() + now.getSeconds() / 60) / 60) * 360;
+            const hourAngle = ((now.getHours() % 12 + now.getMinutes() / 60) / 12) * 360;
+
+            document.getElementById('secondHand').style.transform = `rotate(${secondAngle}deg)`;
+            document.getElementById('minuteHand').style.transform = `rotate(${minuteAngle}deg)`;
+            document.getElementById('hourHand').style.transform = `rotate(${hourAngle}deg)`;
+
+            checkAlarms(hours, minutes);
+        }
+
+        function updateWorldClocks() {
+            const container = document.getElementById('worldClocks');
+            container.innerHTML = worldTimezones.map(tz => {
+                const time = new Date().toLocaleTimeString('ko-KR', { timeZone: tz.timezone, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const date = new Date().toLocaleDateString('ko-KR', { timeZone: tz.timezone });
+                return `
+                    <div class="bg-pink-50 rounded-lg p-4 text-center">
+                        <div class="text-4xl mb-2">${tz.flag}</div>
+                        <div class="text-xl font-bold text-gray-800">${tz.city}</div>
+                        <div class="text-3xl font-bold text-pink-600">${time}</div>
+                        <div class="text-sm text-gray-600">${date}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function startStopwatch() {
+            if (stopwatchInterval) {
+                clearInterval(stopwatchInterval);
+                stopwatchInterval = null;
+                document.getElementById('startStopBtn').innerHTML = '<i class="fas fa-play"></i> 계속';
+            } else {
+                stats.stopwatch++;
+                localStorage.setItem('clockStats', JSON.stringify(stats));
+                updateStats();
+
+                stopwatchInterval = setInterval(() => {
+                    stopwatchTime += 10;
+                    const ms = stopwatchTime % 1000;
+                    const s = Math.floor((stopwatchTime / 1000) % 60);
+                    const m = Math.floor((stopwatchTime / 60000) % 60);
+                    const h = Math.floor(stopwatchTime / 3600000);
+
+                    document.getElementById('stopwatchDisplay').textContent =
+                        `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0').substr(0, 2)}`;
+                }, 10);
+                document.getElementById('startStopBtn').innerHTML = '<i class="fas fa-pause"></i> 정지';
+            }
+        }
+
+        function resetStopwatch() {
+            clearInterval(stopwatchInterval);
+            stopwatchInterval = null;
+            stopwatchTime = 0;
+            document.getElementById('stopwatchDisplay').textContent = '00:00:00.00';
+            document.getElementById('lapTimes').innerHTML = '';
+            document.getElementById('startStopBtn').innerHTML = '<i class="fas fa-play"></i> 시작';
+        }
+
+        function lapStopwatch() {
+            if (stopwatchInterval) {
+                const lapTime = document.getElementById('stopwatchDisplay').textContent;
+                const lapNumber = document.getElementById('lapTimes').children.length + 1;
+                const lapDiv = document.createElement('div');
+                lapDiv.className = 'bg-pink-50 rounded-lg p-3 flex justify-between';
+                lapDiv.innerHTML = `
+                    <span class="font-bold">랩 ${lapNumber}</span>
+                    <span class="text-pink-600 font-mono">${lapTime}</span>
+                `;
+                document.getElementById('lapTimes').insertBefore(lapDiv, document.getElementById('lapTimes').firstChild);
+            }
+        }
+
+        function startTimer() {
+            const minutes = parseInt(document.getElementById('timerMinutes').value) || 0;
+            const seconds = parseInt(document.getElementById('timerSeconds').value) || 0;
+            timerTime = (minutes * 60 + seconds) * 1000;
+
+            if (timerTime === 0) return;
+
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+
+            stats.timer++;
+            localStorage.setItem('clockStats', JSON.stringify(stats));
+            updateStats();
+
+            timerInterval = setInterval(() => {
+                timerTime -= 1000;
+                if (timerTime <= 0) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    timerTime = 0;
+                    alert('⏰ 타이머 종료!');
+                    document.getElementById('timerDisplay').textContent = '00:00';
+                    return;
+                }
+
+                const m = Math.floor(timerTime / 60000);
+                const s = Math.floor((timerTime % 60000) / 1000);
+                document.getElementById('timerDisplay').textContent =
+                    `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            timerTime = 0;
+            document.getElementById('timerDisplay').textContent = '00:00';
+        }
+
+        function addAlarm() {
+            const time = prompt('알람 시간을 입력하세요 (HH:MM):');
+            if (!time || !time.match(/^\d{2}:\d{2}$/)) return;
+
+            const [hours, minutes] = time.split(':');
+            const alarm = {
+                id: Date.now(),
+                time: time,
+                enabled: true,
+                label: '알람'
+            };
+
+            alarms.push(alarm);
+            localStorage.setItem('alarms', JSON.stringify(alarms));
+            updateAlarms();
+        }
+
+        function updateAlarms() {
+            const container = document.getElementById('alarmList');
+            document.getElementById('alarmCount').textContent = alarms.filter(a => a.enabled).length;
+
+            if (alarms.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">설정된 알람이 없습니다</p>';
+                return;
+            }
+
+            container.innerHTML = alarms.map(alarm => `
+                <div class="bg-pink-50 rounded-lg p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="text-3xl font-bold text-pink-600">${alarm.time}</div>
+                        <div class="text-gray-600">${alarm.label}</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="toggleAlarm(${alarm.id})" class="px-3 py-1 ${alarm.enabled ? 'bg-green-600' : 'bg-gray-400'} text-white rounded-lg">
+                            ${alarm.enabled ? 'ON' : 'OFF'}
+                        </button>
+                        <button onclick="deleteAlarm(${alarm.id})" class="px-3 py-1 bg-red-600 text-white rounded-lg">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleAlarm(id) {
+            const alarm = alarms.find(a => a.id === id);
+            if (alarm) {
+                alarm.enabled = !alarm.enabled;
+                localStorage.setItem('alarms', JSON.stringify(alarms));
+                updateAlarms();
+            }
+        }
+
+        function deleteAlarm(id) {
+            alarms = alarms.filter(a => a.id !== id);
+            localStorage.setItem('alarms', JSON.stringify(alarms));
+            updateAlarms();
+        }
+
+        function checkAlarms(hours, minutes) {
+            const currentTime = `${hours}:${minutes}`;
+            alarms.forEach(alarm => {
+                if (alarm.enabled && alarm.time === currentTime) {
+                    alert(`⏰ 알람: ${alarm.label} - ${alarm.time}`);
+                    alarm.enabled = false;
+                    localStorage.setItem('alarms', JSON.stringify(alarms));
+                    updateAlarms();
+                }
+            });
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(tab + 'Tab').classList.remove('hidden');
+            event.target.closest('.tab-button').classList.add('active');
+
+            if (tab === 'worldtime') {
+                updateWorldClocks();
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('timerCount').textContent = stats.timer;
+            document.getElementById('stopwatchCount').textContent = stats.stopwatch;
+        }
+
+        // Initialize
+        setInterval(updateClock, 1000);
+        setInterval(updateWorldClocks, 1000);
+        updateClock();
+        updateAlarms();
+        updateStats();
+    </script>
+</body>
+</html>

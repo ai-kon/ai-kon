@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>그림판 - Paint</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        #canvas {
+            background: white;
+            cursor: crosshair;
+            border: 3px solid #333;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .tool-btn {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .tool-btn:hover {
+            transform: scale(1.1);
+        }
+        .tool-btn.active {
+            background: #667eea !important;
+            color: white !important;
+            transform: scale(1.15);
+        }
+        .color-swatch {
+            width: 35px;
+            height: 35px;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .color-swatch:hover {
+            transform: scale(1.2);
+        }
+        .color-swatch.active {
+            border-color: #333;
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <div class="bg-white rounded-lg shadow-2xl p-6">
+            <!-- Header -->
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">
+                        <i class="fas fa-palette text-purple-600 mr-3"></i>그림판
+                    </h1>
+                    <p class="text-gray-600">MS Paint 스타일 드로잉 툴</p>
+                </div>
+                <button onclick="window.location.href='../'" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">뒤로가기</button>
+            </div>
+
+            <!-- Tools Section -->
+            <div class="mb-4 p-4 bg-gray-100 rounded-lg">
+                <div class="flex flex-wrap gap-3 items-center">
+                    <!-- Drawing Tools -->
+                    <div class="flex gap-2">
+                        <button onclick="setTool('pencil')" class="tool-btn active px-4 py-2 bg-white rounded-lg shadow" title="연필">
+                            <i class="fas fa-pencil-alt"></i> 연필
+                        </button>
+                        <button onclick="setTool('brush')" class="tool-btn px-4 py-2 bg-white rounded-lg shadow" title="브러시">
+                            <i class="fas fa-paint-brush"></i> 브러시
+                        </button>
+                        <button onclick="setTool('eraser')" class="tool-btn px-4 py-2 bg-white rounded-lg shadow" title="지우개">
+                            <i class="fas fa-eraser"></i> 지우개
+                        </button>
+                        <button onclick="setTool('line')" class="tool-btn px-4 py-2 bg-white rounded-lg shadow" title="선">
+                            <i class="fas fa-minus"></i> 선
+                        </button>
+                        <button onclick="setTool('rectangle')" class="tool-btn px-4 py-2 bg-white rounded-lg shadow" title="사각형">
+                            <i class="far fa-square"></i> 사각형
+                        </button>
+                        <button onclick="setTool('circle')" class="tool-btn px-4 py-2 bg-white rounded-lg shadow" title="원">
+                            <i class="far fa-circle"></i> 원
+                        </button>
+                        <button onclick="setTool('fill')" class="tool-btn px-4 py-2 bg-white rounded-lg shadow" title="채우기">
+                            <i class="fas fa-fill-drip"></i> 채우기
+                        </button>
+                        <button onclick="setTool('text')" class="tool-btn px-4 py-2 bg-white rounded-lg shadow" title="텍스트">
+                            <i class="fas fa-font"></i> 텍스트
+                        </button>
+                    </div>
+
+                    <div class="h-8 w-px bg-gray-300"></div>
+
+                    <!-- Brush Size -->
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-bold">크기:</label>
+                        <input type="range" id="brushSize" min="1" max="50" value="3" class="w-32" oninput="updateBrushSize()">
+                        <span id="brushSizeLabel" class="text-sm font-bold w-8">3px</span>
+                    </div>
+
+                    <div class="h-8 w-px bg-gray-300"></div>
+
+                    <!-- Actions -->
+                    <div class="flex gap-2">
+                        <button onclick="undo()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-undo"></i> 실행 취소
+                        </button>
+                        <button onclick="redo()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-redo"></i> 다시 실행
+                        </button>
+                        <button onclick="clearCanvas()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                            <i class="fas fa-trash"></i> 지우기
+                        </button>
+                        <button onclick="saveImage()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                            <i class="fas fa-save"></i> 저장
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Color Palette -->
+                <div class="mt-4 flex items-center gap-3">
+                    <label class="text-sm font-bold">색상:</label>
+                    <div class="flex gap-2 flex-wrap">
+                        <div class="color-swatch active rounded" style="background: #000000" onclick="setColor('#000000')" title="검정"></div>
+                        <div class="color-swatch rounded" style="background: #ffffff; border: 1px solid #ccc" onclick="setColor('#ffffff')" title="흰색"></div>
+                        <div class="color-swatch rounded" style="background: #ff0000" onclick="setColor('#ff0000')" title="빨강"></div>
+                        <div class="color-swatch rounded" style="background: #00ff00" onclick="setColor('#00ff00')" title="초록"></div>
+                        <div class="color-swatch rounded" style="background: #0000ff" onclick="setColor('#0000ff')" title="파랑"></div>
+                        <div class="color-swatch rounded" style="background: #ffff00" onclick="setColor('#ffff00')" title="노랑"></div>
+                        <div class="color-swatch rounded" style="background: #ff00ff" onclick="setColor('#ff00ff')" title="마젠타"></div>
+                        <div class="color-swatch rounded" style="background: #00ffff" onclick="setColor('#00ffff')" title="시안"></div>
+                        <div class="color-swatch rounded" style="background: #ffa500" onclick="setColor('#ffa500')" title="오렌지"></div>
+                        <div class="color-swatch rounded" style="background: #800080" onclick="setColor('#800080')" title="보라"></div>
+                        <div class="color-swatch rounded" style="background: #ffc0cb" onclick="setColor('#ffc0cb')" title="핑크"></div>
+                        <div class="color-swatch rounded" style="background: #a52a2a" onclick="setColor('#a52a2a')" title="갈색"></div>
+                        <div class="color-swatch rounded" style="background: #808080" onclick="setColor('#808080')" title="회색"></div>
+                    </div>
+                    <input type="color" id="customColor" class="ml-2 w-12 h-9 rounded cursor-pointer" oninput="setColor(this.value)" title="색상 선택기">
+                    <div class="ml-3 flex items-center gap-2 px-3 py-1 bg-white rounded border-2 border-gray-300">
+                        <span class="text-sm font-bold">현재:</span>
+                        <div id="currentColor" class="w-10 h-10 rounded border-2 border-gray-300" style="background: #000000"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Canvas -->
+            <div class="mb-4 flex justify-center">
+                <canvas id="canvas" width="1200" height="700"></canvas>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-5 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg text-center">
+                    <div class="text-sm text-blue-600">총 그림</div>
+                    <div class="text-2xl font-bold" id="totalDrawings">0</div>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg text-center">
+                    <div class="text-sm text-purple-600">저장한 그림</div>
+                    <div class="text-2xl font-bold" id="savedCount">0</div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg text-center">
+                    <div class="text-sm text-green-600">실행 취소</div>
+                    <div class="text-2xl font-bold" id="undoCount">0</div>
+                </div>
+                <div class="bg-orange-50 p-4 rounded-lg text-center">
+                    <div class="text-sm text-orange-600">사용 도구</div>
+                    <div class="text-lg font-bold" id="currentTool">연필</div>
+                </div>
+                <div class="bg-pink-50 p-4 rounded-lg text-center">
+                    <div class="text-sm text-pink-600">캔버스 크기</div>
+                    <div class="text-lg font-bold">1200×700</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let currentTool = 'pencil';
+        let currentColor = '#000000';
+        let brushSize = 3;
+        let isDrawing = false;
+        let startX, startY;
+        let history = [];
+        let historyStep = -1;
+        let savedCount = parseInt(localStorage.getItem('paint_saved_count') || '0');
+        let totalDrawings = parseInt(localStorage.getItem('paint_total_drawings') || '0');
+        let undoCount = parseInt(localStorage.getItem('paint_undo_count') || '0');
+
+        // Initialize white canvas
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        saveState();
+
+        function setTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.closest('.tool-btn').classList.add('active');
+
+            const toolNames = {
+                'pencil': '연필',
+                'brush': '브러시',
+                'eraser': '지우개',
+                'line': '선',
+                'rectangle': '사각형',
+                'circle': '원',
+                'fill': '채우기',
+                'text': '텍스트'
+            };
+            document.getElementById('currentTool').textContent = toolNames[tool];
+        }
+
+        function setColor(color) {
+            currentColor = color;
+            document.getElementById('currentColor').style.background = color;
+            document.getElementById('customColor').value = color;
+
+            document.querySelectorAll('.color-swatch').forEach(swatch => {
+                swatch.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        function updateBrushSize() {
+            brushSize = parseInt(document.getElementById('brushSize').value);
+            document.getElementById('brushSizeLabel').textContent = brushSize + 'px';
+        }
+
+        function saveState() {
+            historyStep++;
+            if (historyStep < history.length) {
+                history.length = historyStep;
+            }
+            history.push(canvas.toDataURL());
+        }
+
+        function undo() {
+            if (historyStep > 0) {
+                historyStep--;
+                const img = new Image();
+                img.src = history[historyStep];
+                img.onload = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                };
+                undoCount++;
+                localStorage.setItem('paint_undo_count', undoCount.toString());
+                updateStats();
+            }
+        }
+
+        function redo() {
+            if (historyStep < history.length - 1) {
+                historyStep++;
+                const img = new Image();
+                img.src = history[historyStep];
+                img.onload = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                };
+            }
+        }
+
+        function clearCanvas() {
+            if (confirm('캔버스를 지우시겠습니까?')) {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                saveState();
+            }
+        }
+
+        function saveImage() {
+            const link = document.createElement('a');
+            link.download = `그림_${new Date().toISOString().slice(0,10)}_${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+
+            savedCount++;
+            localStorage.setItem('paint_saved_count', savedCount.toString());
+            updateStats();
+            alert('그림이 저장되었습니다!');
+        }
+
+        function floodFill(startX, startY, fillColor) {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const targetColor = getPixelColor(imageData, startX, startY);
+            const fillColorRGB = hexToRgb(fillColor);
+
+            if (colorsMatch(targetColor, fillColorRGB)) return;
+
+            const pixelsToCheck = [[startX, startY]];
+
+            while (pixelsToCheck.length > 0) {
+                const [x, y] = pixelsToCheck.pop();
+
+                if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) continue;
+
+                const currentColor = getPixelColor(imageData, x, y);
+
+                if (colorsMatch(currentColor, targetColor)) {
+                    setPixelColor(imageData, x, y, fillColorRGB);
+                    pixelsToCheck.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function getPixelColor(imageData, x, y) {
+            const index = (y * imageData.width + x) * 4;
+            return {
+                r: imageData.data[index],
+                g: imageData.data[index + 1],
+                b: imageData.data[index + 2],
+                a: imageData.data[index + 3]
+            };
+        }
+
+        function setPixelColor(imageData, x, y, color) {
+            const index = (y * imageData.width + x) * 4;
+            imageData.data[index] = color.r;
+            imageData.data[index + 1] = color.g;
+            imageData.data[index + 2] = color.b;
+            imageData.data[index + 3] = 255;
+        }
+
+        function colorsMatch(a, b) {
+            return a.r === b.r && a.g === b.g && a.b === b.b && a.a === b.a;
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16),
+                a: 255
+            } : null;
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            startX = e.clientX - rect.left;
+            startY = e.clientY - rect.top;
+
+            if (currentTool === 'fill') {
+                floodFill(Math.floor(startX), Math.floor(startY), currentColor);
+                saveState();
+                isDrawing = false;
+                totalDrawings++;
+                localStorage.setItem('paint_total_drawings', totalDrawings.toString());
+                updateStats();
+            } else if (currentTool === 'text') {
+                const text = prompt('입력할 텍스트:');
+                if (text) {
+                    ctx.font = `${brushSize * 5}px Arial`;
+                    ctx.fillStyle = currentColor;
+                    ctx.fillText(text, startX, startY);
+                    saveState();
+                    totalDrawings++;
+                    localStorage.setItem('paint_total_drawings', totalDrawings.toString());
+                    updateStats();
+                }
+                isDrawing = false;
+            } else if (currentTool === 'pencil' || currentTool === 'brush' || currentTool === 'eraser') {
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (currentTool === 'pencil') {
+                ctx.strokeStyle = currentColor;
+                ctx.lineWidth = brushSize;
+                ctx.lineCap = 'round';
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            } else if (currentTool === 'brush') {
+                ctx.strokeStyle = currentColor;
+                ctx.lineWidth = brushSize * 2;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            } else if (currentTool === 'eraser') {
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = brushSize * 3;
+                ctx.lineCap = 'round';
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (!isDrawing) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (currentTool === 'line') {
+                ctx.strokeStyle = currentColor;
+                ctx.lineWidth = brushSize;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            } else if (currentTool === 'rectangle') {
+                ctx.strokeStyle = currentColor;
+                ctx.lineWidth = brushSize;
+                ctx.strokeRect(startX, startY, x - startX, y - startY);
+            } else if (currentTool === 'circle') {
+                ctx.strokeStyle = currentColor;
+                ctx.lineWidth = brushSize;
+                ctx.beginPath();
+                const radius = Math.sqrt(Math.pow(x - startX, 2) + Math.pow(y - startY, 2));
+                ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+
+            isDrawing = false;
+            if (currentTool !== 'fill' && currentTool !== 'text') {
+                saveState();
+                totalDrawings++;
+                localStorage.setItem('paint_total_drawings', totalDrawings.toString());
+                updateStats();
+            }
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            if (isDrawing && (currentTool === 'pencil' || currentTool === 'brush' || currentTool === 'eraser')) {
+                isDrawing = false;
+                saveState();
+            }
+        });
+
+        function updateStats() {
+            document.getElementById('totalDrawings').textContent = totalDrawings;
+            document.getElementById('savedCount').textContent = savedCount;
+            document.getElementById('undoCount').textContent = undoCount;
+        }
+
+        updateStats();
+    </script>
+</body>
+</html>

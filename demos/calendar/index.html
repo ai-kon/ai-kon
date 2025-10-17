@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>달력 - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        }
+        .calendar-day {
+            aspect-ratio: 1;
+            transition: all 0.2s;
+        }
+        .calendar-day:hover {
+            transform: scale(1.05);
+        }
+        .event-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 1px;
+        }
+        .today {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            font-weight: bold;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-4">
+                    <a href="../" class="text-orange-600 hover:text-orange-800 transition">
+                        <i class="fas fa-arrow-left text-2xl"></i>
+                    </a>
+                    <h1 class="text-3xl font-bold text-gray-800">
+                        <i class="fas fa-calendar-alt text-orange-600"></i> 달력
+                    </h1>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="previousMonth()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button onclick="today()" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition">
+                        <i class="fas fa-calendar-day"></i> 오늘
+                    </button>
+                    <button onclick="nextMonth()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <button onclick="openEventModal()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                        <i class="fas fa-plus"></i> 일정 추가
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-4 gap-4 text-center">
+                <div class="bg-orange-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-orange-600" id="totalEvents">0</div>
+                    <div class="text-sm text-gray-600">전체 일정</div>
+                </div>
+                <div class="bg-orange-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-orange-600" id="todayEvents">0</div>
+                    <div class="text-sm text-gray-600">오늘 일정</div>
+                </div>
+                <div class="bg-orange-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-orange-600" id="upcomingEvents">0</div>
+                    <div class="text-sm text-gray-600">다가오는 일정</div>
+                </div>
+                <div class="bg-orange-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-orange-600" id="currentMonth">1월</div>
+                    <div class="text-sm text-gray-600">현재 월</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Calendar -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <div class="text-center mb-6">
+                        <h2 class="text-3xl font-bold text-gray-800" id="calendarTitle">2024년 1월</h2>
+                    </div>
+
+                    <!-- Calendar Grid -->
+                    <div class="grid grid-cols-7 gap-2">
+                        <div class="text-center font-bold text-red-600 p-2">일</div>
+                        <div class="text-center font-bold text-gray-700 p-2">월</div>
+                        <div class="text-center font-bold text-gray-700 p-2">화</div>
+                        <div class="text-center font-bold text-gray-700 p-2">수</div>
+                        <div class="text-center font-bold text-gray-700 p-2">목</div>
+                        <div class="text-center font-bold text-gray-700 p-2">금</div>
+                        <div class="text-center font-bold text-blue-600 p-2">토</div>
+                    </div>
+
+                    <div class="grid grid-cols-7 gap-2 mt-2" id="calendarGrid"></div>
+                </div>
+            </div>
+
+            <!-- Events List -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-list text-orange-600"></i> 일정 목록
+                    </h2>
+                    <div id="eventsList" class="space-y-2 max-h-[600px] overflow-y-auto">
+                        <p class="text-gray-500 text-center py-4">일정이 없습니다</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Modal -->
+    <div id="eventModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-calendar-plus text-orange-600"></i> <span id="modalTitle">일정 추가</span>
+                </h3>
+                <button onclick="closeEventModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+
+            <form onsubmit="saveEvent(event)" class="space-y-4">
+                <input type="hidden" id="eventId">
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">제목</label>
+                    <input type="text" id="eventTitle" required
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">날짜</label>
+                    <input type="date" id="eventDate" required
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">시간</label>
+                    <input type="time" id="eventTime"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">색상</label>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="selectColor('bg-red-500')" class="w-10 h-10 bg-red-500 rounded-lg hover:ring-2 ring-gray-400"></button>
+                        <button type="button" onclick="selectColor('bg-orange-500')" class="w-10 h-10 bg-orange-500 rounded-lg hover:ring-2 ring-gray-400"></button>
+                        <button type="button" onclick="selectColor('bg-yellow-500')" class="w-10 h-10 bg-yellow-500 rounded-lg hover:ring-2 ring-gray-400"></button>
+                        <button type="button" onclick="selectColor('bg-green-500')" class="w-10 h-10 bg-green-500 rounded-lg hover:ring-2 ring-gray-400"></button>
+                        <button type="button" onclick="selectColor('bg-blue-500')" class="w-10 h-10 bg-blue-500 rounded-lg hover:ring-2 ring-gray-400"></button>
+                        <button type="button" onclick="selectColor('bg-purple-500')" class="w-10 h-10 bg-purple-500 rounded-lg hover:ring-2 ring-gray-400"></button>
+                    </div>
+                    <input type="hidden" id="eventColor" value="bg-orange-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">메모</label>
+                    <textarea id="eventNotes" rows="3"
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"></textarea>
+                </div>
+
+                <div class="flex gap-2">
+                    <button type="submit" class="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition">
+                        <i class="fas fa-save"></i> 저장
+                    </button>
+                    <button type="button" onclick="deleteEvent()" id="deleteBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition hidden">
+                        <i class="fas fa-trash"></i> 삭제
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth();
+        let events = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+        let editingEventId = null;
+
+        const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+
+        function renderCalendar() {
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const today = new Date();
+            const isCurrentMonth = today.getFullYear() === currentYear && today.getMonth() === currentMonth;
+
+            document.getElementById('calendarTitle').textContent = `${currentYear}년 ${months[currentMonth]}`;
+            document.getElementById('currentMonth').textContent = months[currentMonth];
+
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            // Empty cells before first day
+            for (let i = 0; i < firstDay; i++) {
+                grid.innerHTML += '<div class="calendar-day"></div>';
+            }
+
+            // Calendar days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayEvents = events.filter(e => e.date === dateStr);
+                const isToday = isCurrentMonth && day === today.getDate();
+
+                const eventDots = dayEvents.slice(0, 3).map(e =>
+                    `<span class="event-dot ${e.color}"></span>`
+                ).join('');
+
+                grid.innerHTML += `
+                    <div class="calendar-day ${isToday ? 'today' : 'bg-gray-50'} rounded-lg p-2 cursor-pointer hover:bg-gray-100 text-center"
+                         onclick="showDayEvents('${dateStr}')">
+                        <div class="text-lg font-semibold">${day}</div>
+                        <div class="mt-1">${eventDots}</div>
+                        ${dayEvents.length > 3 ? `<div class="text-xs text-gray-500">+${dayEvents.length - 3}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            updateStats();
+            updateEventsList();
+        }
+
+        function updateStats() {
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+            document.getElementById('totalEvents').textContent = events.length;
+            document.getElementById('todayEvents').textContent = events.filter(e => e.date === todayStr).length;
+
+            const upcoming = events.filter(e => new Date(e.date) > today).length;
+            document.getElementById('upcomingEvents').textContent = upcoming;
+        }
+
+        function updateEventsList() {
+            const container = document.getElementById('eventsList');
+            const sortedEvents = [...events].sort((a, b) => new Date(a.date + ' ' + (a.time || '00:00')) - new Date(b.date + ' ' + (b.time || '00:00')));
+
+            if (sortedEvents.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">일정이 없습니다</p>';
+                return;
+            }
+
+            container.innerHTML = sortedEvents.map(event => {
+                const date = new Date(event.date);
+                const dateStr = `${date.getMonth() + 1}월 ${date.getDate()}일`;
+                return `
+                    <div class="bg-orange-50 rounded-lg p-3 cursor-pointer hover:bg-orange-100 transition"
+                         onclick="editEvent('${event.id}')">
+                        <div class="flex items-start gap-2">
+                            <div class="w-3 h-3 ${event.color} rounded-full mt-1"></div>
+                            <div class="flex-1">
+                                <div class="font-semibold text-gray-800">${event.title}</div>
+                                <div class="text-sm text-gray-600">
+                                    <i class="fas fa-calendar"></i> ${dateStr}
+                                    ${event.time ? `<i class="fas fa-clock ml-2"></i> ${event.time}` : ''}
+                                </div>
+                                ${event.notes ? `<div class="text-xs text-gray-500 mt-1">${event.notes}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function showDayEvents(dateStr) {
+            const dayEvents = events.filter(e => e.date === dateStr);
+            if (dayEvents.length === 0) {
+                openEventModal(dateStr);
+            } else {
+                editEvent(dayEvents[0].id);
+            }
+        }
+
+        function openEventModal(date = null) {
+            editingEventId = null;
+            document.getElementById('modalTitle').textContent = '일정 추가';
+            document.getElementById('eventId').value = '';
+            document.getElementById('eventTitle').value = '';
+            document.getElementById('eventDate').value = date || new Date().toISOString().split('T')[0];
+            document.getElementById('eventTime').value = '';
+            document.getElementById('eventColor').value = 'bg-orange-500';
+            document.getElementById('eventNotes').value = '';
+            document.getElementById('deleteBtn').classList.add('hidden');
+            document.getElementById('eventModal').classList.add('active');
+        }
+
+        function closeEventModal() {
+            document.getElementById('eventModal').classList.remove('active');
+        }
+
+        function selectColor(color) {
+            document.getElementById('eventColor').value = color;
+        }
+
+        function saveEvent(e) {
+            e.preventDefault();
+
+            const event = {
+                id: editingEventId || Date.now().toString(),
+                title: document.getElementById('eventTitle').value,
+                date: document.getElementById('eventDate').value,
+                time: document.getElementById('eventTime').value,
+                color: document.getElementById('eventColor').value,
+                notes: document.getElementById('eventNotes').value
+            };
+
+            if (editingEventId) {
+                const index = events.findIndex(e => e.id === editingEventId);
+                events[index] = event;
+            } else {
+                events.push(event);
+            }
+
+            localStorage.setItem('calendarEvents', JSON.stringify(events));
+            closeEventModal();
+            renderCalendar();
+        }
+
+        function editEvent(id) {
+            const event = events.find(e => e.id === id);
+            if (!event) return;
+
+            editingEventId = id;
+            document.getElementById('modalTitle').textContent = '일정 수정';
+            document.getElementById('eventId').value = event.id;
+            document.getElementById('eventTitle').value = event.title;
+            document.getElementById('eventDate').value = event.date;
+            document.getElementById('eventTime').value = event.time || '';
+            document.getElementById('eventColor').value = event.color;
+            document.getElementById('eventNotes').value = event.notes || '';
+            document.getElementById('deleteBtn').classList.remove('hidden');
+            document.getElementById('eventModal').classList.add('active');
+        }
+
+        function deleteEvent() {
+            if (!editingEventId) return;
+
+            if (confirm('이 일정을 삭제하시겠습니까?')) {
+                events = events.filter(e => e.id !== editingEventId);
+                localStorage.setItem('calendarEvents', JSON.stringify(events));
+                closeEventModal();
+                renderCalendar();
+            }
+        }
+
+        function previousMonth() {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar();
+        }
+
+        function nextMonth() {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar();
+        }
+
+        function today() {
+            currentYear = new Date().getFullYear();
+            currentMonth = new Date().getMonth();
+            renderCalendar();
+        }
+
+        // Close modal on outside click
+        document.getElementById('eventModal').addEventListener('click', (e) => {
+            if (e.target.id === 'eventModal') {
+                closeEventModal();
+            }
+        });
+
+        // Initialize
+        renderCalendar();
+    </script>
+</body>
+</html>

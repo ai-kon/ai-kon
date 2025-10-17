@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>터미널 - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: #000;
+            font-family: 'Courier New', monospace;
+        }
+        #terminal {
+            background: #1a1a1a;
+            color: #0f0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .prompt {
+            color: #0f0;
+        }
+        .error {
+            color: #f00;
+        }
+        .info {
+            color: #0ff;
+        }
+        .warning {
+            color: #ff0;
+        }
+        #input {
+            background: transparent;
+            border: none;
+            color: #0f0;
+            outline: none;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .cursor {
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-gray-900 rounded-t-lg shadow-lg p-4 border-b border-gray-700">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="../" class="text-green-500 hover:text-green-400 transition">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </a>
+                    <h1 class="text-xl font-bold text-green-500">
+                        <i class="fas fa-terminal"></i> AI-KON Terminal v1.0
+                    </h1>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="clearTerminal()" class="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition text-sm">
+                        <i class="fas fa-trash"></i> Clear
+                    </button>
+                    <button onclick="exportHistory()" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-4 gap-4 mt-4 text-center text-xs">
+                <div class="bg-gray-800 rounded p-2">
+                    <div class="text-lg font-bold text-green-500" id="commandCount">0</div>
+                    <div class="text-gray-400">Commands</div>
+                </div>
+                <div class="bg-gray-800 rounded p-2">
+                    <div class="text-lg font-bold text-green-500" id="sessionTime">00:00</div>
+                    <div class="text-gray-400">Session</div>
+                </div>
+                <div class="bg-gray-800 rounded p-2">
+                    <div class="text-lg font-bold text-green-500" id="currentDir">/home</div>
+                    <div class="text-gray-400">Directory</div>
+                </div>
+                <div class="bg-gray-800 rounded p-2">
+                    <div class="text-lg font-bold text-green-500" id="userName">guest</div>
+                    <div class="text-gray-400">User</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terminal -->
+        <div id="terminal" class="rounded-b-lg shadow-lg p-4 h-[600px] overflow-y-auto">
+            <div id="output"></div>
+            <div class="flex items-center">
+                <span class="prompt" id="promptText">guest@ai-kon:~$ </span>
+                <input type="text" id="input" class="flex-1 ml-2" autofocus autocomplete="off">
+                <span class="cursor">█</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let commandHistory = JSON.parse(localStorage.getItem('terminalHistory') || '[]');
+        let historyIndex = -1;
+        let currentDir = '/home';
+        let userName = 'guest';
+        let commandCount = 0;
+        let sessionStart = Date.now();
+        let fileSystem = {
+            '/home': ['documents', 'downloads', 'pictures'],
+            '/home/documents': ['readme.txt', 'notes.txt'],
+            '/home/downloads': [],
+            '/home/pictures': ['photo1.jpg', 'photo2.png']
+        };
+
+        const commands = {
+            help: () => {
+                return `
+<span class="info">Available Commands:</span>
+  help              - Show this help message
+  clear             - Clear the terminal
+  ls                - List directory contents
+  cd [dir]          - Change directory
+  pwd               - Print working directory
+  echo [text]       - Print text
+  date              - Show current date and time
+  whoami            - Display current user
+  uname             - System information
+  calc [expr]       - Calculate expression (e.g., calc 2+2)
+  joke              - Get a random joke
+  history           - Show command history
+  banner            - Show ASCII banner
+  time              - Show current time
+  weather           - Show weather (simulated)
+  fortune           - Get a fortune cookie
+  exit              - Close terminal (refresh page)
+`;
+            },
+
+            clear: () => {
+                document.getElementById('output').innerHTML = '';
+                return '';
+            },
+
+            ls: () => {
+                const contents = fileSystem[currentDir] || [];
+                if (contents.length === 0) {
+                    return '<span class="warning">Directory is empty</span>';
+                }
+                return contents.map(item => {
+                    const isDir = fileSystem[currentDir + '/' + item];
+                    const color = isDir ? 'text-blue-400' : 'text-gray-300';
+                    const icon = isDir ? '📁' : '📄';
+                    return `<span class="${color}">${icon} ${item}</span>`;
+                }).join('  ');
+            },
+
+            cd: (args) => {
+                if (!args[0]) {
+                    currentDir = '/home';
+                    return '';
+                }
+
+                const target = args[0];
+                if (target === '..') {
+                    const parts = currentDir.split('/').filter(p => p);
+                    parts.pop();
+                    currentDir = '/' + parts.join('/') || '/home';
+                    return '';
+                } else if (target === '/') {
+                    currentDir = '/home';
+                    return '';
+                } else {
+                    const newPath = currentDir + '/' + target;
+                    if (fileSystem[newPath]) {
+                        currentDir = newPath;
+                        return '';
+                    } else {
+                        return `<span class="error">cd: ${target}: No such directory</span>`;
+                    }
+                }
+            },
+
+            pwd: () => currentDir,
+
+            echo: (args) => args.join(' '),
+
+            date: () => new Date().toString(),
+
+            whoami: () => userName,
+
+            uname: () => 'AI-KON Terminal 1.0 (JavaScript Engine)',
+
+            calc: (args) => {
+                try {
+                    const expr = args.join('');
+                    const result = eval(expr);
+                    return `<span class="info">${result}</span>`;
+                } catch (e) {
+                    return `<span class="error">Invalid expression</span>`;
+                }
+            },
+
+            joke: () => {
+                const jokes = [
+                    "Why do programmers prefer dark mode? Because light attracts bugs!",
+                    "Why did the programmer quit his job? Because he didn't get arrays!",
+                    "How many programmers does it take to change a light bulb? None, that's a hardware problem!",
+                    "Why do Java developers wear glasses? Because they can't C#!",
+                    "A SQL query walks into a bar, walks up to two tables and asks... 'Can I join you?'"
+                ];
+                return `<span class="info">${jokes[Math.floor(Math.random() * jokes.length)]}</span>`;
+            },
+
+            history: () => {
+                return commandHistory.slice(-20).map((cmd, i) =>
+                    `<span class="text-gray-400">${i + 1}.</span> ${cmd}`
+                ).join('\n');
+            },
+
+            banner: () => {
+                return `<span class="info">
+   ___    ____      __  __ ____  _   __
+  /   |  /  _/     / / / // __ \\/ | / /
+ / /| |  / /______/ /_/ // / / /  |/ /
+/ ___ |_/ //_____/ __  // /_/ / /|  /
+/_/  |_/___/    /_/ /_/ \\____/_/ |_/
+
+Welcome to AI-KON Terminal
+Type 'help' for available commands
+</span>`;
+            },
+
+            time: () => new Date().toLocaleTimeString('ko-KR'),
+
+            weather: () => {
+                const conditions = ['Sunny', 'Cloudy', 'Rainy', 'Partly Cloudy'];
+                const temp = Math.floor(Math.random() * 20) + 10;
+                const condition = conditions[Math.floor(Math.random() * conditions.length)];
+                return `<span class="info">Current Weather: ${condition}, ${temp}°C</span>`;
+            },
+
+            fortune: () => {
+                const fortunes = [
+                    "A pleasant surprise is waiting for you.",
+                    "Your code will compile on the first try.",
+                    "Good things come to those who commit.",
+                    "The best time to debug is now.",
+                    "Your next PR will be approved without comments."
+                ];
+                return `<span class="info">🥠 ${fortunes[Math.floor(Math.random() * fortunes.length)]}</span>`;
+            },
+
+            exit: () => {
+                return '<span class="warning">Goodbye! (Refresh page to restart)</span>';
+            }
+        };
+
+        function executeCommand(input) {
+            const parts = input.trim().split(' ');
+            const cmd = parts[0].toLowerCase();
+            const args = parts.slice(1);
+
+            if (commands[cmd]) {
+                return commands[cmd](args);
+            } else if (cmd === '') {
+                return '';
+            } else {
+                return `<span class="error">Command not found: ${cmd}</span>`;
+            }
+        }
+
+        function addOutput(text, isCommand = false) {
+            const output = document.getElementById('output');
+            if (isCommand) {
+                output.innerHTML += `<div><span class="prompt">${document.getElementById('promptText').textContent}</span>${text}</div>`;
+            } else if (text) {
+                output.innerHTML += `<div>${text}</div>`;
+            }
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            const terminal = document.getElementById('terminal');
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function updateStats() {
+            document.getElementById('commandCount').textContent = commandCount;
+            document.getElementById('currentDir').textContent = currentDir.split('/').pop() || '/';
+            document.getElementById('userName').textContent = userName;
+
+            const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('sessionTime').textContent =
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function clearTerminal() {
+            document.getElementById('output').innerHTML = '';
+            addOutput(commands.banner());
+        }
+
+        function exportHistory() {
+            const blob = new Blob([commandHistory.join('\n')], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'terminal-history.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Input handler
+        document.getElementById('input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const input = e.target.value;
+                if (input.trim()) {
+                    commandHistory.push(input);
+                    localStorage.setItem('terminalHistory', JSON.stringify(commandHistory));
+                    commandCount++;
+
+                    addOutput(input, true);
+                    const output = executeCommand(input);
+                    addOutput(output);
+
+                    historyIndex = -1;
+                }
+                e.target.value = '';
+                updateStats();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (commandHistory.length > 0) {
+                    if (historyIndex === -1) {
+                        historyIndex = commandHistory.length - 1;
+                    } else if (historyIndex > 0) {
+                        historyIndex--;
+                    }
+                    e.target.value = commandHistory[historyIndex] || '';
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex !== -1) {
+                    historyIndex++;
+                    if (historyIndex >= commandHistory.length) {
+                        historyIndex = -1;
+                        e.target.value = '';
+                    } else {
+                        e.target.value = commandHistory[historyIndex];
+                    }
+                }
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                // Auto-complete (basic implementation)
+                const input = e.target.value;
+                const matches = Object.keys(commands).filter(cmd => cmd.startsWith(input));
+                if (matches.length === 1) {
+                    e.target.value = matches[0];
+                } else if (matches.length > 1) {
+                    addOutput(`<span class="info">${matches.join('  ')}</span>`);
+                }
+            }
+        });
+
+        // Update prompt
+        setInterval(() => {
+            document.getElementById('promptText').textContent = `${userName}@ai-kon:${currentDir.split('/').pop() || '/'}$ `;
+        }, 100);
+
+        // Update session time
+        setInterval(updateStats, 1000);
+
+        // Initialize
+        addOutput(commands.banner());
+        addOutput('<span class="info">Session started. Type "help" for available commands.</span>');
+        updateStats();
+    </script>
+</body>
+</html>
