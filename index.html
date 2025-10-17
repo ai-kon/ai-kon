@@ -1,263 +1,446 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI-KON | Building the World's First Fully Autonomous AI Company</title>
-    <meta name="description" content="Replacing human labor with autonomous AI systems while making the world better through interactive world models.">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI-KON OS | Browser-Powered AI Desktop</title>
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
+<!-- External Libraries via CDN for single-file functionality -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
 
-        .container {
-            max-width: 900px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 60px 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            animation: fadeIn 1s ease-in-out;
-        }
+<style>
+    :root {
+        --bg-peal: rgba(255, 255, 255, 0.1);
+        --dock-bg: rgba(20, 20, 20, 0.3);
+        --menu-bg: rgba(20, 20, 20, 0.3);
+        --window-bg: rgba(30, 30, 32, 0.85);
+        --window-header: #2d2d2d;
+        --text-color: #ffffff;
+        --accent: #667eea;
+        --system-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+    * { box-sizing: border-box; user-select: none; }
+    body, html {
+        margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden;
+        font-family: var(--system-font); color: var(--text-color);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background-size: 400% 400%;
+        animation: gradientBG 15s ease infinite;
+        cursor: default;
+    }
 
-        .logo {
-            font-size: 3.5em;
-            font-weight: 800;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 20px;
-            text-align: center;
-            letter-spacing: -2px;
-        }
+    @keyframes gradientBG {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
 
-        .tagline {
-            text-align: center;
-            font-size: 1.3em;
-            color: #666;
-            margin-bottom: 40px;
-            font-weight: 300;
-        }
+    /* --- Boot Screen --- */
+    #boot-screen {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: #000; z-index: 99999;
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        transition: opacity 1s ease-out;
+    }
+    .ai-logo { color: white; font-size: 80px; margin-bottom: 40px; font-weight: 800; }
+    .loading-bar {
+        width: 300px; height: 6px; background: #333; border-radius: 3px; overflow: hidden;
+    }
+    .loading-progress {
+        height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); width: 0%; border-radius: 3px;
+        transition: width 3s ease-in-out;
+    }
 
-        .section {
-            margin-bottom: 40px;
-        }
+    /* --- UI Layout --- */
+    #desktop { width: 100%; height: 100%; position: relative; }
 
-        h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.8em;
-            font-weight: 600;
-        }
+    /* Menu Bar */
+    #menubar {
+        position: absolute; top: 0; width: 100%; height: 30px;
+        background: var(--menu-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 0 20px; font-size: 13px; font-weight: 500; z-index: 5000;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .menu-left, .menu-right { display: flex; gap: 15px; align-items: center; }
+    .menu-item:hover { background: rgba(255,255,255,0.1); border-radius: 4px; padding: 2px 8px; margin: -2px -8px;}
+    .logo-icon { font-size: 16px; font-weight: 800; }
+    #active-app-name { font-weight: 700; }
 
-        p {
-            color: #555;
-            margin-bottom: 15px;
-            font-size: 1.1em;
-        }
+    /* Dock */
+    #dock-container {
+        position: absolute; bottom: 10px; width: 100%;
+        display: flex; justify-content: center; z-index: 6000;
+    }
+    #dock {
+        background: var(--dock-bg);
+        backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+        border: 1px solid rgba(255,255,255,0.1);
+        height: 70px; padding: 5px 10px; border-radius: 20px;
+        display: flex; align-items: flex-end; gap: 8px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        transition: all 0.2s ease;
+    }
+    .dock-item {
+        width: 55px; height: 55px; border-radius: 12px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1); position: relative;
+        cursor: pointer;
+    }
+    .dock-icon-svg { width: 100%; height: 100%; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 28px;}
 
-        .focus-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
+    .dock-item:hover { transform: scale(1.2) translateY(-10px); margin: 0 5px; }
+    .dock-dot {
+        width: 5px; height: 5px; background: rgba(255,255,255,0.4); border-radius: 50%;
+        position: absolute; bottom: -8px; display: none;
+    }
+    .dock-item.active .dock-dot { display: block; }
 
-        .focus-item {
-            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
-            padding: 25px;
-            border-radius: 12px;
-            border-left: 4px solid #667eea;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-20px); }
+    }
+    .bouncing { animation: bounce 0.6s ease infinite; }
 
-        .focus-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
-        }
+    /* --- Windows System --- */
+    .window {
+        position: absolute; background: var(--window-bg);
+        backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.15);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        display: flex; flex-direction: column; overflow: hidden;
+        min-width: 300px; min-height: 200px;
+        transition: transform 0.15s, opacity 0.15s, box-shadow 0.2s;
+        transform-origin: center;
+    }
 
-        .focus-item h3 {
-            color: #667eea;
-            margin-bottom: 10px;
-            font-size: 1.2em;
-        }
+    .window.opening { animation: winOpen 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+    @keyframes winOpen { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; }}
 
-        .focus-item p {
-            font-size: 0.95em;
-            color: #666;
-            margin: 0;
-        }
+    .window.inactive {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        border-color: rgba(255,255,255,0.05);
+    }
+    .window.inactive .traffic-lights span { background-color: #555 !important; color: #555 !important;}
 
-        .links {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 40px;
-            flex-wrap: wrap;
-        }
+    .window-header {
+        height: 30px; background: rgba(255,255,255,0.05);
+        display: flex; align-items: center; position: relative; cursor: grab;
+    }
+    .window-header:active { cursor: grabbing; }
 
-        .btn {
-            display: inline-block;
-            padding: 12px 30px;
-            border-radius: 30px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            font-size: 1em;
-        }
+    .traffic-lights {
+        display: flex; gap: 8px; margin-left: 12px; z-index: 2;
+    }
+    .t-btn {
+        width: 12px; height: 12px; border-radius: 50%; display: flex; justify-content: center; align-items: center;
+        font-size: 8px; color: transparent; transition: 0.1s; cursor: default;
+    }
+    .traffic-lights:hover .t-btn { color: rgba(0,0,0,0.6); }
+    .close-btn { background: #ff5f56; }
+    .min-btn { background: #ffbd2e; }
+    .max-btn { background: #27c93f; }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
+    .window-title {
+        position: absolute; width: 100%; text-align: center; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8); pointer-events: none;
+    }
+    .window-content {
+        flex: 1; overflow: auto; position: relative;
+        user-select: text;
+    }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
+    .ui-resizable-se { bottom: 0; right: 0; width: 15px; height: 15px; background: none; }
 
-        .btn-secondary {
-            background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
-        }
+    /* APP STYLES */
+    .app-launcher { padding: 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 30px; }
+    .app-card { display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s; }
+    .app-card:hover { transform: scale(1.1); }
+    .app-icon-large { width: 80px; height: 80px; border-radius: 18px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; font-size: 40px; }
+    .app-label { color: white; font-size: 13px; text-align: center; }
 
-        .btn-secondary:hover {
-            background: #667eea;
-            color: white;
-        }
+    /* Icon Styles */
+    .icon-chat { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .icon-vision { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+    .icon-code { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
+    .icon-world { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; }
+    .icon-about { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; }
 
-        footer {
-            text-align: center;
-            margin-top: 50px;
-            padding-top: 30px;
-            border-top: 1px solid #ddd;
-            color: #999;
-            font-size: 0.9em;
-        }
+    .welcome-app { padding: 40px; color: white; max-width: 600px; margin: 0 auto; }
+    .welcome-app h1 { font-size: 36px; margin-bottom: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;}
+    .welcome-app p { line-height: 1.8; margin-bottom: 15px; opacity: 0.9; }
+    .welcome-app a { color: #667eea; text-decoration: none; font-weight: 600; }
+    .welcome-app a:hover { text-decoration: underline; }
 
-        .status {
-            display: inline-block;
-            background: #10b981;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 600;
-            margin-left: 10px;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 40px 25px;
-            }
-
-            .logo {
-                font-size: 2.5em;
-            }
-
-            .tagline {
-                font-size: 1.1em;
-            }
-
-            h2 {
-                font-size: 1.5em;
-            }
-
-            .focus-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="logo">AI-KON</h1>
-        <p class="tagline">Building the World's First Fully Autonomous AI Company <span class="status">Phase 0</span></p>
 
-        <div class="section">
-            <h2>Mission</h2>
-            <p><strong>Replacing human labor with autonomous AI systems while making the world better through interactive world models.</strong></p>
-            <p>AI-KON is pioneering a revolutionary approach where AI handles everything from strategic planning to physical execution, while simultaneously creating interactive game-like environments where AI trains and humans play.</p>
-        </div>
+    <!-- Boot Screen -->
+    <div id="boot-screen">
+        <div class="ai-logo">AI-KON</div>
+        <div class="loading-bar"><div class="loading-progress"></div></div>
+        <p style="color: #888; margin-top: 20px; font-size: 14px;">Loading AI Desktop...</p>
+    </div>
 
-        <div class="section">
-            <h2>Two Pillars</h2>
-            <div class="focus-grid">
-                <div class="focus-item">
-                    <h3>🤖 Autonomous AI Workforce</h3>
-                    <p>Multi-agent system: Planning AI → Command AI → Execution AI → Physical AI</p>
-                </div>
-                <div class="focus-item">
-                    <h3>🌍 World Model Simulator</h3>
-                    <p>Interactive game environment for AI training and human gameplay</p>
-                </div>
-                <div class="focus-item">
-                    <h3>🔬 Research & Innovation</h3>
-                    <p>Advancing scalable world models and imagination-based learning</p>
-                </div>
-                <div class="focus-item">
-                    <h3>🛠️ Open Source</h3>
-                    <p>Publishing tools, frameworks, and research for the community</p>
-                </div>
+    <!-- Desktop Environment -->
+    <div id="desktop">
+
+        <!-- Menu Bar -->
+        <div id="menubar">
+            <div class="menu-left">
+                <div class="menu-item"><span class="logo-icon">AI</span></div>
+                <div class="menu-item" id="active-app-name">AI-KON</div>
+                <div class="menu-item">File</div>
+                <div class="menu-item">View</div>
+                <div class="menu-item">Demos</div>
+                <div class="menu-item">Help</div>
+            </div>
+            <div class="menu-right">
+                <div class="menu-item"><i class="fas fa-wifi"></i></div>
+                <div class="menu-item"><i class="fas fa-search"></i></div>
+                <div class="menu-item" id="clock">Loading...</div>
             </div>
         </div>
 
-        <div class="section">
-            <h2>Current Phase: Foundation (Month 1-2)</h2>
-            <p><strong>Core Infrastructure:</strong></p>
-            <ul style="list-style: none; padding-left: 0;">
-                <li>✅ GitHub organization setup</li>
-                <li>✅ Vision and architecture documentation</li>
-                <li>⏳ Infrastructure provisioning (K8s, GPU cluster)</li>
-                <li>⏳ First autonomous agent prototype</li>
-            </ul>
-            <p style="margin-top: 20px;"><strong>Upcoming Projects:</strong></p>
-            <ul style="list-style: none; padding-left: 0;">
-                <li>🤖 <strong>ai-workforce</strong> - Multi-agent autonomous AI system</li>
-                <li>🌍 <strong>world-model</strong> - Simulation environment and RL training</li>
-                <li>🎮 <strong>game-platform</strong> - Interactive multiplayer game frontend</li>
-            </ul>
-        </div>
+        <!-- Windows Container -->
+        <div id="windows-container"></div>
 
-        <div class="links">
-            <a href="./demos/os/" class="btn btn-primary" style="font-size: 1.1em;">🖥️ Launch AI-KON OS</a>
-            <a href="./demos/" class="btn btn-secondary">All Demos</a>
-            <a href="https://github.com/ai-kon" class="btn btn-secondary">GitHub</a>
-            <a href="https://github.com/ai-kon/ai-kon/blob/main/VISION.md" class="btn btn-secondary">Vision</a>
+        <!-- Dock -->
+        <div id="dock-container">
+            <div id="dock">
+                <!-- Generated by JS -->
+            </div>
         </div>
-
-        <footer>
-            <p><em>"The best way to predict the future is to build it."</em></p>
-            <p>&copy; 2025 AI-KON. Where autonomous AI meets interactive worlds.</p>
-        </footer>
     </div>
+
+<script>
+    const apps = [
+        { id: 'launcher', name: 'AI Demos', iconClass: 'icon-about', icon: 'fas fa-th' },
+        { id: 'chat', name: 'AI Chat', iconClass: 'icon-chat', icon: 'fas fa-comments', url: './demos/chat/' },
+        { id: 'vision', name: 'Vision', iconClass: 'icon-vision', icon: 'fas fa-eye', url: './demos/vision/' },
+        { id: 'code', name: 'Code', iconClass: 'icon-code', icon: 'fas fa-code', url: './demos/code/' },
+        { id: 'world', name: 'World', iconClass: 'icon-world', icon: 'fas fa-globe', url: './demos/world/' },
+        { id: 'about', name: 'About', iconClass: 'icon-about', icon: 'fas fa-info-circle' }
+    ];
+
+    class WindowManager {
+        constructor() {
+            this.windows = {};
+            this.zIndexCounter = 100;
+            this.activeApp = 'AI-KON';
+            this.initDock();
+        }
+
+        initDock() {
+            const dock = $('#dock');
+            apps.forEach(app => {
+                let el = $(`
+                    <div class="dock-item" id="dock-${app.id}" title="${app.name}">
+                        <div class="dock-icon-svg ${app.iconClass}"><i class="${app.icon}"></i></div>
+                        <div class="dock-dot"></div>
+                    </div>
+                `);
+                el.on('click', () => this.openApp(app.id));
+                dock.append(el);
+            });
+        }
+
+        updateMenubar(appName) {
+            this.activeApp = appName;
+            $('#active-app-name').text(appName);
+        }
+
+        setActiveWindow(id) {
+            $('.window').addClass('inactive');
+            $(`#win-${id}`).removeClass('inactive').css('z-index', ++this.zIndexCounter);
+            this.updateMenubar(this.windows[id].name);
+        }
+
+        openApp(appId) {
+            const appConfig = apps.find(a => a.id === appId);
+
+            const dockItem = $(`#dock-${appId}`);
+            if(!dockItem.hasClass('active') && !dockItem.hasClass('bouncing')) {
+                dockItem.addClass('bouncing');
+                setTimeout(() => dockItem.removeClass('bouncing').addClass('active'), 600);
+            }
+
+            if (this.windows[appId]) {
+                if($(`#win-${appId}`).is(':hidden')) {
+                    this.restoreWindow(appId);
+                } else {
+                    this.setActiveWindow(appId);
+                }
+                return;
+            }
+
+            this.createWindow(appId, appConfig);
+        }
+
+        createWindow(id, config) {
+            this.windows[id] = config;
+
+            let w = 700, h = 500;
+            if(id === 'about') { w = 600; h = 400; }
+            if(id === 'launcher') { w = 800; h = 600; }
+
+            const top = 50 + (Object.keys(this.windows).length * 20);
+            const left = 50 + (Object.keys(this.windows).length * 20);
+
+            const winHTML = `
+                <div class="window opening" id="win-${id}" style="width:${w}px; height:${h}px; top:${top}px; left:${left}px; z-index:${++this.zIndexCounter}">
+                    <div class="window-header">
+                        <div class="traffic-lights">
+                            <div class="t-btn close-btn"><i class="fas fa-times"></i></div>
+                            <div class="t-btn min-btn"><i class="fas fa-minus"></i></div>
+                            <div class="t-btn max-btn"><i class="fas fa-plus"></i></div>
+                        </div>
+                        <div class="window-title">${config.name}</div>
+                    </div>
+                    <div class="window-content" id="content-${id}"></div>
+                </div>
+            `;
+
+            $('#windows-container').append(winHTML);
+            const $win = $(`#win-${id}`);
+
+            $win.draggable({ handle: '.window-header', containment: '#desktop', start: () => this.setActiveWindow(id) })
+                .resizable({ minHeight: 200, minWidth: 250 })
+                .on('mousedown', () => this.setActiveWindow(id));
+
+            $win.find('.close-btn').on('click', (e) => { e.stopPropagation(); this.closeWindow(id); });
+            $win.find('.min-btn').on('click', (e) => { e.stopPropagation(); this.minimizeWindow(id); });
+            $win.find('.max-btn').on('click', (e) => { e.stopPropagation(); this.maximizeWindow(id); });
+
+            setTimeout(() => $win.removeClass('opening'), 200);
+
+            this.setActiveWindow(id);
+            this.loadAppContent(id);
+        }
+
+        closeWindow(id) {
+            $(`#win-${id}`).fadeOut(150, function() { $(this).remove(); });
+            delete this.windows[id];
+            $(`#dock-${id}`).removeClass('active');
+            this.updateMenubar('AI-KON');
+        }
+
+        minimizeWindow(id) {
+            $(`#win-${id}`).fadeOut(200);
+            this.updateMenubar('AI-KON');
+        }
+
+        restoreWindow(id) {
+            $(`#win-${id}`).fadeIn(200);
+            this.setActiveWindow(id);
+        }
+
+        maximizeWindow(id) {
+            const $win = $(`#win-${id}`);
+            if ($win.hasClass('maximized')) {
+                $win.css({ top: $win.data('top'), left: $win.data('left'), width: $win.data('width'), height: $win.data('height') }).removeClass('maximized');
+            } else {
+                $win.data({ top: $win.css('top'), left: $win.css('left'), width: $win.css('width'), height: $win.css('height') });
+                $win.css({ top: '30px', left: '0', width: '100%', height: 'calc(100% - 100px)' }).addClass('maximized');
+            }
+        }
+
+        loadAppContent(id) {
+            const container = $(`#content-${id}`);
+            const config = apps.find(a => a.id === id);
+
+            if (id === 'launcher') {
+                renderLauncher(container);
+            } else if (id === 'about') {
+                renderAbout(container);
+            } else if (config.url) {
+                container.html(`<iframe src="${config.url}" style="width:100%; height:100%; border:none; background:white;"></iframe>`);
+            }
+        }
+    }
+
+    const wm = new WindowManager();
+
+    function renderLauncher(container) {
+        container.html(`
+            <div class="app-launcher">
+                <div class="app-card" onclick="wm.openApp('chat')">
+                    <div class="app-icon-large icon-chat"><i class="fas fa-comments"></i></div>
+                    <div class="app-label">AI Chat</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('vision')">
+                    <div class="app-icon-large icon-vision"><i class="fas fa-eye"></i></div>
+                    <div class="app-label">Image Analysis</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('code')">
+                    <div class="app-icon-large icon-code"><i class="fas fa-code"></i></div>
+                    <div class="app-label">Code Assistant</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('world')">
+                    <div class="app-icon-large icon-world"><i class="fas fa-globe"></i></div>
+                    <div class="app-label">World Model</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('about')">
+                    <div class="app-icon-large icon-about"><i class="fas fa-info-circle"></i></div>
+                    <div class="app-label">About AI-KON</div>
+                </div>
+            </div>
+        `);
+    }
+
+    function renderAbout(container) {
+        container.html(`
+            <div class="welcome-app">
+                <h1>AI-KON OS</h1>
+                <p>Welcome to <strong>AI-KON</strong> - Building the world's first fully autonomous AI company.</p>
+
+                <h3 style="margin-top: 30px; margin-bottom: 15px; color: #667eea;">About This Desktop</h3>
+                <p>This is a browser-based operating system interface showcasing AI-powered demos. All applications run entirely in your browser using WebGPU acceleration.</p>
+
+                <h3 style="margin-top: 30px; margin-bottom: 15px; color: #764ba2;">Available Demos</h3>
+                <ul style="line-height: 2;">
+                    <li><strong>AI Chat</strong> - Conversational AI with Qwen2.5</li>
+                    <li><strong>Image Analysis</strong> - Zero-shot classification with CLIP</li>
+                    <li><strong>Code Assistant</strong> - AI-powered code generation</li>
+                    <li><strong>World Model</strong> - Reinforcement learning demo</li>
+                </ul>
+
+                <h3 style="margin-top: 30px; margin-bottom: 15px; color: #667eea;">Links</h3>
+                <p>
+                    <a href="https://github.com/ai-kon" target="_blank">GitHub</a> •
+                    <a href="https://github.com/ai-kon/ai-kon/blob/main/VISION.md" target="_blank">Vision</a> •
+                    <a href="https://github.com/ai-kon/ai-kon/blob/main/ROADMAP.md" target="_blank">Roadmap</a>
+                </p>
+
+                <p style="margin-top: 40px; opacity: 0.6; font-size: 12px;">
+                    © 2025 AI-KON. Where autonomous AI meets interactive worlds.
+                </p>
+            </div>
+        `);
+    }
+
+    function updateClock() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        $('#clock').text(timeStr);
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    $(window).on('load', () => {
+        $('.loading-progress').css('width', '100%');
+        setTimeout(() => {
+            $('#boot-screen').fadeOut(500, function(){ $(this).remove(); });
+            setTimeout(() => wm.openApp('launcher'), 600);
+        }, 2000);
+    });
+
+</script>
 </body>
 </html>
