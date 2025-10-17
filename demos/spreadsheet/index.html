@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Spreadsheet Analyzer - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e3a8a 0%, #10b981 100%);
+        }
+        .spreadsheet-container {
+            overflow: auto;
+            max-height: 500px;
+        }
+        .cell {
+            min-width: 100px;
+            height: 32px;
+            border: 1px solid #e5e7eb;
+            padding: 4px 8px;
+            background: white;
+            cursor: cell;
+        }
+        .cell:focus {
+            outline: 2px solid #3b82f6;
+            background: #eff6ff;
+        }
+        .cell.selected {
+            background: #dbeafe;
+        }
+        .row-header, .col-header {
+            background: #f3f4f6;
+            font-weight: 600;
+            text-align: center;
+            padding: 4px;
+            border: 1px solid #d1d5db;
+            user-select: none;
+        }
+        .formula-bar {
+            font-family: 'Courier New', monospace;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-900 to-green-600 text-white p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold flex items-center gap-3">
+                            <i class="fas fa-table"></i>
+                            AI Spreadsheet Analyzer
+                        </h1>
+                        <p class="text-blue-200 mt-1">Excel-like spreadsheet with AI-powered data analysis</p>
+                    </div>
+                    <button onclick="window.location.href='../'" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                        <i class="fas fa-home mr-2"></i>Back to Demos
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <!-- Spreadsheet Column -->
+                    <div class="lg:col-span-3">
+                        <!-- Toolbar -->
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 flex flex-wrap gap-2">
+                            <button onclick="addRow()" class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors">
+                                <i class="fas fa-plus mr-1"></i>Add Row
+                            </button>
+                            <button onclick="addColumn()" class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors">
+                                <i class="fas fa-plus mr-1"></i>Add Column
+                            </button>
+                            <button onclick="deleteRow()" class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors">
+                                <i class="fas fa-trash mr-1"></i>Delete Row
+                            </button>
+                            <div class="flex-1"></div>
+                            <button onclick="importCSV()" class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors">
+                                <i class="fas fa-file-import mr-1"></i>Import CSV
+                            </button>
+                            <button onclick="exportCSV()" class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors">
+                                <i class="fas fa-file-export mr-1"></i>Export CSV
+                            </button>
+                            <button onclick="clearAll()" class="px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors">
+                                <i class="fas fa-eraser mr-1"></i>Clear All
+                            </button>
+                        </div>
+
+                        <!-- Formula Bar -->
+                        <div class="mb-4 flex items-center gap-2 bg-white border-2 border-gray-300 rounded-lg p-2">
+                            <span class="font-bold text-gray-700" id="cellLabel">A1</span>
+                            <input type="text" id="formulaBar" placeholder="Enter value or formula (=SUM(A1:A5))"
+                                   class="flex-1 px-3 py-1 formula-bar border border-gray-300 rounded focus:outline-none focus:border-blue-500">
+                            <button onclick="applyFormula()" class="px-4 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </div>
+
+                        <!-- Spreadsheet -->
+                        <div class="spreadsheet-container border-2 border-gray-300 rounded-lg">
+                            <table id="spreadsheet" class="border-collapse">
+                                <thead>
+                                    <tr id="headerRow">
+                                        <th class="row-header"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableBody">
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Quick Stats -->
+                        <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div class="bg-blue-50 p-3 rounded-lg">
+                                <div class="text-xs text-blue-600 font-medium">Selected Sum</div>
+                                <div class="text-xl font-bold text-blue-900" id="statSum">0</div>
+                            </div>
+                            <div class="bg-green-50 p-3 rounded-lg">
+                                <div class="text-xs text-green-600 font-medium">Average</div>
+                                <div class="text-xl font-bold text-green-900" id="statAvg">0</div>
+                            </div>
+                            <div class="bg-purple-50 p-3 rounded-lg">
+                                <div class="text-xs text-purple-600 font-medium">Count</div>
+                                <div class="text-xl font-bold text-purple-900" id="statCount">0</div>
+                            </div>
+                            <div class="bg-orange-50 p-3 rounded-lg">
+                                <div class="text-xs text-orange-600 font-medium">Max</div>
+                                <div class="text-xl font-bold text-orange-900" id="statMax">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Panel -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-gradient-to-br from-blue-50 to-green-50 rounded-lg p-4">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                <i class="fas fa-brain text-blue-600"></i>
+                                AI Analysis
+                            </h2>
+
+                            <!-- Model Loading -->
+                            <div id="loadingStatus" class="mb-4 p-3 bg-blue-100 rounded-lg">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i class="fas fa-circle-notch fa-spin text-blue-600"></i>
+                                    <span class="font-medium text-blue-800">Loading AI...</span>
+                                </div>
+                                <div id="loadingProgress" class="text-sm text-blue-600"></div>
+                            </div>
+
+                            <div id="aiFeatures" class="hidden space-y-3">
+                                <button onclick="analyzeData()" class="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all transform hover:scale-105">
+                                    <i class="fas fa-chart-line mr-2"></i>Analyze Data
+                                </button>
+
+                                <button onclick="generateChart()" class="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all transform hover:scale-105">
+                                    <i class="fas fa-chart-bar mr-2"></i>Generate Chart
+                                </button>
+
+                                <button onclick="findPatterns()" class="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg transition-all transform hover:scale-105">
+                                    <i class="fas fa-search mr-2"></i>Find Patterns
+                                </button>
+
+                                <button onclick="predictNext()" class="w-full px-4 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-lg transition-all transform hover:scale-105">
+                                    <i class="fas fa-forward mr-2"></i>Predict Next
+                                </button>
+
+                                <button onclick="summarizeData()" class="w-full px-4 py-3 bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white rounded-lg transition-all transform hover:scale-105">
+                                    <i class="fas fa-file-alt mr-2"></i>Summarize
+                                </button>
+                            </div>
+
+                            <!-- AI Results -->
+                            <div id="aiResults" class="mt-4 hidden">
+                                <h3 class="font-bold text-gray-700 mb-2">
+                                    <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>AI Insights
+                                </h3>
+                                <div id="resultsContent" class="bg-white rounded-lg p-3 text-sm max-h-96 overflow-y-auto">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart Section -->
+                <div id="chartSection" class="mt-6 hidden">
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-gray-800">
+                                <i class="fas fa-chart-pie mr-2"></i>Data Visualization
+                            </h3>
+                            <div class="flex gap-2">
+                                <select id="chartType" class="px-3 py-1 border border-gray-300 rounded">
+                                    <option value="bar">Bar Chart</option>
+                                    <option value="line">Line Chart</option>
+                                    <option value="pie">Pie Chart</option>
+                                    <option value="doughnut">Doughnut Chart</option>
+                                </select>
+                                <button onclick="closeChart()" class="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="dataChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSV Import Modal -->
+    <input type="file" id="csvInput" accept=".csv" style="display: none;" onchange="handleCSVImport(event)">
+
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5';
+
+        // Check WebGPU support
+        if (!navigator.gpu) {
+            window.location.href = '../fallback.html';
+            throw new Error('WebGPU not supported');
+        }
+
+        env.allowLocalModels = false;
+
+        let generator = null;
+        let currentChart = null;
+
+        const ROWS = 20;
+        const COLS = 10;
+        let data = [];
+        let selectedCell = { row: 0, col: 0 };
+
+        // Initialize spreadsheet
+        function initSpreadsheet() {
+            const headerRow = document.getElementById('headerRow');
+            const tableBody = document.getElementById('tableBody');
+
+            // Create headers
+            for (let i = 0; i < COLS; i++) {
+                const th = document.createElement('th');
+                th.className = 'col-header';
+                th.textContent = String.fromCharCode(65 + i);
+                headerRow.appendChild(th);
+            }
+
+            // Create rows
+            for (let i = 0; i < ROWS; i++) {
+                const row = [];
+                const tr = document.createElement('tr');
+
+                // Row header
+                const th = document.createElement('th');
+                th.className = 'row-header';
+                th.textContent = i + 1;
+                tr.appendChild(th);
+
+                // Cells
+                for (let j = 0; j < COLS; j++) {
+                    const td = document.createElement('td');
+                    td.className = 'cell';
+                    td.contentEditable = true;
+                    td.dataset.row = i;
+                    td.dataset.col = j;
+                    td.addEventListener('focus', () => selectCell(i, j));
+                    td.addEventListener('blur', () => updateCell(i, j, td.innerText));
+                    td.addEventListener('keydown', handleCellKeydown);
+                    tr.appendChild(td);
+                    row.push({ value: '', formula: null });
+                }
+
+                tableBody.appendChild(tr);
+                data.push(row);
+            }
+        }
+
+        function selectCell(row, col) {
+            selectedCell = { row, col };
+            document.getElementById('cellLabel').textContent =
+                String.fromCharCode(65 + col) + (row + 1);
+
+            const cell = data[row][col];
+            document.getElementById('formulaBar').value = cell.formula || cell.value;
+
+            // Update stats for selected range
+            updateStats();
+        }
+
+        function updateCell(row, col, value) {
+            data[row][col].value = value;
+            if (value.startsWith('=')) {
+                data[row][col].formula = value;
+                evaluateFormula(row, col);
+            }
+        }
+
+        function handleCellKeydown(e) {
+            const row = parseInt(e.target.dataset.row);
+            const col = parseInt(e.target.dataset.col);
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (row < ROWS - 1) {
+                    getCellElement(row + 1, col).focus();
+                }
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                if (col < COLS - 1) {
+                    getCellElement(row, col + 1).focus();
+                }
+            }
+        }
+
+        function getCellElement(row, col) {
+            return document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        }
+
+        window.applyFormula = function() {
+            const formula = document.getElementById('formulaBar').value;
+            const { row, col } = selectedCell;
+            const cell = getCellElement(row, col);
+
+            data[row][col].value = formula;
+            if (formula.startsWith('=')) {
+                data[row][col].formula = formula;
+                evaluateFormula(row, col);
+            } else {
+                cell.innerText = formula;
+            }
+        };
+
+        function evaluateFormula(row, col) {
+            const formula = data[row][col].formula;
+            const cell = getCellElement(row, col);
+
+            try {
+                // Parse formula
+                let result = formula.substring(1).toUpperCase();
+
+                // SUM function
+                if (result.includes('SUM')) {
+                    const range = result.match(/SUM\(([A-Z0-9:]+)\)/);
+                    if (range) {
+                        const sum = getRangeValues(range[1]).reduce((a, b) => a + b, 0);
+                        cell.innerText = sum;
+                        data[row][col].value = sum.toString();
+                        return;
+                    }
+                }
+
+                // AVERAGE function
+                if (result.includes('AVERAGE')) {
+                    const range = result.match(/AVERAGE\(([A-Z0-9:]+)\)/);
+                    if (range) {
+                        const values = getRangeValues(range[1]);
+                        const avg = values.reduce((a, b) => a + b, 0) / values.length;
+                        cell.innerText = avg.toFixed(2);
+                        data[row][col].value = avg.toFixed(2);
+                        return;
+                    }
+                }
+
+                // MAX function
+                if (result.includes('MAX')) {
+                    const range = result.match(/MAX\(([A-Z0-9:]+)\)/);
+                    if (range) {
+                        const max = Math.max(...getRangeValues(range[1]));
+                        cell.innerText = max;
+                        data[row][col].value = max.toString();
+                        return;
+                    }
+                }
+
+                // MIN function
+                if (result.includes('MIN')) {
+                    const range = result.match(/MIN\(([A-Z0-9:]+)\)/);
+                    if (range) {
+                        const min = Math.min(...getRangeValues(range[1]));
+                        cell.innerText = min;
+                        data[row][col].value = min.toString();
+                        return;
+                    }
+                }
+
+                // Simple arithmetic
+                const evalResult = eval(result.replace(/([A-Z])(\d+)/g, (match, col, row) => {
+                    const c = col.charCodeAt(0) - 65;
+                    const r = parseInt(row) - 1;
+                    return parseFloat(data[r][c].value) || 0;
+                }));
+
+                cell.innerText = evalResult;
+                data[row][col].value = evalResult.toString();
+            } catch (error) {
+                cell.innerText = '#ERROR';
+            }
+        }
+
+        function getRangeValues(range) {
+            const values = [];
+            const [start, end] = range.split(':');
+
+            const startCol = start.charCodeAt(0) - 65;
+            const startRow = parseInt(start.substring(1)) - 1;
+            const endCol = end ? end.charCodeAt(0) - 65 : startCol;
+            const endRow = end ? parseInt(end.substring(1)) - 1 : startRow;
+
+            for (let r = startRow; r <= endRow; r++) {
+                for (let c = startCol; c <= endCol; c++) {
+                    const val = parseFloat(data[r][c].value);
+                    if (!isNaN(val)) values.push(val);
+                }
+            }
+
+            return values;
+        }
+
+        function updateStats() {
+            // Get all numeric values from selection (for now, just current cell area)
+            const values = [];
+            data.forEach(row => {
+                row.forEach(cell => {
+                    const val = parseFloat(cell.value);
+                    if (!isNaN(val)) values.push(val);
+                });
+            });
+
+            if (values.length > 0) {
+                document.getElementById('statSum').textContent = values.reduce((a, b) => a + b, 0).toFixed(2);
+                document.getElementById('statAvg').textContent = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2);
+                document.getElementById('statCount').textContent = values.length;
+                document.getElementById('statMax').textContent = Math.max(...values).toFixed(2);
+            }
+        }
+
+        window.addRow = function() {
+            const row = [];
+            const tr = document.createElement('tr');
+            const newRowIndex = data.length;
+
+            const th = document.createElement('th');
+            th.className = 'row-header';
+            th.textContent = newRowIndex + 1;
+            tr.appendChild(th);
+
+            for (let j = 0; j < COLS; j++) {
+                const td = document.createElement('td');
+                td.className = 'cell';
+                td.contentEditable = true;
+                td.dataset.row = newRowIndex;
+                td.dataset.col = j;
+                td.addEventListener('focus', () => selectCell(newRowIndex, j));
+                td.addEventListener('blur', () => updateCell(newRowIndex, j, td.innerText));
+                td.addEventListener('keydown', handleCellKeydown);
+                tr.appendChild(td);
+                row.push({ value: '', formula: null });
+            }
+
+            document.getElementById('tableBody').appendChild(tr);
+            data.push(row);
+        };
+
+        window.addColumn = function() {
+            const newColIndex = data[0].length;
+            const header = String.fromCharCode(65 + newColIndex);
+
+            const th = document.createElement('th');
+            th.className = 'col-header';
+            th.textContent = header;
+            document.getElementById('headerRow').appendChild(th);
+
+            data.forEach((row, i) => {
+                row.push({ value: '', formula: null });
+                const tr = document.getElementById('tableBody').children[i];
+                const td = document.createElement('td');
+                td.className = 'cell';
+                td.contentEditable = true;
+                td.dataset.row = i;
+                td.dataset.col = newColIndex;
+                td.addEventListener('focus', () => selectCell(i, newColIndex));
+                td.addEventListener('blur', () => updateCell(i, newColIndex, td.innerText));
+                td.addEventListener('keydown', handleCellKeydown);
+                tr.appendChild(td);
+            });
+        };
+
+        window.deleteRow = function() {
+            if (data.length > 1) {
+                data.pop();
+                document.getElementById('tableBody').lastChild.remove();
+            }
+        };
+
+        window.clearAll = function() {
+            if (confirm('Clear all data?')) {
+                data.forEach(row => {
+                    row.forEach(cell => {
+                        cell.value = '';
+                        cell.formula = null;
+                    });
+                });
+                document.querySelectorAll('.cell').forEach(cell => cell.innerText = '');
+                updateStats();
+            }
+        };
+
+        // CSV Import/Export
+        window.importCSV = function() {
+            document.getElementById('csvInput').click();
+        };
+
+        window.handleCSVImport = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const rows = text.split('\n').map(row => row.split(','));
+
+                rows.forEach((row, i) => {
+                    if (i < data.length) {
+                        row.forEach((value, j) => {
+                            if (j < data[i].length) {
+                                data[i][j].value = value.trim();
+                                const cell = getCellElement(i, j);
+                                if (cell) cell.innerText = value.trim();
+                            }
+                        });
+                    }
+                });
+
+                updateStats();
+            };
+            reader.readAsText(file);
+        };
+
+        window.exportCSV = function() {
+            const csv = data.map(row =>
+                row.map(cell => cell.value).join(',')
+            ).join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'spreadsheet.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        // AI Functions
+        async function loadModels() {
+            try {
+                const loadingProgress = document.getElementById('loadingProgress');
+
+                loadingProgress.textContent = 'Loading AI model...';
+                generator = await pipeline('text-generation', 'onnx-community/Qwen2.5-0.5B-Instruct', {
+                    dtype: 'q8',
+                    device: 'webgpu',
+                    progress_callback: (progress) => {
+                        if (progress.status === 'progress') {
+                            loadingProgress.textContent = `Downloading: ${progress.file} (${progress.progress.toFixed(0)}%)`;
+                        }
+                    }
+                });
+
+                document.getElementById('loadingStatus').classList.add('hidden');
+                document.getElementById('aiFeatures').classList.remove('hidden');
+            } catch (error) {
+                document.getElementById('loadingProgress').innerHTML =
+                    `<span class="text-red-600"><i class="fas fa-exclamation-triangle mr-2"></i>Error: ${error.message}</span>`;
+            }
+        }
+
+        window.analyzeData = async function() {
+            if (!generator) return;
+
+            const values = [];
+            data.forEach(row => {
+                row.forEach(cell => {
+                    if (cell.value) values.push(cell.value);
+                });
+            });
+
+            if (values.length === 0) {
+                showAIResult('No data to analyze. Please enter some data first.');
+                return;
+            }
+
+            showAIResult('<i class="fas fa-circle-notch fa-spin text-blue-600 mr-2"></i>Analyzing data...');
+
+            try {
+                const dataStr = values.slice(0, 50).join(', ');
+                const messages = [
+                    { role: 'system', content: 'You are a data analyst. Analyze the data and provide insights.' },
+                    { role: 'user', content: `Analyze this data: ${dataStr}` }
+                ];
+
+                const result = await generator(messages, {
+                    max_new_tokens: 200,
+                    temperature: 0.7
+                });
+
+                const analysis = result[0].generated_text[result[0].generated_text.length - 1].content;
+                showAIResult(`<div class="font-bold mb-2 text-blue-600"><i class="fas fa-chart-line mr-2"></i>Data Analysis</div><div class="text-gray-700">${analysis}</div>`);
+            } catch (error) {
+                showAIResult(`<span class="text-red-600">Error: ${error.message}</span>`);
+            }
+        };
+
+        window.generateChart = function() {
+            const values = [];
+            const labels = [];
+
+            data.forEach((row, i) => {
+                const val = parseFloat(row[0].value);
+                if (!isNaN(val)) {
+                    labels.push(row[1].value || `Row ${i + 1}`);
+                    values.push(val);
+                }
+            });
+
+            if (values.length === 0) {
+                showAIResult('No numeric data found in first column for chart generation.');
+                return;
+            }
+
+            document.getElementById('chartSection').classList.remove('hidden');
+
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            const ctx = document.getElementById('dataChart').getContext('2d');
+            const chartType = document.getElementById('chartType').value;
+
+            currentChart = new Chart(ctx, {
+                type: chartType,
+                data: {
+                    labels: labels.slice(0, 10),
+                    datasets: [{
+                        label: 'Data',
+                        data: values.slice(0, 10),
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.5)',
+                            'rgba(16, 185, 129, 0.5)',
+                            'rgba(245, 158, 11, 0.5)',
+                            'rgba(239, 68, 68, 0.5)',
+                            'rgba(139, 92, 246, 0.5)',
+                            'rgba(236, 72, 153, 0.5)',
+                            'rgba(6, 182, 212, 0.5)',
+                            'rgba(132, 204, 22, 0.5)',
+                            'rgba(251, 146, 60, 0.5)',
+                            'rgba(168, 85, 247, 0.5)'
+                        ],
+                        borderColor: [
+                            'rgb(59, 130, 246)',
+                            'rgb(16, 185, 129)',
+                            'rgb(245, 158, 11)',
+                            'rgb(239, 68, 68)',
+                            'rgb(139, 92, 246)',
+                            'rgb(236, 72, 153)',
+                            'rgb(6, 182, 212)',
+                            'rgb(132, 204, 22)',
+                            'rgb(251, 146, 60)',
+                            'rgb(168, 85, 247)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: chartType === 'pie' || chartType === 'doughnut'
+                        }
+                    }
+                }
+            });
+        };
+
+        window.closeChart = function() {
+            document.getElementById('chartSection').classList.add('hidden');
+            if (currentChart) {
+                currentChart.destroy();
+                currentChart = null;
+            }
+        };
+
+        document.getElementById('chartType').addEventListener('change', generateChart);
+
+        window.findPatterns = async function() {
+            if (!generator) return;
+
+            const numericValues = [];
+            data.forEach(row => {
+                row.forEach(cell => {
+                    const val = parseFloat(cell.value);
+                    if (!isNaN(val)) numericValues.push(val);
+                });
+            });
+
+            if (numericValues.length < 3) {
+                showAIResult('Not enough numeric data to find patterns. Need at least 3 values.');
+                return;
+            }
+
+            showAIResult('<i class="fas fa-circle-notch fa-spin text-purple-600 mr-2"></i>Finding patterns...');
+
+            try {
+                const dataStr = numericValues.slice(0, 20).join(', ');
+                const messages = [
+                    { role: 'system', content: 'You are a data analyst. Find patterns and trends in numerical data.' },
+                    { role: 'user', content: `Find patterns in this data: ${dataStr}` }
+                ];
+
+                const result = await generator(messages, {
+                    max_new_tokens: 150,
+                    temperature: 0.5
+                });
+
+                const patterns = result[0].generated_text[result[0].generated_text.length - 1].content;
+                showAIResult(`<div class="font-bold mb-2 text-purple-600"><i class="fas fa-search mr-2"></i>Patterns Found</div><div class="text-gray-700">${patterns}</div>`);
+            } catch (error) {
+                showAIResult(`<span class="text-red-600">Error: ${error.message}</span>`);
+            }
+        };
+
+        window.predictNext = async function() {
+            if (!generator) return;
+
+            const numericValues = [];
+            data.forEach(row => {
+                const val = parseFloat(row[0].value);
+                if (!isNaN(val)) numericValues.push(val);
+            });
+
+            if (numericValues.length < 2) {
+                showAIResult('Not enough data to make predictions. Need at least 2 values.');
+                return;
+            }
+
+            // Simple linear prediction
+            const last = numericValues[numericValues.length - 1];
+            const secondLast = numericValues[numericValues.length - 2];
+            const diff = last - secondLast;
+            const prediction = last + diff;
+
+            showAIResult(`
+                <div class="font-bold mb-2 text-orange-600"><i class="fas fa-forward mr-2"></i>Next Value Prediction</div>
+                <div class="text-gray-700 mb-2">Based on linear trend analysis:</div>
+                <div class="text-2xl font-bold text-orange-600">${prediction.toFixed(2)}</div>
+                <div class="text-sm text-gray-500 mt-2">Last values: ${secondLast}, ${last} (trend: ${diff > 0 ? '+' : ''}${diff.toFixed(2)})</div>
+            `);
+        };
+
+        window.summarizeData = async function() {
+            if (!generator) return;
+
+            const allValues = [];
+            data.forEach(row => {
+                row.forEach(cell => {
+                    if (cell.value) allValues.push(cell.value);
+                });
+            });
+
+            if (allValues.length === 0) {
+                showAIResult('No data to summarize.');
+                return;
+            }
+
+            showAIResult('<i class="fas fa-circle-notch fa-spin text-indigo-600 mr-2"></i>Summarizing data...');
+
+            try {
+                const dataStr = allValues.slice(0, 100).join(', ');
+                const messages = [
+                    { role: 'system', content: 'Provide a brief summary of the spreadsheet data.' },
+                    { role: 'user', content: `Summarize this data: ${dataStr}` }
+                ];
+
+                const result = await generator(messages, {
+                    max_new_tokens: 150,
+                    temperature: 0.5
+                });
+
+                const summary = result[0].generated_text[result[0].generated_text.length - 1].content;
+                showAIResult(`<div class="font-bold mb-2 text-indigo-600"><i class="fas fa-file-alt mr-2"></i>Data Summary</div><div class="text-gray-700">${summary}</div>`);
+            } catch (error) {
+                showAIResult(`<span class="text-red-600">Error: ${error.message}</span>`);
+            }
+        };
+
+        function showAIResult(html) {
+            document.getElementById('aiResults').classList.remove('hidden');
+            document.getElementById('resultsContent').innerHTML = html;
+        }
+
+        // Initialize
+        initSpreadsheet();
+        loadModels();
+
+        // Auto-update stats
+        setInterval(updateStats, 2000);
+    </script>
+</body>
+</html>

@@ -235,6 +235,12 @@
         { id: 'sentiment', name: 'Sentiment', iconClass: 'icon-about', icon: 'fas fa-smile', url: './demos/sentiment/' },
         { id: 'detection', name: 'Detection', iconClass: 'icon-code', icon: 'fas fa-search', url: './demos/detection/' },
         { id: 'depth', name: 'Depth', iconClass: 'icon-world', icon: 'fas fa-mountain', url: './demos/depth/' },
+        { id: 'p2pmessenger', name: 'P2P Messenger', iconClass: 'icon-chat', icon: 'fas fa-comment-dots', url: './demos/p2pmessenger/' },
+        { id: 'doceditor', name: 'Doc Editor', iconClass: 'icon-code', icon: 'fas fa-file-word', url: './demos/doceditor/' },
+        { id: 'spreadsheet', name: 'Spreadsheet', iconClass: 'icon-world', icon: 'fas fa-table', url: './demos/spreadsheet/' },
+        { id: 'meeting', name: 'Meeting', iconClass: 'icon-vision', icon: 'fas fa-video', url: './demos/meeting/' },
+        { id: 'taskmanager', name: 'Tasks', iconClass: 'icon-about', icon: 'fas fa-tasks', url: './demos/taskmanager/' },
+        { id: 'fileshare', name: 'File Share', iconClass: 'icon-chat', icon: 'fas fa-share-alt', url: './demos/fileshare/' },
         { id: 'world', name: 'World Model', iconClass: 'icon-world', icon: 'fas fa-globe', url: './demos/world/' },
         { id: 'about', name: 'About', iconClass: 'icon-about', icon: 'fas fa-info-circle' }
     ];
@@ -416,6 +422,30 @@
                     <div class="app-icon-large icon-world"><i class="fas fa-mountain"></i></div>
                     <div class="app-label">Depth Estimation</div>
                 </div>
+                <div class="app-card" onclick="wm.openApp('p2pmessenger')">
+                    <div class="app-icon-large icon-chat"><i class="fas fa-comment-dots"></i></div>
+                    <div class="app-label">P2P Messenger</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('doceditor')">
+                    <div class="app-icon-large icon-code"><i class="fas fa-file-word"></i></div>
+                    <div class="app-label">Doc Editor</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('spreadsheet')">
+                    <div class="app-icon-large icon-world"><i class="fas fa-table"></i></div>
+                    <div class="app-label">Spreadsheet</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('meeting')">
+                    <div class="app-icon-large icon-vision"><i class="fas fa-video"></i></div>
+                    <div class="app-label">Meeting</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('taskmanager')">
+                    <div class="app-icon-large icon-about"><i class="fas fa-tasks"></i></div>
+                    <div class="app-label">Task Manager</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('fileshare')">
+                    <div class="app-icon-large icon-chat"><i class="fas fa-share-alt"></i></div>
+                    <div class="app-label">File Share</div>
+                </div>
                 <div class="app-card" onclick="wm.openApp('world')">
                     <div class="app-icon-large icon-world"><i class="fas fa-globe"></i></div>
                     <div class="app-label">World Model</div>
@@ -448,6 +478,12 @@
                     <li><strong>Sentiment Analysis</strong> - Emotion detection in text</li>
                     <li><strong>Object Detection</strong> - YOLO real-time object detection</li>
                     <li><strong>Depth Estimation</strong> - Monocular depth perception with MiDaS</li>
+                    <li><strong>P2P Messenger</strong> - WebRTC peer-to-peer messaging & calls</li>
+                    <li><strong>Doc Editor</strong> - AI-powered document editor with writing assistance</li>
+                    <li><strong>Spreadsheet</strong> - Excel-like spreadsheet with AI data analysis</li>
+                    <li><strong>Meeting</strong> - Video conferencing with screen share & whiteboard</li>
+                    <li><strong>Task Manager</strong> - Kanban task management with AI planning</li>
+                    <li><strong>File Share</strong> - P2P file transfer with WebRTC</li>
                     <li><strong>World Model</strong> - Reinforcement learning demo</li>
                 </ul>
 

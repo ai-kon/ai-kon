@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Task Manager - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        }
+        .task-card {
+            transition: all 0.2s;
+            cursor: grab;
+        }
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        .task-card.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        .column {
+            min-height: 400px;
+        }
+        .priority-high { border-left: 4px solid #ef4444; }
+        .priority-medium { border-left: 4px solid #f59e0b; }
+        .priority-low { border-left: 4px solid #10b981; }
+        .ai-suggestion-card {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 4px solid #f59e0b;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-t-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold flex items-center gap-3">
+                        <i class="fas fa-tasks"></i>
+                        AI Task Manager
+                    </h1>
+                    <p class="text-indigo-200 mt-1">Smart project management with AI-powered insights</p>
+                </div>
+                <button onclick="window.location.href='../'" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                    <i class="fas fa-home mr-2"></i>Back to Demos
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="bg-white rounded-b-lg shadow-2xl p-6">
+            <!-- Toolbar -->
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex gap-3">
+                    <button onclick="showNewTaskModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
+                        <i class="fas fa-plus mr-2"></i>New Task
+                    </button>
+                    <button onclick="getAISuggestions()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
+                        <i class="fas fa-robot mr-2"></i>AI Suggestions
+                    </button>
+                    <button onclick="analyzeProject()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                        <i class="fas fa-chart-line mr-2"></i>Analyze Project
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="text-sm">
+                        <span class="text-gray-600">Tasks:</span>
+                        <span class="font-bold" id="taskCount">0</span>
+                    </div>
+                    <div class="text-sm">
+                        <span class="text-gray-600">Completed:</span>
+                        <span class="font-bold text-green-600" id="completedCount">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model Loading Status -->
+            <div id="loadingStatus" class="mb-4 p-3 bg-blue-100 rounded-lg">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-circle-notch fa-spin text-blue-600"></i>
+                    <span class="font-medium text-blue-800">Loading AI Assistant...</span>
+                </div>
+                <div id="loadingProgress" class="text-sm text-blue-600"></div>
+            </div>
+
+            <!-- Kanban Board -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Backlog Column -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-gray-700 flex items-center gap-2">
+                            <i class="fas fa-inbox text-gray-500"></i>
+                            Backlog
+                        </h3>
+                        <span class="bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-xs font-bold" id="backlogCount">0</span>
+                    </div>
+                    <div id="backlog" class="column space-y-3" data-status="backlog">
+                    </div>
+                </div>
+
+                <!-- To Do Column -->
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-gray-700 flex items-center gap-2">
+                            <i class="fas fa-list text-blue-500"></i>
+                            To Do
+                        </h3>
+                        <span class="bg-blue-200 text-blue-700 px-2 py-1 rounded-full text-xs font-bold" id="todoCount">0</span>
+                    </div>
+                    <div id="todo" class="column space-y-3" data-status="todo">
+                    </div>
+                </div>
+
+                <!-- In Progress Column -->
+                <div class="bg-yellow-50 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-gray-700 flex items-center gap-2">
+                            <i class="fas fa-spinner text-yellow-500"></i>
+                            In Progress
+                        </h3>
+                        <span class="bg-yellow-200 text-yellow-700 px-2 py-1 rounded-full text-xs font-bold" id="progressCount">0</span>
+                    </div>
+                    <div id="progress" class="column space-y-3" data-status="progress">
+                    </div>
+                </div>
+
+                <!-- Done Column -->
+                <div class="bg-green-50 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-gray-700 flex items-center gap-2">
+                            <i class="fas fa-check-circle text-green-500"></i>
+                            Done
+                        </h3>
+                        <span class="bg-green-200 text-green-700 px-2 py-1 rounded-full text-xs font-bold" id="doneCount">0</span>
+                    </div>
+                    <div id="done" class="column space-y-3" data-status="done">
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Insights Panel -->
+            <div id="aiInsights" class="mt-6 hidden">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-lightbulb text-yellow-500"></i>
+                    AI Insights
+                </h3>
+                <div id="insightsContent" class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Task Modal -->
+    <div id="taskModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg max-w-2xl w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-plus-circle text-indigo-600 mr-2"></i>
+                    <span id="modalTitle">New Task</span>
+                </h3>
+                <button onclick="closeTaskModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Task Title</label>
+                    <input type="text" id="taskTitle" placeholder="Enter task title..."
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea id="taskDescription" placeholder="Enter task description..."
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 resize-none" rows="3"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                        <select id="taskPriority" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <select id="taskStatus" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500">
+                            <option value="backlog">Backlog</option>
+                            <option value="todo" selected>To Do</option>
+                            <option value="progress">In Progress</option>
+                            <option value="done">Done</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                        <input type="date" id="taskDueDate"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
+                        <input type="text" id="taskAssignee" placeholder="Assign to..."
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <button onclick="saveTask()" class="flex-1 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-medium">
+                        <i class="fas fa-save mr-2"></i>Save Task
+                    </button>
+                    <button onclick="aiBreakdownTask()" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium">
+                        <i class="fas fa-robot mr-2"></i>AI Breakdown
+                    </button>
+                </div>
+
+                <div id="aiBreakdown" class="hidden mt-4 p-4 bg-purple-50 rounded-lg">
+                    <h4 class="font-bold text-purple-800 mb-2">AI Task Breakdown</h4>
+                    <div id="breakdownContent" class="text-sm text-gray-700"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5';
+
+        // Check WebGPU support
+        if (!navigator.gpu) {
+            window.location.href = '../fallback.html';
+            throw new Error('WebGPU not supported');
+        }
+
+        env.allowLocalModels = false;
+
+        let generator = null;
+        let tasks = [];
+        let currentEditingTask = null;
+
+        // Load AI model
+        async function loadModel() {
+            try {
+                const loadingProgress = document.getElementById('loadingProgress');
+
+                loadingProgress.textContent = 'Loading AI model...';
+                generator = await pipeline('text-generation', 'onnx-community/Qwen2.5-0.5B-Instruct', {
+                    dtype: 'q8',
+                    device: 'webgpu',
+                    progress_callback: (progress) => {
+                        if (progress.status === 'progress') {
+                            loadingProgress.textContent = `Downloading: ${progress.file} (${progress.progress.toFixed(0)}%)`;
+                        }
+                    }
+                });
+
+                document.getElementById('loadingStatus').classList.add('hidden');
+                loadTasks();
+            } catch (error) {
+                document.getElementById('loadingProgress').innerHTML =
+                    `<span class="text-red-600"><i class="fas fa-exclamation-triangle mr-2"></i>Error: ${error.message}</span>`;
+            }
+        }
+
+        // Task Management
+        window.showNewTaskModal = function() {
+            currentEditingTask = null;
+            document.getElementById('modalTitle').textContent = 'New Task';
+            document.getElementById('taskTitle').value = '';
+            document.getElementById('taskDescription').value = '';
+            document.getElementById('taskPriority').value = 'medium';
+            document.getElementById('taskStatus').value = 'todo';
+            document.getElementById('taskDueDate').value = '';
+            document.getElementById('taskAssignee').value = '';
+            document.getElementById('aiBreakdown').classList.add('hidden');
+            document.getElementById('taskModal').classList.remove('hidden');
+        };
+
+        window.closeTaskModal = function() {
+            document.getElementById('taskModal').classList.add('hidden');
+        };
+
+        window.saveTask = function() {
+            const task = {
+                id: currentEditingTask?.id || Date.now(),
+                title: document.getElementById('taskTitle').value.trim(),
+                description: document.getElementById('taskDescription').value.trim(),
+                priority: document.getElementById('taskPriority').value,
+                status: document.getElementById('taskStatus').value,
+                dueDate: document.getElementById('taskDueDate').value,
+                assignee: document.getElementById('taskAssignee').value.trim(),
+                createdAt: currentEditingTask?.createdAt || new Date().toISOString()
+            };
+
+            if (!task.title) {
+                alert('Please enter a task title');
+                return;
+            }
+
+            if (currentEditingTask) {
+                const index = tasks.findIndex(t => t.id === currentEditingTask.id);
+                tasks[index] = task;
+            } else {
+                tasks.push(task);
+            }
+
+            saveTasks();
+            renderTasks();
+            closeTaskModal();
+        };
+
+        window.editTask = function(id) {
+            currentEditingTask = tasks.find(t => t.id === id);
+            if (!currentEditingTask) return;
+
+            document.getElementById('modalTitle').textContent = 'Edit Task';
+            document.getElementById('taskTitle').value = currentEditingTask.title;
+            document.getElementById('taskDescription').value = currentEditingTask.description;
+            document.getElementById('taskPriority').value = currentEditingTask.priority;
+            document.getElementById('taskStatus').value = currentEditingTask.status;
+            document.getElementById('taskDueDate').value = currentEditingTask.dueDate;
+            document.getElementById('taskAssignee').value = currentEditingTask.assignee;
+            document.getElementById('taskModal').classList.remove('hidden');
+        };
+
+        window.deleteTask = function(id) {
+            if (confirm('Delete this task?')) {
+                tasks = tasks.filter(t => t.id !== id);
+                saveTasks();
+                renderTasks();
+            }
+        };
+
+        function renderTasks() {
+            const columns = ['backlog', 'todo', 'progress', 'done'];
+
+            columns.forEach(col => {
+                const container = document.getElementById(col);
+                container.innerHTML = '';
+
+                const columnTasks = tasks.filter(t => t.status === col);
+
+                columnTasks.forEach(task => {
+                    const taskCard = createTaskCard(task);
+                    container.appendChild(taskCard);
+                });
+
+                document.getElementById(`${col}Count`).textContent = columnTasks.length;
+            });
+
+            updateStats();
+        }
+
+        function createTaskCard(task) {
+            const div = document.createElement('div');
+            div.className = `task-card bg-white rounded-lg p-4 shadow priority-${task.priority}`;
+            div.draggable = true;
+            div.dataset.taskId = task.id;
+
+            const priorityColors = {
+                high: 'text-red-600',
+                medium: 'text-yellow-600',
+                low: 'text-green-600'
+            };
+
+            div.innerHTML = `
+                <div class="flex items-start justify-between mb-2">
+                    <h4 class="font-bold text-gray-800 flex-1">${task.title}</h4>
+                    <div class="flex gap-1">
+                        <button onclick="editTask(${task.id})" class="text-blue-500 hover:text-blue-700">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteTask(${task.id})" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                ${task.description ? `<p class="text-sm text-gray-600 mb-2">${task.description}</p>` : ''}
+                <div class="flex items-center justify-between text-xs">
+                    <span class="${priorityColors[task.priority]} font-medium">
+                        <i class="fas fa-flag mr-1"></i>${task.priority.toUpperCase()}
+                    </span>
+                    ${task.dueDate ? `<span class="text-gray-500"><i class="fas fa-calendar mr-1"></i>${task.dueDate}</span>` : ''}
+                </div>
+                ${task.assignee ? `<div class="mt-2 text-xs text-gray-500"><i class="fas fa-user mr-1"></i>${task.assignee}</div>` : ''}
+            `;
+
+            // Drag and drop
+            div.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('taskId', task.id);
+                div.classList.add('dragging');
+            });
+
+            div.addEventListener('dragend', () => {
+                div.classList.remove('dragging');
+            });
+
+            return div;
+        }
+
+        // Drag and drop for columns
+        ['backlog', 'todo', 'progress', 'done'].forEach(colId => {
+            const col = document.getElementById(colId);
+
+            col.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+
+            col.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const taskId = parseInt(e.dataTransfer.getData('taskId'));
+                const task = tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.status = col.dataset.status;
+                    saveTasks();
+                    renderTasks();
+                }
+            });
+        });
+
+        function updateStats() {
+            document.getElementById('taskCount').textContent = tasks.length;
+            document.getElementById('completedCount').textContent = tasks.filter(t => t.status === 'done').length;
+        }
+
+        function saveTasks() {
+            localStorage.setItem('ai_tasks', JSON.stringify(tasks));
+        }
+
+        function loadTasks() {
+            const saved = localStorage.getItem('ai_tasks');
+            if (saved) {
+                tasks = JSON.parse(saved);
+                renderTasks();
+            }
+        }
+
+        // AI Functions
+        window.aiBreakdownTask = async function() {
+            if (!generator) return;
+
+            const title = document.getElementById('taskTitle').value.trim();
+            const description = document.getElementById('taskDescription').value.trim();
+
+            if (!title) {
+                alert('Please enter a task title first');
+                return;
+            }
+
+            const breakdownDiv = document.getElementById('aiBreakdown');
+            const content = document.getElementById('breakdownContent');
+
+            breakdownDiv.classList.remove('hidden');
+            content.innerHTML = '<i class="fas fa-circle-notch fa-spin text-purple-600 mr-2"></i>AI is breaking down your task...';
+
+            try {
+                const messages = [
+                    { role: 'system', content: 'You are a project manager. Break down the task into 3-5 specific subtasks.' },
+                    { role: 'user', content: `Break down this task: "${title}". ${description}` }
+                ];
+
+                const result = await generator(messages, {
+                    max_new_tokens: 200,
+                    temperature: 0.7
+                });
+
+                const breakdown = result[0].generated_text[result[0].generated_text.length - 1].content;
+                content.innerHTML = `<div class="whitespace-pre-line">${breakdown}</div>`;
+            } catch (error) {
+                content.innerHTML = `<span class="text-red-600">Error: ${error.message}</span>`;
+            }
+        };
+
+        window.getAISuggestions = async function() {
+            if (!generator || tasks.length === 0) {
+                showInsights('Add some tasks first to get AI suggestions.');
+                return;
+            }
+
+            showInsights('<i class="fas fa-circle-notch fa-spin text-purple-600 mr-2"></i>AI is analyzing your tasks...');
+
+            try {
+                const taskList = tasks.map(t => `- ${t.title} (${t.priority} priority, ${t.status})`).join('\n');
+
+                const messages = [
+                    { role: 'system', content: 'You are a productivity expert. Analyze the task list and provide suggestions for better organization and prioritization.' },
+                    { role: 'user', content: `Analyze these tasks and suggest improvements:\n${taskList}` }
+                ];
+
+                const result = await generator(messages, {
+                    max_new_tokens: 250,
+                    temperature: 0.7
+                });
+
+                const suggestions = result[0].generated_text[result[0].generated_text.length - 1].content;
+                showInsights(`
+                    <div class="font-bold text-purple-800 mb-2">
+                        <i class="fas fa-robot mr-2"></i>AI Suggestions
+                    </div>
+                    <div class="text-gray-700 whitespace-pre-line">${suggestions}</div>
+                `);
+            } catch (error) {
+                showInsights(`<span class="text-red-600">Error: ${error.message}</span>`);
+            }
+        };
+
+        window.analyzeProject = async function() {
+            if (!generator || tasks.length === 0) {
+                showInsights('Add some tasks first to analyze your project.');
+                return;
+            }
+
+            showInsights('<i class="fas fa-circle-notch fa-spin text-blue-600 mr-2"></i>AI is analyzing your project...');
+
+            try {
+                const stats = {
+                    total: tasks.length,
+                    backlog: tasks.filter(t => t.status === 'backlog').length,
+                    todo: tasks.filter(t => t.status === 'todo').length,
+                    progress: tasks.filter(t => t.status === 'progress').length,
+                    done: tasks.filter(t => t.status === 'done').length,
+                    high: tasks.filter(t => t.priority === 'high').length,
+                    medium: tasks.filter(t => t.priority === 'medium').length,
+                    low: tasks.filter(t => t.priority === 'low').length
+                };
+
+                const messages = [
+                    { role: 'system', content: 'You are a project analyst. Analyze project statistics and provide insights.' },
+                    { role: 'user', content: `Analyze this project: ${stats.total} total tasks, ${stats.done} completed, ${stats.progress} in progress, ${stats.high} high priority. What are the insights?` }
+                ];
+
+                const result = await generator(messages, {
+                    max_new_tokens: 200,
+                    temperature: 0.7
+                });
+
+                const analysis = result[0].generated_text[result[0].generated_text.length - 1].content;
+                const completionRate = ((stats.done / stats.total) * 100).toFixed(1);
+
+                showInsights(`
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="bg-white rounded-lg p-3">
+                            <div class="text-2xl font-bold text-indigo-600">${completionRate}%</div>
+                            <div class="text-sm text-gray-600">Completion Rate</div>
+                        </div>
+                        <div class="bg-white rounded-lg p-3">
+                            <div class="text-2xl font-bold text-purple-600">${stats.high}</div>
+                            <div class="text-sm text-gray-600">High Priority Tasks</div>
+                        </div>
+                    </div>
+                    <div class="font-bold text-blue-800 mb-2">
+                        <i class="fas fa-chart-line mr-2"></i>AI Analysis
+                    </div>
+                    <div class="text-gray-700 whitespace-pre-line">${analysis}</div>
+                `);
+            } catch (error) {
+                showInsights(`<span class="text-red-600">Error: ${error.message}</span>`);
+            }
+        };
+
+        function showInsights(html) {
+            document.getElementById('aiInsights').classList.remove('hidden');
+            document.getElementById('insightsContent').innerHTML = html;
+        }
+
+        // Initialize
+        loadModel();
+    </script>
+</body>
+</html>

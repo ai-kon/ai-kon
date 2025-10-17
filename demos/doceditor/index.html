@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Document Editor - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .editor-container {
+            min-height: 500px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .editor {
+            min-height: 480px;
+            outline: none;
+            font-family: 'Georgia', serif;
+            line-height: 1.8;
+        }
+        .editor:focus {
+            outline: none;
+        }
+        .toolbar-btn {
+            @apply px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors;
+        }
+        .toolbar-btn.active {
+            @apply bg-blue-500 text-white;
+        }
+        .ai-suggestion {
+            background: linear-gradient(90deg, #fef3c7, #fde68a);
+            border-left: 4px solid #f59e0b;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .ai-suggestion:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .stat-badge {
+            @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(99, 102, 241, 0.8); }
+        }
+        .ai-active {
+            animation: pulse-glow 2s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold flex items-center gap-3">
+                            <i class="fas fa-file-word"></i>
+                            AI Document Editor
+                        </h1>
+                        <p class="text-purple-200 mt-1">Intelligent word processor with AI assistance</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="window.location.href='../'" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                            <i class="fas fa-home mr-2"></i>Back to Demos
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Editor Column -->
+                    <div class="lg:col-span-2">
+                        <!-- Document Title -->
+                        <div class="mb-4">
+                            <input type="text" id="docTitle" placeholder="Untitled Document"
+                                   class="text-2xl font-bold w-full px-4 py-2 border-b-2 border-gray-300 focus:border-purple-500 outline-none transition-colors">
+                        </div>
+
+                        <!-- Toolbar -->
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 flex flex-wrap gap-2">
+                            <button onclick="formatDoc('bold')" class="toolbar-btn" title="Bold (Ctrl+B)">
+                                <i class="fas fa-bold"></i>
+                            </button>
+                            <button onclick="formatDoc('italic')" class="toolbar-btn" title="Italic (Ctrl+I)">
+                                <i class="fas fa-italic"></i>
+                            </button>
+                            <button onclick="formatDoc('underline')" class="toolbar-btn" title="Underline (Ctrl+U)">
+                                <i class="fas fa-underline"></i>
+                            </button>
+                            <div class="w-px bg-gray-300"></div>
+                            <button onclick="formatDoc('formatBlock', '<h1>')" class="toolbar-btn" title="Heading 1">
+                                <i class="fas fa-heading"></i><sub>1</sub>
+                            </button>
+                            <button onclick="formatDoc('formatBlock', '<h2>')" class="toolbar-btn" title="Heading 2">
+                                <i class="fas fa-heading"></i><sub>2</sub>
+                            </button>
+                            <button onclick="formatDoc('formatBlock', '<p>')" class="toolbar-btn" title="Paragraph">
+                                <i class="fas fa-paragraph"></i>
+                            </button>
+                            <div class="w-px bg-gray-300"></div>
+                            <button onclick="formatDoc('insertUnorderedList')" class="toolbar-btn" title="Bullet List">
+                                <i class="fas fa-list-ul"></i>
+                            </button>
+                            <button onclick="formatDoc('insertOrderedList')" class="toolbar-btn" title="Numbered List">
+                                <i class="fas fa-list-ol"></i>
+                            </button>
+                            <div class="w-px bg-gray-300"></div>
+                            <button onclick="formatDoc('justifyLeft')" class="toolbar-btn" title="Align Left">
+                                <i class="fas fa-align-left"></i>
+                            </button>
+                            <button onclick="formatDoc('justifyCenter')" class="toolbar-btn" title="Align Center">
+                                <i class="fas fa-align-center"></i>
+                            </button>
+                            <button onclick="formatDoc('justifyRight')" class="toolbar-btn" title="Align Right">
+                                <i class="fas fa-align-right"></i>
+                            </button>
+                            <div class="flex-1"></div>
+                            <button onclick="clearFormatting()" class="toolbar-btn text-red-600" title="Clear Formatting">
+                                <i class="fas fa-remove-format"></i>
+                            </button>
+                        </div>
+
+                        <!-- Editor Area -->
+                        <div class="editor-container bg-white border-2 border-gray-200 rounded-lg p-6">
+                            <div id="editor" class="editor" contenteditable="true"
+                                 placeholder="Start writing your document here...">
+                            </div>
+                        </div>
+
+                        <!-- Stats Bar -->
+                        <div class="mt-4 flex flex-wrap gap-3">
+                            <span class="stat-badge">
+                                <i class="fas fa-font mr-2"></i>
+                                <span id="wordCount">0</span> words
+                            </span>
+                            <span class="stat-badge">
+                                <i class="fas fa-align-left mr-2"></i>
+                                <span id="charCount">0</span> characters
+                            </span>
+                            <span class="stat-badge">
+                                <i class="fas fa-paragraph mr-2"></i>
+                                <span id="paragraphCount">0</span> paragraphs
+                            </span>
+                            <span class="stat-badge">
+                                <i class="fas fa-clock mr-2"></i>
+                                <span id="readTime">0</span> min read
+                            </span>
+                        </div>
+
+                        <!-- Export Buttons -->
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <button onclick="exportDoc('pdf')" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
+                                <i class="fas fa-file-pdf mr-2"></i>Export PDF
+                            </button>
+                            <button onclick="exportDoc('txt')" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors">
+                                <i class="fas fa-file-alt mr-2"></i>Export TXT
+                            </button>
+                            <button onclick="exportDoc('md')" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
+                                <i class="fas fa-file-code mr-2"></i>Export MD
+                            </button>
+                            <button onclick="exportDoc('html')" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors">
+                                <i class="fas fa-file-code mr-2"></i>Export HTML
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- AI Assistant Column -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-4">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                <i class="fas fa-robot text-purple-600"></i>
+                                AI Assistant
+                            </h2>
+
+                            <!-- Model Loading Status -->
+                            <div id="loadingStatus" class="mb-4 p-3 bg-blue-100 rounded-lg">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i class="fas fa-circle-notch fa-spin text-blue-600"></i>
+                                    <span class="font-medium text-blue-800">Loading AI Models...</span>
+                                </div>
+                                <div id="loadingProgress" class="text-sm text-blue-600"></div>
+                            </div>
+
+                            <div id="aiFeatures" class="hidden space-y-3">
+                                <!-- AI Writing Assistant -->
+                                <button onclick="showAIAssist()" class="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-lg transition-all transform hover:scale-105">
+                                    <i class="fas fa-magic mr-2"></i>AI Writing Assistant
+                                </button>
+
+                                <!-- Summarize -->
+                                <button onclick="summarizeDocument()" class="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all transform hover:scale-105">
+                                    <i class="fas fa-compress-alt mr-2"></i>Summarize Document
+                                </button>
+
+                                <!-- Improve Writing -->
+                                <button onclick="improveWriting()" class="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all transform hover:scale-105">
+                                    <i class="fas fa-pen-fancy mr-2"></i>Improve Writing
+                                </button>
+
+                                <!-- Continue Writing -->
+                                <button onclick="continueWriting()" class="w-full px-4 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-lg transition-all transform hover:scale-105">
+                                    <i class="fas fa-forward mr-2"></i>Continue Writing
+                                </button>
+
+                                <!-- Grammar Check -->
+                                <button onclick="checkGrammar()" class="w-full px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-lg transition-all transform hover:scale-105">
+                                    <i class="fas fa-spell-check mr-2"></i>Check Grammar
+                                </button>
+                            </div>
+
+                            <!-- AI Suggestions Panel -->
+                            <div id="suggestionsPanel" class="mt-4 hidden">
+                                <h3 class="font-bold text-gray-700 mb-2">
+                                    <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>AI Suggestions
+                                </h3>
+                                <div id="suggestions" class="space-y-2 max-h-96 overflow-y-auto">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Writing Assistant Modal -->
+    <div id="aiAssistModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg max-w-2xl w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-magic text-purple-600 mr-2"></i>AI Writing Assistant
+                </h3>
+                <button onclick="closeAIAssist()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+
+            <textarea id="aiPrompt" placeholder="Tell the AI what you want to write about... (e.g., 'Write a professional email about project updates')"
+                      class="w-full h-32 p-4 border-2 border-gray-300 rounded-lg focus:border-purple-500 outline-none resize-none"></textarea>
+
+            <button onclick="generateAIText()" class="mt-4 w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition-all font-medium">
+                <i class="fas fa-wand-magic-sparkles mr-2"></i>Generate
+            </button>
+
+            <div id="aiOutput" class="mt-4 hidden">
+                <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-bold text-gray-700">Generated Text:</h4>
+                        <button onclick="insertAIText()" class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-sm">
+                            <i class="fas fa-plus mr-1"></i>Insert
+                        </button>
+                    </div>
+                    <div id="generatedText" class="text-gray-800 leading-relaxed"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5';
+
+        // Check WebGPU support
+        if (!navigator.gpu) {
+            window.location.href = '../fallback.html';
+            throw new Error('WebGPU not supported');
+        }
+
+        env.allowLocalModels = false;
+
+        let generator = null;
+        let summarizer = null;
+        let generatedTextCache = '';
+
+        const editor = document.getElementById('editor');
+        const docTitle = document.getElementById('docTitle');
+        const loadingStatus = document.getElementById('loadingStatus');
+        const loadingProgress = document.getElementById('loadingProgress');
+        const aiFeatures = document.getElementById('aiFeatures');
+
+        // Load AI models
+        async function loadModels() {
+            try {
+                loadingProgress.textContent = 'Loading text generation model...';
+                generator = await pipeline('text-generation', 'onnx-community/Qwen2.5-0.5B-Instruct', {
+                    dtype: 'q8',
+                    device: 'webgpu',
+                    progress_callback: (progress) => {
+                        if (progress.status === 'progress') {
+                            loadingProgress.textContent = `Downloading: ${progress.file} (${progress.progress.toFixed(0)}%)`;
+                        }
+                    }
+                });
+
+                loadingProgress.textContent = 'Loading summarization model...';
+                summarizer = await pipeline('summarization', 'Xenova/distilbart-cnn-6-6', {
+                    device: 'webgpu',
+                    progress_callback: (progress) => {
+                        if (progress.status === 'progress') {
+                            loadingProgress.textContent = `Downloading: ${progress.file} (${progress.progress.toFixed(0)}%)`;
+                        }
+                    }
+                });
+
+                loadingStatus.classList.add('hidden');
+                aiFeatures.classList.remove('hidden');
+            } catch (error) {
+                loadingProgress.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-triangle mr-2"></i>Error loading models: ${error.message}</span>`;
+            }
+        }
+
+        // Auto-save functionality
+        let autoSaveTimer = null;
+        function autoSave() {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+                const data = {
+                    title: docTitle.value || 'Untitled Document',
+                    content: editor.innerHTML,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem('ai_doc_autosave', JSON.stringify(data));
+            }, 1000);
+        }
+
+        // Load auto-saved content
+        function loadAutoSave() {
+            const saved = localStorage.getItem('ai_doc_autosave');
+            if (saved) {
+                const data = JSON.parse(saved);
+                docTitle.value = data.title;
+                editor.innerHTML = data.content;
+                updateStats();
+            }
+        }
+
+        // Update document statistics
+        function updateStats() {
+            const text = editor.innerText || '';
+            const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+            const chars = text.length;
+            const paragraphs = text.split('\n').filter(p => p.trim().length > 0).length;
+            const readTime = Math.ceil(words.length / 200); // 200 words per minute
+
+            document.getElementById('wordCount').textContent = words.length;
+            document.getElementById('charCount').textContent = chars;
+            document.getElementById('paragraphCount').textContent = paragraphs;
+            document.getElementById('readTime').textContent = readTime;
+
+            autoSave();
+        }
+
+        // Format document
+        window.formatDoc = function(command, value = null) {
+            document.execCommand(command, false, value);
+            editor.focus();
+        };
+
+        // Clear formatting
+        window.clearFormatting = function() {
+            document.execCommand('removeFormat', false, null);
+            editor.focus();
+        };
+
+        // AI Writing Assistant
+        window.showAIAssist = function() {
+            document.getElementById('aiAssistModal').classList.remove('hidden');
+            document.getElementById('aiPrompt').focus();
+        };
+
+        window.closeAIAssist = function() {
+            document.getElementById('aiAssistModal').classList.add('hidden');
+            document.getElementById('aiOutput').classList.add('hidden');
+            document.getElementById('aiPrompt').value = '';
+        };
+
+        window.generateAIText = async function() {
+            const prompt = document.getElementById('aiPrompt').value.trim();
+            if (!prompt || !generator) return;
+
+            const aiOutput = document.getElementById('aiOutput');
+            const generatedText = document.getElementById('generatedText');
+
+            aiOutput.classList.remove('hidden');
+            generatedText.innerHTML = '<i class="fas fa-circle-notch fa-spin text-purple-600 mr-2"></i>Generating...';
+
+            try {
+                const messages = [
+                    { role: 'system', content: 'You are a helpful writing assistant. Generate clear, professional content.' },
+                    { role: 'user', content: prompt }
+                ];
+
+                const result = await generator(messages, {
+                    max_new_tokens: 256,
+                    temperature: 0.7,
+                    do_sample: true
+                });
+
+                generatedTextCache = result[0].generated_text[result[0].generated_text.length - 1].content;
+                generatedText.textContent = generatedTextCache;
+            } catch (error) {
+                generatedText.innerHTML = `<span class="text-red-600">Error: ${error.message}</span>`;
+            }
+        };
+
+        window.insertAIText = function() {
+            if (generatedTextCache) {
+                document.execCommand('insertHTML', false, '<p>' + generatedTextCache + '</p>');
+                closeAIAssist();
+                updateStats();
+            }
+        };
+
+        // Summarize document
+        window.summarizeDocument = async function() {
+            const text = editor.innerText.trim();
+            if (!text || !summarizer) return;
+
+            if (text.split(/\s+/).length < 50) {
+                showSuggestion('Document is too short to summarize. Write at least 50 words.');
+                return;
+            }
+
+            const suggestionsPanel = document.getElementById('suggestionsPanel');
+            const suggestions = document.getElementById('suggestions');
+
+            suggestionsPanel.classList.remove('hidden');
+            suggestions.innerHTML = '<div class="ai-suggestion"><i class="fas fa-circle-notch fa-spin text-blue-600 mr-2"></i>Generating summary...</div>';
+
+            try {
+                const result = await summarizer(text, {
+                    max_length: 120,
+                    min_length: 30
+                });
+
+                const summary = result[0].summary_text;
+                suggestions.innerHTML = `
+                    <div class="ai-suggestion">
+                        <div class="font-bold text-gray-700 mb-2">
+                            <i class="fas fa-file-alt text-blue-500 mr-2"></i>Document Summary
+                        </div>
+                        <div class="text-gray-600">${summary}</div>
+                    </div>
+                `;
+            } catch (error) {
+                suggestions.innerHTML = `<div class="ai-suggestion bg-red-100 border-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>Error: ${error.message}</div>`;
+            }
+        };
+
+        // Improve writing
+        window.improveWriting = async function() {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+
+            if (!selectedText) {
+                showSuggestion('Please select some text to improve.');
+                return;
+            }
+
+            if (!generator) return;
+
+            const suggestionsPanel = document.getElementById('suggestionsPanel');
+            const suggestions = document.getElementById('suggestions');
+
+            suggestionsPanel.classList.remove('hidden');
+            suggestions.innerHTML = '<div class="ai-suggestion"><i class="fas fa-circle-notch fa-spin text-green-600 mr-2"></i>Improving text...</div>';
+
+            try {
+                const messages = [
+                    { role: 'system', content: 'You are a professional editor. Improve the following text to be more clear, concise, and professional. Only return the improved text.' },
+                    { role: 'user', content: selectedText }
+                ];
+
+                const result = await generator(messages, {
+                    max_new_tokens: 200,
+                    temperature: 0.7
+                });
+
+                const improved = result[0].generated_text[result[0].generated_text.length - 1].content;
+
+                suggestions.innerHTML = `
+                    <div class="ai-suggestion" onclick="replaceSelection('${improved.replace(/'/g, "\\'")}')">
+                        <div class="font-bold text-gray-700 mb-2">
+                            <i class="fas fa-pen-fancy text-green-500 mr-2"></i>Improved Version (Click to replace)
+                        </div>
+                        <div class="text-gray-600">${improved}</div>
+                    </div>
+                `;
+            } catch (error) {
+                suggestions.innerHTML = `<div class="ai-suggestion bg-red-100 border-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>Error: ${error.message}</div>`;
+            }
+        };
+
+        // Continue writing
+        window.continueWriting = async function() {
+            const text = editor.innerText.trim();
+            if (!text || !generator) return;
+
+            const lastParagraph = text.split('\n').filter(p => p.trim()).pop();
+
+            const suggestionsPanel = document.getElementById('suggestionsPanel');
+            const suggestions = document.getElementById('suggestions');
+
+            suggestionsPanel.classList.remove('hidden');
+            suggestions.innerHTML = '<div class="ai-suggestion"><i class="fas fa-circle-notch fa-spin text-orange-600 mr-2"></i>Generating continuation...</div>';
+
+            try {
+                const messages = [
+                    { role: 'system', content: 'Continue the following text naturally and coherently.' },
+                    { role: 'user', content: lastParagraph }
+                ];
+
+                const result = await generator(messages, {
+                    max_new_tokens: 150,
+                    temperature: 0.8
+                });
+
+                const continuation = result[0].generated_text[result[0].generated_text.length - 1].content;
+
+                suggestions.innerHTML = `
+                    <div class="ai-suggestion" onclick="appendText('${continuation.replace(/'/g, "\\'")}')">
+                        <div class="font-bold text-gray-700 mb-2">
+                            <i class="fas fa-forward text-orange-500 mr-2"></i>Suggested Continuation (Click to add)
+                        </div>
+                        <div class="text-gray-600">${continuation}</div>
+                    </div>
+                `;
+            } catch (error) {
+                suggestions.innerHTML = `<div class="ai-suggestion bg-red-100 border-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>Error: ${error.message}</div>`;
+            }
+        };
+
+        // Grammar check
+        window.checkGrammar = async function() {
+            const text = editor.innerText.trim();
+            if (!text || !generator) return;
+
+            const suggestionsPanel = document.getElementById('suggestionsPanel');
+            const suggestions = document.getElementById('suggestions');
+
+            suggestionsPanel.classList.remove('hidden');
+            suggestions.innerHTML = '<div class="ai-suggestion"><i class="fas fa-circle-notch fa-spin text-pink-600 mr-2"></i>Checking grammar...</div>';
+
+            try {
+                const messages = [
+                    { role: 'system', content: 'Check the following text for grammar, spelling, and style issues. List any problems found with suggestions to fix them.' },
+                    { role: 'user', content: text.substring(0, 500) } // Limit to first 500 chars
+                ];
+
+                const result = await generator(messages, {
+                    max_new_tokens: 200,
+                    temperature: 0.3
+                });
+
+                const feedback = result[0].generated_text[result[0].generated_text.length - 1].content;
+
+                suggestions.innerHTML = `
+                    <div class="ai-suggestion">
+                        <div class="font-bold text-gray-700 mb-2">
+                            <i class="fas fa-spell-check text-pink-500 mr-2"></i>Grammar & Style Feedback
+                        </div>
+                        <div class="text-gray-600 whitespace-pre-line">${feedback}</div>
+                    </div>
+                `;
+            } catch (error) {
+                suggestions.innerHTML = `<div class="ai-suggestion bg-red-100 border-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>Error: ${error.message}</div>`;
+            }
+        };
+
+        // Helper functions
+        window.replaceSelection = function(text) {
+            document.execCommand('insertText', false, text);
+            updateStats();
+        };
+
+        window.appendText = function(text) {
+            document.execCommand('insertHTML', false, '<p>' + text + '</p>');
+            updateStats();
+        };
+
+        function showSuggestion(message) {
+            const suggestionsPanel = document.getElementById('suggestionsPanel');
+            const suggestions = document.getElementById('suggestions');
+
+            suggestionsPanel.classList.remove('hidden');
+            suggestions.innerHTML = `
+                <div class="ai-suggestion bg-blue-100 border-blue-500">
+                    <i class="fas fa-info-circle text-blue-600 mr-2"></i>${message}
+                </div>
+            `;
+        }
+
+        // Export functions
+        window.exportDoc = function(format) {
+            const title = docTitle.value || 'document';
+            const content = editor.innerHTML;
+            const text = editor.innerText;
+
+            if (format === 'pdf') {
+                // Create a print-friendly version
+                const printWindow = window.open('', '', 'width=800,height=600');
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>${title}</title>
+                        <style>
+                            body { font-family: Georgia, serif; line-height: 1.6; padding: 40px; }
+                            h1, h2, h3 { margin-top: 20px; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>${title}</h1>
+                        ${content}
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                printWindow.print();
+            } else if (format === 'txt') {
+                downloadFile(title + '.txt', text, 'text/plain');
+            } else if (format === 'md') {
+                const markdown = htmlToMarkdown(content);
+                downloadFile(title + '.md', `# ${title}\n\n${markdown}`, 'text/markdown');
+            } else if (format === 'html') {
+                const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>${title}</title>
+    <style>
+        body { font-family: Georgia, serif; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 20px; }
+        h1, h2, h3 { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>${title}</h1>
+    ${content}
+</body>
+</html>`;
+                downloadFile(title + '.html', html, 'text/html');
+            }
+        };
+
+        function htmlToMarkdown(html) {
+            return html
+                .replace(/<h1>(.*?)<\/h1>/g, '# $1\n\n')
+                .replace(/<h2>(.*?)<\/h2>/g, '## $1\n\n')
+                .replace(/<h3>(.*?)<\/h3>/g, '### $1\n\n')
+                .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
+                .replace(/<b>(.*?)<\/b>/g, '**$1**')
+                .replace(/<em>(.*?)<\/em>/g, '*$1*')
+                .replace(/<i>(.*?)<\/i>/g, '*$1*')
+                .replace(/<p>(.*?)<\/p>/g, '$1\n\n')
+                .replace(/<br\s*\/?>/g, '\n')
+                .replace(/<ul>(.*?)<\/ul>/gs, (match, list) => {
+                    return list.replace(/<li>(.*?)<\/li>/g, '- $1\n');
+                })
+                .replace(/<ol>(.*?)<\/ol>/gs, (match, list) => {
+                    let counter = 1;
+                    return list.replace(/<li>(.*?)<\/li>/g, () => `${counter++}. $1\n`);
+                })
+                .replace(/<[^>]*>/g, '');
+        }
+
+        function downloadFile(filename, content, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Event listeners
+        editor.addEventListener('input', updateStats);
+        editor.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const text = e.clipboardData.getData('text/plain');
+            document.execCommand('insertText', false, text);
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'b') {
+                    e.preventDefault();
+                    formatDoc('bold');
+                } else if (e.key === 'i') {
+                    e.preventDefault();
+                    formatDoc('italic');
+                } else if (e.key === 'u') {
+                    e.preventDefault();
+                    formatDoc('underline');
+                } else if (e.key === 's') {
+                    e.preventDefault();
+                    autoSave();
+                    showSuggestion('Document saved!');
+                }
+            }
+        });
+
+        // Initialize
+        loadAutoSave();
+        loadModels();
+    </script>
+</body>
+</html>

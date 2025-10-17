@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screen Share + Meeting - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%);
+        }
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .participant-video {
+            aspect-ratio: 16/9;
+            background: #1f2937;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        .participant-name {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .control-btn {
+            @apply w-12 h-12 rounded-full flex items-center justify-center transition-all;
+        }
+        .control-btn.active {
+            @apply bg-red-500 hover:bg-red-600;
+        }
+        .control-btn.inactive {
+            @apply bg-gray-700 hover:bg-gray-600;
+        }
+        .chat-message {
+            @apply p-3 rounded-lg mb-2;
+        }
+        .chat-message.sent {
+            @apply bg-blue-100 ml-auto max-w-[80%];
+        }
+        .chat-message.received {
+            @apply bg-gray-100 mr-auto max-w-[80%];
+        }
+        .whiteboard-canvas {
+            border: 2px solid #4b5563;
+            background: white;
+            cursor: crosshair;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-slate-900 to-blue-900 text-white rounded-t-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold flex items-center gap-3">
+                        <i class="fas fa-video"></i>
+                        Screen Share + Meeting
+                    </h1>
+                    <p class="text-blue-200 mt-1">Professional video conferencing with screen sharing</p>
+                </div>
+                <button onclick="window.location.href='../'" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                    <i class="fas fa-home mr-2"></i>Back to Demos
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Meeting Area -->
+        <div class="bg-white rounded-b-lg shadow-2xl overflow-hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-0">
+                <!-- Video Area -->
+                <div class="lg:col-span-3 p-6 bg-gray-900">
+                    <!-- Main Video Display -->
+                    <div id="mainVideoContainer" class="video-container mb-4" style="height: 400px;">
+                        <video id="mainVideo" autoplay playsinline muted></video>
+                        <div class="participant-name" id="mainVideoName">Your Screen</div>
+
+                        <!-- Meeting Info Overlay -->
+                        <div class="absolute top-4 right-4 bg-black/70 text-white px-4 py-2 rounded-lg">
+                            <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
+                                    <span class="text-sm font-medium" id="meetingDuration">00:00</span>
+                                </div>
+                                <div class="text-sm" id="participantCount">
+                                    <i class="fas fa-users mr-1"></i>1
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Screen Share Info -->
+                        <div id="screenShareInfo" class="hidden absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                            <i class="fas fa-desktop text-6xl text-white/50 mb-4"></i>
+                            <p class="text-white text-xl">Click "Share Screen" to start sharing</p>
+                        </div>
+                    </div>
+
+                    <!-- Participant Videos Grid -->
+                    <div id="participantGrid" class="video-grid">
+                        <!-- Participants will be added here dynamically -->
+                    </div>
+
+                    <!-- Control Bar -->
+                    <div class="mt-4 flex items-center justify-center gap-3 bg-gray-800 p-4 rounded-lg">
+                        <button id="micBtn" onclick="toggleMic()" class="control-btn inactive" title="Microphone">
+                            <i class="fas fa-microphone text-white text-xl"></i>
+                        </button>
+                        <button id="videoBtn" onclick="toggleVideo()" class="control-btn inactive" title="Camera">
+                            <i class="fas fa-video text-white text-xl"></i>
+                        </button>
+                        <button id="screenBtn" onclick="toggleScreenShare()" class="control-btn inactive" title="Share Screen">
+                            <i class="fas fa-desktop text-white text-xl"></i>
+                        </button>
+                        <button onclick="toggleWhiteboard()" class="control-btn inactive" title="Whiteboard">
+                            <i class="fas fa-chalkboard text-white text-xl"></i>
+                        </button>
+                        <button onclick="toggleRecording()" class="control-btn inactive" title="Record">
+                            <i class="fas fa-circle text-white text-xl"></i>
+                        </button>
+                        <button onclick="toggleChat()" class="control-btn inactive" title="Chat">
+                            <i class="fas fa-comment text-white text-xl"></i>
+                        </button>
+                        <button onclick="endMeeting()" class="control-btn bg-red-600 hover:bg-red-700" title="End Meeting">
+                            <i class="fas fa-phone-slash text-white text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="lg:col-span-1 bg-gray-50 p-4">
+                    <!-- Tabs -->
+                    <div class="flex gap-2 mb-4">
+                        <button onclick="showTab('chat')" id="chatTab" class="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg transition-colors">
+                            <i class="fas fa-comment mr-1"></i>Chat
+                        </button>
+                        <button onclick="showTab('participants')" id="participantsTab" class="flex-1 px-3 py-2 bg-gray-300 text-gray-700 rounded-lg transition-colors">
+                            <i class="fas fa-users mr-1"></i>People
+                        </button>
+                    </div>
+
+                    <!-- Chat Panel -->
+                    <div id="chatPanel" class="h-[500px] flex flex-col">
+                        <div id="chatMessages" class="flex-1 overflow-y-auto mb-4 space-y-2">
+                            <div class="text-center text-gray-500 text-sm py-4">
+                                <i class="fas fa-info-circle mr-2"></i>Chat messages will appear here
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" id="chatInput" placeholder="Type a message..."
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                   onkeypress="if(event.key==='Enter') sendMessage()">
+                            <button onclick="sendMessage()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Participants Panel -->
+                    <div id="participantsPanel" class="h-[500px] hidden">
+                        <div class="space-y-2">
+                            <div class="bg-white p-3 rounded-lg flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                                        Y
+                                    </div>
+                                    <div>
+                                        <div class="font-medium">You</div>
+                                        <div class="text-xs text-gray-500">Host</div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <i class="fas fa-microphone-slash text-gray-400"></i>
+                                    <i class="fas fa-video-slash text-gray-400"></i>
+                                </div>
+                            </div>
+                            <div id="participantsList"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Whiteboard Modal -->
+            <div id="whiteboardModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+                <div class="bg-white rounded-lg max-w-5xl w-full p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-2xl font-bold text-gray-800">
+                            <i class="fas fa-chalkboard text-blue-600 mr-2"></i>Collaborative Whiteboard
+                        </h3>
+                        <button onclick="closeWhiteboard()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <!-- Drawing Tools -->
+                    <div class="flex gap-2 mb-4 flex-wrap">
+                        <button onclick="setDrawMode('pen')" class="px-3 py-2 bg-blue-500 text-white rounded">
+                            <i class="fas fa-pen mr-1"></i>Pen
+                        </button>
+                        <button onclick="setDrawMode('eraser')" class="px-3 py-2 bg-gray-500 text-white rounded">
+                            <i class="fas fa-eraser mr-1"></i>Eraser
+                        </button>
+                        <button onclick="setDrawMode('line')" class="px-3 py-2 bg-green-500 text-white rounded">
+                            <i class="fas fa-minus mr-1"></i>Line
+                        </button>
+                        <button onclick="setDrawMode('rect')" class="px-3 py-2 bg-purple-500 text-white rounded">
+                            <i class="fas fa-square mr-1"></i>Rectangle
+                        </button>
+                        <button onclick="setDrawMode('circle')" class="px-3 py-2 bg-pink-500 text-white rounded">
+                            <i class="fas fa-circle mr-1"></i>Circle
+                        </button>
+                        <input type="color" id="colorPicker" value="#000000" class="w-12 h-10 rounded cursor-pointer">
+                        <input type="range" id="sizePicker" min="1" max="20" value="3" class="w-32">
+                        <button onclick="clearWhiteboard()" class="px-3 py-2 bg-red-500 text-white rounded ml-auto">
+                            <i class="fas fa-trash mr-1"></i>Clear
+                        </button>
+                    </div>
+
+                    <!-- Canvas -->
+                    <canvas id="whiteboard" class="whiteboard-canvas" width="900" height="500"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let localStream = null;
+        let screenStream = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let meetingStartTime = null;
+        let durationInterval = null;
+
+        let isMicOn = false;
+        let isVideoOn = false;
+        let isScreenSharing = false;
+        let isRecording = false;
+
+        const mainVideo = document.getElementById('mainVideo');
+        const micBtn = document.getElementById('micBtn');
+        const videoBtn = document.getElementById('videoBtn');
+        const screenBtn = document.getElementById('screenBtn');
+
+        // Start meeting on load
+        async function initMeeting() {
+            meetingStartTime = Date.now();
+            updateDuration();
+            durationInterval = setInterval(updateDuration, 1000);
+
+            // Show screen share info
+            document.getElementById('screenShareInfo').classList.remove('hidden');
+        }
+
+        function updateDuration() {
+            const elapsed = Math.floor((Date.now() - meetingStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('meetingDuration').textContent =
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        // Microphone control
+        async function toggleMic() {
+            if (!isMicOn) {
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    isMicOn = true;
+                    micBtn.classList.remove('inactive');
+                    micBtn.classList.add('active');
+                    micBtn.querySelector('i').classList.replace('fa-microphone', 'fa-microphone-slash');
+                } catch (error) {
+                    alert('Microphone access denied: ' + error.message);
+                }
+            } else {
+                if (localStream) {
+                    localStream.getAudioTracks().forEach(track => track.stop());
+                    localStream = null;
+                }
+                isMicOn = false;
+                micBtn.classList.remove('active');
+                micBtn.classList.add('inactive');
+                micBtn.querySelector('i').classList.replace('fa-microphone-slash', 'fa-microphone');
+            }
+        }
+
+        // Video control
+        async function toggleVideo() {
+            if (!isVideoOn) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    mainVideo.srcObject = stream;
+                    localStream = stream;
+                    isVideoOn = true;
+                    videoBtn.classList.remove('inactive');
+                    videoBtn.classList.add('active');
+                    videoBtn.querySelector('i').classList.replace('fa-video', 'fa-video-slash');
+                    document.getElementById('mainVideoName').textContent = 'You (Camera)';
+                    document.getElementById('screenShareInfo').classList.add('hidden');
+                } catch (error) {
+                    alert('Camera access denied: ' + error.message);
+                }
+            } else {
+                if (localStream) {
+                    localStream.getVideoTracks().forEach(track => track.stop());
+                    mainVideo.srcObject = null;
+                    localStream = null;
+                }
+                isVideoOn = false;
+                videoBtn.classList.remove('active');
+                videoBtn.classList.add('inactive');
+                videoBtn.querySelector('i').classList.replace('fa-video-slash', 'fa-video');
+                document.getElementById('screenShareInfo').classList.remove('hidden');
+            }
+        }
+
+        // Screen share control
+        async function toggleScreenShare() {
+            if (!isScreenSharing) {
+                try {
+                    screenStream = await navigator.mediaDevices.getDisplayMedia({
+                        video: {
+                            cursor: 'always'
+                        },
+                        audio: true
+                    });
+
+                    mainVideo.srcObject = screenStream;
+                    mainVideo.muted = false;
+                    isScreenSharing = true;
+                    screenBtn.classList.remove('inactive');
+                    screenBtn.classList.add('active');
+                    document.getElementById('mainVideoName').textContent = 'Your Screen';
+                    document.getElementById('screenShareInfo').classList.add('hidden');
+
+                    // Handle screen share stop
+                    screenStream.getVideoTracks()[0].addEventListener('ended', () => {
+                        stopScreenShare();
+                    });
+                } catch (error) {
+                    alert('Screen sharing denied: ' + error.message);
+                }
+            } else {
+                stopScreenShare();
+            }
+        }
+
+        function stopScreenShare() {
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                mainVideo.srcObject = null;
+                screenStream = null;
+            }
+            isScreenSharing = false;
+            screenBtn.classList.remove('active');
+            screenBtn.classList.add('inactive');
+            document.getElementById('screenShareInfo').classList.remove('hidden');
+        }
+
+        // Recording
+        window.toggleRecording = async function() {
+            if (!isRecording) {
+                const stream = mainVideo.srcObject || await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
+                recordedChunks = [];
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm;codecs=vp8,opus'
+                });
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `meeting-recording-${Date.now()}.webm`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                addChatMessage('System', 'Recording started', 'received');
+            } else {
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                }
+                isRecording = false;
+                addChatMessage('System', 'Recording stopped and saved', 'received');
+            }
+        };
+
+        // Chat functions
+        window.toggleChat = function() {
+            showTab('chat');
+        };
+
+        window.showTab = function(tab) {
+            const chatPanel = document.getElementById('chatPanel');
+            const participantsPanel = document.getElementById('participantsPanel');
+            const chatTab = document.getElementById('chatTab');
+            const participantsTab = document.getElementById('participantsTab');
+
+            if (tab === 'chat') {
+                chatPanel.classList.remove('hidden');
+                participantsPanel.classList.add('hidden');
+                chatTab.classList.replace('bg-gray-300', 'bg-blue-500');
+                chatTab.classList.replace('text-gray-700', 'text-white');
+                participantsTab.classList.replace('bg-blue-500', 'bg-gray-300');
+                participantsTab.classList.replace('text-white', 'text-gray-700');
+            } else {
+                chatPanel.classList.add('hidden');
+                participantsPanel.classList.remove('hidden');
+                participantsTab.classList.replace('bg-gray-300', 'bg-blue-500');
+                participantsTab.classList.replace('text-gray-700', 'text-white');
+                chatTab.classList.replace('bg-blue-500', 'bg-gray-300');
+                chatTab.classList.replace('text-white', 'text-gray-700');
+            }
+        };
+
+        window.sendMessage = function() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+
+            if (message) {
+                addChatMessage('You', message, 'sent');
+                input.value = '';
+            }
+        };
+
+        function addChatMessage(sender, message, type) {
+            const chatMessages = document.getElementById('chatMessages');
+            const firstMessage = chatMessages.querySelector('.text-center');
+            if (firstMessage) firstMessage.remove();
+
+            const div = document.createElement('div');
+            div.className = `chat-message ${type}`;
+            div.innerHTML = `
+                <div class="font-bold text-sm mb-1">${sender}</div>
+                <div class="text-gray-700">${message}</div>
+                <div class="text-xs text-gray-500 mt-1">${new Date().toLocaleTimeString()}</div>
+            `;
+
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Whiteboard
+        let canvas, ctx;
+        let isDrawing = false;
+        let drawMode = 'pen';
+        let lastX = 0;
+        let lastY = 0;
+
+        window.toggleWhiteboard = function() {
+            document.getElementById('whiteboardModal').classList.remove('hidden');
+            if (!canvas) {
+                canvas = document.getElementById('whiteboard');
+                ctx = canvas.getContext('2d');
+
+                canvas.addEventListener('mousedown', startDrawing);
+                canvas.addEventListener('mousemove', draw);
+                canvas.addEventListener('mouseup', stopDrawing);
+                canvas.addEventListener('mouseout', stopDrawing);
+            }
+        };
+
+        window.closeWhiteboard = function() {
+            document.getElementById('whiteboardModal').classList.add('hidden');
+        };
+
+        window.setDrawMode = function(mode) {
+            drawMode = mode;
+        };
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            lastX = e.clientX - rect.left;
+            lastY = e.clientY - rect.top;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            ctx.strokeStyle = document.getElementById('colorPicker').value;
+            ctx.lineWidth = document.getElementById('sizePicker').value;
+            ctx.lineCap = 'round';
+
+            if (drawMode === 'pen') {
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            } else if (drawMode === 'eraser') {
+                ctx.clearRect(x - 10, y - 10, 20, 20);
+            } else if (drawMode === 'line') {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            }
+
+            lastX = x;
+            lastY = y;
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        window.clearWhiteboard = function() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        };
+
+        window.endMeeting = function() {
+            if (confirm('End meeting for everyone?')) {
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                }
+                if (screenStream) {
+                    screenStream.getTracks().forEach(track => track.stop());
+                }
+                if (durationInterval) {
+                    clearInterval(durationInterval);
+                }
+                window.location.href = '../';
+            }
+        };
+
+        // Initialize meeting
+        initMeeting();
+    </script>
+</body>
+</html>
