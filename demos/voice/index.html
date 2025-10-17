@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Assistant | AI-KON Demos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .loader {
+            border: 6px solid #f3f4f6;
+            border-top: 6px solid #6366f1;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .pulse-ring {
+            animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0; }
+        }
+        .mic-pulse {
+            animation: mic-pulse 1s ease-in-out infinite;
+        }
+        @keyframes mic-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .message {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .waveform {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 60px;
+        }
+        .wave-bar {
+            width: 6px;
+            background: linear-gradient(180deg, #6366f1, #a855f7);
+            border-radius: 3px;
+            animation: wave 1s ease-in-out infinite;
+        }
+        .wave-bar:nth-child(1) { animation-delay: 0s; }
+        .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+        .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+        .wave-bar:nth-child(6) { animation-delay: 0.3s; }
+        .wave-bar:nth-child(7) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(8) { animation-delay: 0.1s; }
+        @keyframes wave {
+            0%, 100% { height: 15px; }
+            50% { height: 50px; }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 min-h-screen">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center z-50">
+        <div class="loader"></div>
+        <h2 class="text-white text-xl font-semibold mt-4">Loading AI Voice Assistant...</h2>
+        <p class="text-white text-sm mt-2">This may take a few minutes</p>
+        <progress id="progress-bar" value="0" max="100" class="w-64 mt-4 h-2"></progress>
+        <p id="progress-text" class="text-white text-sm mt-2">0%</p>
+    </div>
+
+    <div class="container mx-auto p-4 max-w-4xl">
+        <!-- Header -->
+        <header class="bg-white/80 backdrop-blur-lg rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                        🎙️ Voice Assistant
+                    </h1>
+                    <p class="text-sm text-gray-600 mt-1">Full-duplex AI conversation with speech</p>
+                </div>
+                <a href="../" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                    ← Back
+                </a>
+            </div>
+        </header>
+
+        <!-- Main Interface -->
+        <div class="bg-white/80 backdrop-blur-lg rounded-xl shadow-lg p-8 mb-6">
+            <!-- AI Avatar -->
+            <div class="text-center mb-6">
+                <div class="relative inline-block">
+                    <div id="pulse-ring" class="absolute inset-0 rounded-full bg-indigo-400 pulse-ring opacity-75 hidden"></div>
+                    <div id="avatar" class="relative w-32 h-32 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-2xl">
+                        <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Waveform -->
+                <div id="waveform" class="waveform hidden mt-6">
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                </div>
+
+                <!-- Status -->
+                <p id="status-text" class="mt-4 text-lg font-medium text-gray-700">
+                    Click the button below to start talking
+                </p>
+            </div>
+
+            <!-- Conversation Display -->
+            <div class="max-h-64 overflow-y-auto mb-6 space-y-3" id="conversation">
+                <div class="message flex items-start">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                        AI
+                    </div>
+                    <div class="ml-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-3 max-w-xs">
+                        <p class="text-sm text-gray-800">
+                            👋 Hi! I'm your AI voice assistant. Press and hold the mic button to talk to me!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control Button -->
+            <div class="text-center">
+                <button
+                    id="talk-btn"
+                    class="w-24 h-24 bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-full shadow-2xl hover:scale-105 transition-transform active:scale-95"
+                >
+                    <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                    </svg>
+                </button>
+                <p class="text-sm text-gray-600 mt-3">Press and Hold to Talk</p>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <button class="quick-action bg-white/80 backdrop-blur-lg rounded-lg p-4 hover:shadow-lg transition" data-text="Hello, how are you?">
+                <p class="text-2xl mb-2">👋</p>
+                <p class="text-sm font-medium text-gray-700">Say Hello</p>
+            </button>
+            <button class="quick-action bg-white/80 backdrop-blur-lg rounded-lg p-4 hover:shadow-lg transition" data-text="Tell me a joke">
+                <p class="text-2xl mb-2">😄</p>
+                <p class="text-sm font-medium text-gray-700">Tell a Joke</p>
+            </button>
+            <button class="quick-action bg-white/80 backdrop-blur-lg rounded-lg p-4 hover:shadow-lg transition" data-text="What can you do?">
+                <p class="text-2xl mb-2">💡</p>
+                <p class="text-sm font-medium text-gray-700">What can you do?</p>
+            </button>
+            <button class="quick-action bg-white/80 backdrop-blur-lg rounded-lg p-4 hover:shadow-lg transition" data-text="Help me with something">
+                <p class="text-2xl mb-2">🤝</p>
+                <p class="text-sm font-medium text-gray-700">Get Help</p>
+            </button>
+        </div>
+
+        <!-- Info -->
+        <div class="bg-blue-50/80 backdrop-blur-lg border border-blue-200 rounded-xl p-4">
+            <p class="text-sm text-blue-800">
+                <strong>🎤 Full Voice AI:</strong> This demo combines speech recognition (Whisper), language understanding (LLM),
+                and text-to-speech for natural voice conversations. Press and hold the mic button to speak, release to get a response.
+                Your voice never leaves your device!
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        // Check WebGPU support first
+        if (!navigator.gpu) {
+            window.location.href = '../fallback.html';
+            throw new Error('WebGPU not supported');
+        }
+
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5';
+
+        env.allowLocalModels = false;
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const avatar = document.getElementById('avatar');
+        const pulseRing = document.getElementById('pulse-ring');
+        const waveform = document.getElementById('waveform');
+        const statusText = document.getElementById('status-text');
+        const conversation = document.getElementById('conversation');
+        const talkBtn = document.getElementById('talk-btn');
+        const quickActions = document.querySelectorAll('.quick-action');
+
+        let transcriber;
+        let generator;
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let conversationHistory = [];
+
+        // Initialize models
+        async function initModels() {
+            try {
+                // Load speech recognition
+                transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en', {
+                    device: 'webgpu',
+                    dtype: 'q8',
+                    progress_callback: (progress) => {
+                        if (progress.status === 'progress') {
+                            const percent = Math.round(progress.progress * 0.5);
+                            progressBar.value = percent;
+                            progressText.textContent = percent + '%';
+                        }
+                    }
+                });
+
+                // Load language model
+                generator = await pipeline('text-generation', 'Xenova/Qwen2.5-0.5B-Instruct', {
+                    dtype: 'q8',
+                    device: 'webgpu',
+                    progress_callback: (progress) => {
+                        if (progress.status === 'progress') {
+                            const percent = 50 + Math.round(progress.progress * 0.5);
+                            progressBar.value = percent;
+                            progressText.textContent = percent + '%';
+                        }
+                    }
+                });
+
+                loadingOverlay.style.display = 'none';
+                console.log('Models loaded');
+            } catch (error) {
+                console.error('Failed to load models:', error);
+                const errorDetails = error.message || 'Unknown error';
+
+                let helpText = 'Please refresh the page and try again.';
+                if (errorDetails.includes('gpu')) {
+                    helpText = 'Your browser may not fully support WebGPU. Please update to the latest Chrome/Edge version.';
+                } else if (errorDetails.includes('network') || errorDetails.includes('fetch')) {
+                    helpText = 'Network error while downloading models. Please check your connection and try again.';
+                }
+
+                loadingOverlay.innerHTML = `
+                    <div class="text-center px-8">
+                        <div class="text-6xl mb-4">❌</div>
+                        <h2 class="text-white text-xl font-semibold mb-2">Failed to Load Models</h2>
+                        <p class="text-white text-sm mb-2">${helpText}</p>
+                        <p class="text-white text-xs opacity-75 mb-4">${errorDetails}</p>
+                        <button onclick="window.location.reload()" class="px-6 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 font-medium">
+                            Try Again
+                        </button>
+                        <a href="../" class="ml-2 px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium inline-block">
+                            Back to Demos
+                        </a>
+                    </div>
+                `;
+            }
+        }
+
+        // Start recording
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    await processVoice(audioBlob);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+
+                // Update UI
+                avatar.classList.add('mic-pulse');
+                pulseRing.classList.remove('hidden');
+                waveform.classList.remove('hidden');
+                statusText.textContent = '🎤 Listening...';
+                talkBtn.classList.add('scale-110', 'bg-red-600');
+
+            } catch (error) {
+                console.error('Microphone access denied:', error);
+                alert('Microphone access is required. Please allow microphone access and try again.');
+            }
+        }
+
+        // Stop recording
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+
+                // Update UI
+                avatar.classList.remove('mic-pulse');
+                pulseRing.classList.add('hidden');
+                waveform.classList.add('hidden');
+                statusText.textContent = '🤔 Processing...';
+                talkBtn.classList.remove('scale-110', 'bg-red-600');
+            }
+        }
+
+        // Process voice input
+        async function processVoice(audioBlob) {
+            try {
+                // Transcribe
+                statusText.textContent = '🎧 Transcribing...';
+                const arrayBuffer = await audioBlob.arrayBuffer();
+                const transcription = await transcriber(arrayBuffer);
+                const userText = transcription.text;
+
+                addMessage(userText, true);
+
+                // Generate response
+                statusText.textContent = '💭 Thinking...';
+                conversationHistory.push({ role: 'user', content: userText });
+
+                const messages = conversationHistory.slice(-6);
+                const result = await generator(messages, {
+                    max_new_tokens: 128,
+                    temperature: 0.7,
+                    do_sample: true,
+                });
+
+                const aiResponse = result[0].generated_text[result[0].generated_text.length - 1].content;
+
+                addMessage(aiResponse, false);
+                conversationHistory.push({ role: 'assistant', content: aiResponse });
+
+                // Speak response (using browser TTS)
+                statusText.textContent = '🔊 Speaking...';
+                speak(aiResponse);
+
+            } catch (error) {
+                console.error('Processing error:', error);
+                statusText.textContent = '❌ Error occurred';
+                addMessage('Sorry, I had trouble processing that. Please try again.', false);
+            }
+        }
+
+        // Text to speech using browser API
+        function speak(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.9;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+
+            utterance.onend = () => {
+                statusText.textContent = '✅ Ready to talk again';
+            };
+
+            speechSynthesis.speak(utterance);
+        }
+
+        // Add message to conversation
+        function addMessage(text, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message flex items-start';
+
+            if (isUser) {
+                messageDiv.classList.add('justify-end');
+                messageDiv.innerHTML = `
+                    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg p-3 max-w-xs mr-3">
+                        <p class="text-sm text-white">${text}</p>
+                    </div>
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white font-bold text-sm">
+                        U
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                        AI
+                    </div>
+                    <div class="ml-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-3 max-w-xs">
+                        <p class="text-sm text-gray-800">${text}</p>
+                    </div>
+                `;
+            }
+
+            conversation.appendChild(messageDiv);
+            conversation.scrollTop = conversation.scrollHeight;
+        }
+
+        // Event listeners
+        talkBtn.addEventListener('mousedown', startRecording);
+        talkBtn.addEventListener('mouseup', stopRecording);
+        talkBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startRecording();
+        });
+        talkBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopRecording();
+        });
+
+        quickActions.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const text = btn.dataset.text;
+                addMessage(text, true);
+                conversationHistory.push({ role: 'user', content: text });
+
+                statusText.textContent = '💭 Thinking...';
+
+                generator(conversationHistory.slice(-6), {
+                    max_new_tokens: 128,
+                    temperature: 0.7,
+                    do_sample: true,
+                }).then(result => {
+                    const response = result[0].generated_text[result[0].generated_text.length - 1].content;
+                    addMessage(response, false);
+                    conversationHistory.push({ role: 'assistant', content: response });
+                    speak(response);
+                });
+            });
+        });
+
+        // Initialize
+        initModels();
+    </script>
+</body>
+</html>

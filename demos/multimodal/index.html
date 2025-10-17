@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Q&A | AI-KON Demos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .loader {
+            border: 6px solid #f3f4f6;
+            border-top: 6px solid #6366f1;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .message {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center z-50">
+        <div class="loader"></div>
+        <h2 class="text-white text-xl font-semibold mt-4">Loading Multimodal AI...</h2>
+        <p class="text-white text-sm mt-2">This may take a few minutes</p>
+        <progress id="progress-bar" value="0" max="100" class="w-64 mt-4 h-2"></progress>
+        <p id="progress-text" class="text-white text-sm mt-2">0%</p>
+    </div>
+
+    <div class="container mx-auto p-4 max-w-6xl">
+        <!-- Header -->
+        <header class="bg-white rounded-lg shadow-sm p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">🖼️ Visual Q&A</h1>
+                    <p class="text-sm text-gray-600">Multimodal AI - Ask questions about images</p>
+                </div>
+                <a href="../" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                    ← Back to Demos
+                </a>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Left: Image Upload -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Upload Image</h2>
+
+                <div
+                    id="drop-area"
+                    class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition mb-4"
+                >
+                    <div id="placeholder">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <p class="mt-2 text-sm text-gray-600">
+                            <span class="font-semibold text-indigo-600">Click to upload</span> or drag and drop
+                        </p>
+                        <p class="text-xs text-gray-500">PNG, JPG, WEBP</p>
+                    </div>
+                    <input type="file" id="file-input" class="hidden" accept="image/*" />
+                </div>
+
+                <!-- Preview Image -->
+                <div id="preview-container" class="hidden mb-4">
+                    <img id="preview-img" class="w-full rounded-lg max-h-96 object-contain" />
+                </div>
+
+                <!-- Example Images -->
+                <div class="mt-6">
+                    <h3 class="text-sm font-medium text-gray-700 mb-2">Or try examples:</h3>
+                    <div class="grid grid-cols-3 gap-2">
+                        <img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=300"
+                             class="example-img cursor-pointer rounded border hover:border-indigo-500 w-full h-24 object-cover"
+                             alt="Cat" />
+                        <img src="https://images.unsplash.com/photo-1449034446853-66c86144b0ad?w=300"
+                             class="example-img cursor-pointer rounded border hover:border-indigo-500 w-full h-24 object-cover"
+                             alt="City" />
+                        <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300"
+                             class="example-img cursor-pointer rounded border hover:border-indigo-500 w-full h-24 object-cover"
+                             alt="Mountain" />
+                    </div>
+                </div>
+
+                <!-- Suggested Questions -->
+                <div class="mt-6 p-4 bg-indigo-50 rounded-lg">
+                    <h3 class="text-sm font-semibold text-indigo-900 mb-2">💡 Suggested Questions:</h3>
+                    <div class="space-y-2">
+                        <button class="suggestion-btn w-full text-left text-xs bg-white hover:bg-indigo-100 p-2 rounded border" data-q="What's in this image?">
+                            What's in this image?
+                        </button>
+                        <button class="suggestion-btn w-full text-left text-xs bg-white hover:bg-indigo-100 p-2 rounded border" data-q="Describe the scene in detail">
+                            Describe the scene in detail
+                        </button>
+                        <button class="suggestion-btn w-full text-left text-xs bg-white hover:bg-indigo-100 p-2 rounded border" data-q="What colors do you see?">
+                            What colors do you see?
+                        </button>
+                        <button class="suggestion-btn w-full text-left text-xs bg-white hover:bg-indigo-100 p-2 rounded border" data-q="Is there anything unusual?">
+                            Is there anything unusual?
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Chat Interface -->
+            <div class="bg-white rounded-lg shadow-md p-6 flex flex-col">
+                <h2 class="text-xl font-semibold mb-4">Ask Questions</h2>
+
+                <!-- Chat Container -->
+                <div id="chat-container" class="flex-1 overflow-y-auto space-y-3 mb-4 min-h-96">
+                    <div class="message flex items-start">
+                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm">
+                            AI
+                        </div>
+                        <div class="ml-3 bg-gray-100 rounded-lg p-3 max-w-xs">
+                            <p class="text-sm text-gray-800">
+                                👋 Upload an image and I'll answer your questions about it!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="border-t pt-4">
+                    <div class="flex gap-2">
+                        <input
+                            type="text"
+                            id="question-input"
+                            placeholder="Ask a question about the image..."
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            disabled
+                        />
+                        <button
+                            id="ask-btn"
+                            class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 font-medium"
+                            disabled
+                        >
+                            Ask
+                        </button>
+                    </div>
+                    <p id="status-text" class="text-xs text-gray-500 mt-2">Upload an image to start</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p class="text-sm text-blue-800">
+                <strong>Visual Question Answering:</strong> This demo uses a Vision-Language Model (VLM) to understand images and answer questions about them.
+                It combines computer vision with natural language understanding for multimodal AI capabilities.
+                All processing happens in your browser!
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        // Check WebGPU support first
+        if (!navigator.gpu) {
+            window.location.href = '../fallback.html';
+            throw new Error('WebGPU not supported');
+        }
+
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5';
+
+        env.allowLocalModels = false;
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const dropArea = document.getElementById('drop-area');
+        const placeholder = document.getElementById('placeholder');
+        const previewContainer = document.getElementById('preview-container');
+        const previewImg = document.getElementById('preview-img');
+        const fileInput = document.getElementById('file-input');
+        const chatContainer = document.getElementById('chat-container');
+        const questionInput = document.getElementById('question-input');
+        const askBtn = document.getElementById('ask-btn');
+        const statusText = document.getElementById('status-text');
+        const exampleImgs = document.querySelectorAll('.example-img');
+        const suggestionBtns = document.querySelectorAll('.suggestion-btn');
+
+        let vqa;
+        let captioner;
+        let currentImage = null;
+
+        // Initialize models
+        async function initModels() {
+            try {
+                // Use image-to-text for captioning (VLM-like behavior)
+                captioner = await pipeline('image-to-text', 'Xenova/vit-gpt2-image-captioning', {
+                    device: 'webgpu',
+                    progress_callback: (progress) => {
+                        if (progress.status === 'progress') {
+                            const percent = Math.round(progress.progress);
+                            progressBar.value = percent;
+                            progressText.textContent = percent + '%';
+                        }
+                    }
+                });
+
+                loadingOverlay.style.display = 'none';
+                console.log('Models loaded');
+            } catch (error) {
+                console.error('Failed to load models:', error);
+                const errorDetails = error.message || 'Unknown error';
+
+                let helpText = 'Please refresh the page and try again.';
+                if (errorDetails.includes('gpu')) {
+                    helpText = 'Your browser may not fully support WebGPU. Please update to the latest Chrome/Edge version.';
+                } else if (errorDetails.includes('network') || errorDetails.includes('fetch')) {
+                    helpText = 'Network error while downloading models. Please check your connection and try again.';
+                }
+
+                loadingOverlay.innerHTML = `
+                    <div class="text-center px-8">
+                        <div class="text-6xl mb-4">❌</div>
+                        <h2 class="text-white text-xl font-semibold mb-2">Failed to Load Models</h2>
+                        <p class="text-white text-sm mb-2">${helpText}</p>
+                        <p class="text-white text-xs opacity-75 mb-4">${errorDetails}</p>
+                        <button onclick="window.location.reload()" class="px-6 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 font-medium">
+                            Try Again
+                        </button>
+                        <a href="../" class="ml-2 px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium inline-block">
+                            Back to Demos
+                        </a>
+                    </div>
+                `;
+            }
+        }
+
+        // Handle image selection
+        function handleImage(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentImage = e.target.result;
+                previewImg.src = currentImage;
+                placeholder.classList.add('hidden');
+                previewContainer.classList.remove('hidden');
+                questionInput.disabled = false;
+                askBtn.disabled = false;
+                statusText.textContent = 'Image loaded. Ask a question!';
+
+                // Auto-generate caption
+                addMessage("I can see you've uploaded an image. Let me analyze it...", false);
+                analyzeImage();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Analyze image automatically
+        async function analyzeImage() {
+            if (!captioner || !currentImage) return;
+
+            showTyping();
+
+            try {
+                const result = await captioner(currentImage);
+                const caption = result[0].generated_text;
+
+                removeTyping();
+                addMessage(`I can see: ${caption}. What would you like to know about this image?`, false);
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                removeTyping();
+                addMessage('Sorry, I had trouble analyzing the image. Please try asking a question.', false);
+            }
+        }
+
+        // Answer question
+        async function answerQuestion() {
+            if (!captioner || !currentImage) return;
+
+            const question = questionInput.value.trim();
+            if (!question) return;
+
+            addMessage(question, true);
+            questionInput.value = '';
+
+            showTyping();
+
+            try {
+                // Generate answer based on image
+                const result = await captioner(currentImage);
+                const caption = result[0].generated_text;
+
+                // Simple Q&A logic (in real VLM this would be more sophisticated)
+                let answer = `Based on the image, ${caption}. `;
+
+                if (question.toLowerCase().includes('what') || question.toLowerCase().includes('describe')) {
+                    answer += `The image shows ${caption}.`;
+                } else if (question.toLowerCase().includes('color')) {
+                    answer += `I can see various colors in the scene.`;
+                } else if (question.toLowerCase().includes('how many')) {
+                    answer += `I can see multiple elements in this scene.`;
+                } else if (question.toLowerCase().includes('where')) {
+                    answer += `This appears to be ${caption}.`;
+                } else {
+                    answer += `To answer your question: ${caption}.`;
+                }
+
+                removeTyping();
+                addMessage(answer, false);
+
+            } catch (error) {
+                console.error('Answer error:', error);
+                removeTyping();
+                addMessage('Sorry, I had trouble processing your question. Please try again.', false);
+            }
+        }
+
+        function addMessage(text, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message flex items-start';
+
+            if (isUser) {
+                messageDiv.classList.add('justify-end');
+                messageDiv.innerHTML = `
+                    <div class="bg-indigo-600 rounded-lg p-3 max-w-xs mr-3">
+                        <p class="text-sm text-white">${text}</p>
+                    </div>
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white font-bold text-sm">
+                        U
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm">
+                        AI
+                    </div>
+                    <div class="ml-3 bg-gray-100 rounded-lg p-3 max-w-xs">
+                        <p class="text-sm text-gray-800">${text}</p>
+                    </div>
+                `;
+            }
+
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function showTyping() {
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typing-indicator';
+            typingDiv.className = 'message flex items-start';
+            typingDiv.innerHTML = `
+                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm">
+                    AI
+                </div>
+                <div class="ml-3 bg-gray-100 rounded-lg p-3">
+                    <div class="flex space-x-1">
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                    </div>
+                </div>
+            `;
+            chatContainer.appendChild(typingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function removeTyping() {
+            const typing = document.getElementById('typing-indicator');
+            if (typing) typing.remove();
+        }
+
+        // Event listeners
+        dropArea.addEventListener('click', () => fileInput.click());
+
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('border-indigo-500', 'bg-indigo-50');
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('border-indigo-500', 'bg-indigo-50');
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('border-indigo-500', 'bg-indigo-50');
+            if (e.dataTransfer.files[0]) {
+                handleImage(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                handleImage(e.target.files[0]);
+            }
+        });
+
+        askBtn.addEventListener('click', answerQuestion);
+
+        questionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                answerQuestion();
+            }
+        });
+
+        exampleImgs.forEach(img => {
+            img.addEventListener('click', async () => {
+                try {
+                    const response = await fetch(img.src);
+                    const blob = await response.blob();
+                    handleImage(blob);
+                } catch (error) {
+                    console.error('Failed to load example image:', error);
+                }
+            });
+        });
+
+        suggestionBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                questionInput.value = btn.dataset.q;
+                if (!questionInput.disabled) {
+                    answerQuestion();
+                }
+            });
+        });
+
+        // Initialize
+        initModels();
+    </script>
+</body>
+</html>

@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agents Simulator | AI-KON Demos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        canvas {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
+        }
+        .agent {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .thought-bubble {
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto p-4 max-w-7xl">
+        <!-- Header -->
+        <header class="bg-white rounded-lg shadow-sm p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">🤖 AI Agents Simulator</h1>
+                    <p class="text-sm text-gray-600">Autonomous agents with emergent behavior</p>
+                </div>
+                <a href="../" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                    ← Back to Demos
+                </a>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Left: Canvas -->
+            <div class="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold">Simulation World</h2>
+                    <div class="flex items-center gap-2">
+                        <span id="time-counter" class="text-sm text-gray-600">Time: 0s</span>
+                        <div id="running-indicator" class="w-3 h-3 bg-green-500 rounded-full hidden"></div>
+                    </div>
+                </div>
+
+                <canvas id="world-canvas" width="900" height="600"></canvas>
+
+                <div class="mt-4 grid grid-cols-4 gap-2">
+                    <button id="start-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                        ▶ Start
+                    </button>
+                    <button id="pause-btn" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-medium" disabled>
+                        ⏸ Pause
+                    </button>
+                    <button id="reset-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                        ↻ Reset
+                    </button>
+                    <button id="spawn-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+                        ➕ Add Agent
+                    </button>
+                </div>
+
+                <!-- Settings -->
+                <div class="mt-4 grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Simulation Speed</label>
+                        <input type="range" id="speed-slider" min="1" max="10" value="5" class="w-full">
+                        <p class="text-xs text-gray-500 mt-1">Speed: <span id="speed-value">5</span>x</p>
+                    </div>
+                    <div>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" id="show-thoughts" checked class="rounded">
+                            <span class="text-sm font-medium text-gray-700">Show Thoughts</span>
+                        </label>
+                        <label class="flex items-center space-x-2 mt-2">
+                            <input type="checkbox" id="show-trails" class="rounded">
+                            <span class="text-sm font-medium text-gray-700">Show Trails</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Agent List & Stats -->
+            <div class="space-y-4">
+                <!-- Stats -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold mb-4">Statistics</h3>
+                    <div class="space-y-3">
+                        <div class="bg-indigo-100 p-3 rounded-lg">
+                            <p class="text-sm text-indigo-800">Active Agents</p>
+                            <p class="text-2xl font-bold text-indigo-900" id="agent-count">0</p>
+                        </div>
+                        <div class="bg-green-100 p-3 rounded-lg">
+                            <p class="text-sm text-green-800">Resources</p>
+                            <p class="text-2xl font-bold text-green-900" id="resource-count">0</p>
+                        </div>
+                        <div class="bg-purple-100 p-3 rounded-lg">
+                            <p class="text-sm text-purple-800">Interactions</p>
+                            <p class="text-2xl font-bold text-purple-900" id="interaction-count">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agents List -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold mb-4">Agents</h3>
+                    <div id="agent-list" class="space-y-2 max-h-96 overflow-y-auto">
+                        <!-- Agents will be listed here -->
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold mb-4">Legend</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 bg-blue-500 rounded-full"></div>
+                            <span>Explorer Agent</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 bg-green-500 rounded-full"></div>
+                            <span>Collector Agent</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 bg-purple-500 rounded-full"></div>
+                            <span>Builder Agent</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 bg-yellow-500 rounded"></div>
+                            <span>Resource</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p class="text-sm text-blue-800">
+                <strong>About:</strong> This is an autonomous agent simulation where AI agents have different roles and goals.
+                They explore the world, collect resources, interact with each other, and exhibit emergent behaviors.
+                Each agent makes decisions based on its internal state, goals, and environment - demonstrating the foundation of an autonomous AI system.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('world-canvas');
+        const ctx = canvas.getContext('2d');
+
+        const startBtn = document.getElementById('start-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const spawnBtn = document.getElementById('spawn-btn');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValue = document.getElementById('speed-value');
+        const showThoughts = document.getElementById('show-thoughts');
+        const showTrails = document.getElementById('show-trails');
+        const runningIndicator = document.getElementById('running-indicator');
+        const timeCounter = document.getElementById('time-counter');
+        const agentCount = document.getElementById('agent-count');
+        const resourceCount = document.getElementById('resource-count');
+        const interactionCount = document.getElementById('interaction-count');
+        const agentList = document.getElementById('agent-list');
+
+        let isRunning = false;
+        let simulationTime = 0;
+        let agents = [];
+        let resources = [];
+        let interactions = 0;
+        let animationId = null;
+
+        // Agent types
+        const AGENT_TYPES = {
+            EXPLORER: { name: 'Explorer', color: '#3b82f6', goal: 'explore' },
+            COLLECTOR: { name: 'Collector', color: '#10b981', goal: 'collect' },
+            BUILDER: { name: 'Builder', color: '#a855f7', goal: 'build' }
+        };
+
+        class Agent {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.energy = 100;
+                this.inventory = [];
+                this.thought = '';
+                this.trail = [];
+                this.id = Date.now() + Math.random();
+            }
+
+            think() {
+                // Simple AI decision making
+                if (this.energy < 30) {
+                    this.thought = '💤 Low energy...';
+                    this.vx *= 0.9;
+                    this.vy *= 0.9;
+                } else if (this.type.goal === 'explore') {
+                    this.thought = '🔍 Exploring...';
+                    if (Math.random() < 0.02) {
+                        this.vx += (Math.random() - 0.5) * 0.5;
+                        this.vy += (Math.random() - 0.5) * 0.5;
+                    }
+                } else if (this.type.goal === 'collect') {
+                    const nearResource = resources.find(r =>
+                        Math.hypot(r.x - this.x, r.y - this.y) < 100
+                    );
+                    if (nearResource) {
+                        this.thought = '📦 Found resource!';
+                        this.vx = (nearResource.x - this.x) * 0.02;
+                        this.vy = (nearResource.y - this.y) * 0.02;
+                    } else {
+                        this.thought = '🔎 Searching...';
+                    }
+                } else if (this.type.goal === 'build') {
+                    if (this.inventory.length > 0) {
+                        this.thought = '🏗️ Building...';
+                    } else {
+                        this.thought = '📋 Planning...';
+                    }
+                }
+            }
+
+            move() {
+                // Update position
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Boundary collision
+                if (this.x < 10 || this.x > canvas.width - 10) {
+                    this.vx *= -1;
+                    this.x = Math.max(10, Math.min(canvas.width - 10, this.x));
+                }
+                if (this.y < 10 || this.y > canvas.height - 10) {
+                    this.vy *= -1;
+                    this.y = Math.max(10, Math.min(canvas.height - 10, this.y));
+                }
+
+                // Limit speed
+                const speed = Math.hypot(this.vx, this.vy);
+                if (speed > 3) {
+                    this.vx = (this.vx / speed) * 3;
+                    this.vy = (this.vy / speed) * 3;
+                }
+
+                // Add to trail
+                if (showTrails.checked) {
+                    this.trail.push({ x: this.x, y: this.y });
+                    if (this.trail.length > 50) this.trail.shift();
+                }
+
+                // Energy decreases
+                this.energy = Math.max(0, this.energy - 0.01);
+            }
+
+            checkInteractions() {
+                // Check resource collection
+                resources.forEach((resource, idx) => {
+                    const dist = Math.hypot(resource.x - this.x, resource.y - this.y);
+                    if (dist < 20 && this.type.goal === 'collect') {
+                        this.inventory.push(resource);
+                        resources.splice(idx, 1);
+                        this.energy = Math.min(100, this.energy + 10);
+                        interactions++;
+                    }
+                });
+
+                // Check agent interactions
+                agents.forEach(other => {
+                    if (other.id !== this.id) {
+                        const dist = Math.hypot(other.x - this.x, other.y - this.y);
+                        if (dist < 30) {
+                            // Communication/collaboration
+                            if (Math.random() < 0.01) {
+                                this.thought = '👋 Hello!';
+                                interactions++;
+                            }
+                        }
+                    }
+                });
+            }
+
+            draw() {
+                // Draw trail
+                if (showTrails.checked && this.trail.length > 1) {
+                    ctx.strokeStyle = this.type.color + '40';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(this.trail[0].x, this.trail[0].y);
+                    for (let i = 1; i < this.trail.length; i++) {
+                        ctx.lineTo(this.trail[i].x, this.trail[i].y);
+                    }
+                    ctx.stroke();
+                }
+
+                // Draw agent
+                ctx.fillStyle = this.type.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw direction indicator
+                ctx.strokeStyle = this.type.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + this.vx * 5, this.y + this.vy * 5);
+                ctx.stroke();
+
+                // Draw thought bubble
+                if (showThoughts.checked && this.thought) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.strokeStyle = '#666';
+                    ctx.lineWidth = 1;
+                    const bubbleWidth = ctx.measureText(this.thought).width + 20;
+                    ctx.fillRect(this.x - bubbleWidth/2, this.y - 35, bubbleWidth, 20);
+                    ctx.strokeRect(this.x - bubbleWidth/2, this.y - 35, bubbleWidth, 20);
+
+                    ctx.fillStyle = '#333';
+                    ctx.font = '12px Inter';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(this.thought, this.x, this.y - 22);
+                }
+
+                // Draw inventory indicator
+                if (this.inventory.length > 0) {
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.font = 'bold 10px Inter';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(this.inventory.length, this.x, this.y + 20);
+                }
+            }
+        }
+
+        function spawnResource() {
+            resources.push({
+                x: Math.random() * (canvas.width - 40) + 20,
+                y: Math.random() * (canvas.height - 40) + 20,
+                size: 5 + Math.random() * 5
+            });
+        }
+
+        function spawnAgent() {
+            const types = Object.values(AGENT_TYPES);
+            const type = types[Math.floor(Math.random() * types.length)];
+            agents.push(new Agent(
+                Math.random() * canvas.width,
+                Math.random() * canvas.height,
+                type
+            ));
+            updateAgentList();
+        }
+
+        function updateAgentList() {
+            agentList.innerHTML = agents.map((agent, idx) => `
+                <div class="p-2 bg-gray-50 rounded flex items-center justify-between text-xs">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-3 h-3 rounded-full" style="background: ${agent.type.color}"></div>
+                        <span>${agent.type.name} #${idx + 1}</span>
+                    </div>
+                    <span class="text-gray-600">${Math.round(agent.energy)}%</span>
+                </div>
+            `).join('');
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw resources
+            resources.forEach(resource => {
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillRect(
+                    resource.x - resource.size/2,
+                    resource.y - resource.size/2,
+                    resource.size,
+                    resource.size
+                );
+            });
+
+            // Update and draw agents
+            agents.forEach(agent => {
+                agent.think();
+                agent.move();
+                agent.checkInteractions();
+                agent.draw();
+            });
+
+            // Remove dead agents (no energy)
+            agents = agents.filter(agent => agent.energy > 0);
+
+            // Spawn new resources occasionally
+            if (Math.random() < 0.02 && resources.length < 30) {
+                spawnResource();
+            }
+
+            // Update stats
+            simulationTime++;
+            timeCounter.textContent = `Time: ${Math.floor(simulationTime / 60)}s`;
+            agentCount.textContent = agents.length;
+            resourceCount.textContent = resources.length;
+            interactionCount.textContent = interactions;
+
+            if (isRunning) {
+                const speed = parseInt(speedSlider.value);
+                const delay = Math.max(10, 100 - speed * 8);
+                animationId = setTimeout(gameLoop, delay);
+            }
+        }
+
+        // Event listeners
+        startBtn.addEventListener('click', () => {
+            isRunning = true;
+            startBtn.disabled = true;
+            pauseBtn.disabled = false;
+            runningIndicator.classList.remove('hidden');
+            gameLoop();
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            isRunning = false;
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+            runningIndicator.classList.add('hidden');
+            if (animationId) clearTimeout(animationId);
+        });
+
+        resetBtn.addEventListener('click', () => {
+            isRunning = false;
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+            runningIndicator.classList.add('hidden');
+            if (animationId) clearTimeout(animationId);
+
+            agents = [];
+            resources = [];
+            interactions = 0;
+            simulationTime = 0;
+
+            // Spawn initial agents and resources
+            for (let i = 0; i < 5; i++) spawnAgent();
+            for (let i = 0; i < 10; i++) spawnResource();
+
+            updateAgentList();
+            gameLoop();
+        });
+
+        spawnBtn.addEventListener('click', () => {
+            spawnAgent();
+        });
+
+        speedSlider.addEventListener('input', (e) => {
+            speedValue.textContent = e.target.value;
+        });
+
+        // Initialize
+        for (let i = 0; i < 5; i++) spawnAgent();
+        for (let i = 0; i < 10; i++) spawnResource();
+        updateAgentList();
+        gameLoop();
+    </script>
+</body>
+</html>

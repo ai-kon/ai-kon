@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Vision | AI-KON Demos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .loader {
+            border: 6px solid #f3f4f6;
+            border-top: 6px solid #6366f1;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #video-container {
+            position: relative;
+            max-width: 100%;
+        }
+        #webcam, #canvas {
+            max-width: 100%;
+            border-radius: 12px;
+        }
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        .detection-box {
+            border: 3px solid #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 8px;
+            padding: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center z-50">
+        <div class="loader"></div>
+        <h2 class="text-white text-xl font-semibold mt-4">Loading Vision Model...</h2>
+        <p class="text-white text-sm mt-2">Preparing real-time AI...</p>
+        <progress id="progress-bar" value="0" max="100" class="w-64 mt-4 h-2"></progress>
+        <p id="progress-text" class="text-white text-sm mt-2">0%</p>
+    </div>
+
+    <div class="container mx-auto p-4 max-w-6xl">
+        <!-- Header -->
+        <header class="bg-white rounded-lg shadow-sm p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">📹 Real-time Vision</h1>
+                    <p class="text-sm text-gray-600">Live AI-powered camera analysis</p>
+                </div>
+                <a href="../" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                    ← Back to Demos
+                </a>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left: Webcam Feed -->
+            <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold">Camera Feed</h2>
+                    <div class="flex items-center gap-2">
+                        <span id="fps-counter" class="text-sm text-gray-600">0 FPS</span>
+                        <div id="live-indicator" class="w-3 h-3 bg-red-500 rounded-full pulse hidden"></div>
+                    </div>
+                </div>
+
+                <div id="video-container" class="mb-4 bg-black rounded-lg overflow-hidden">
+                    <video id="webcam" autoplay playsinline muted class="w-full"></video>
+                    <canvas id="canvas"></canvas>
+                </div>
+
+                <div class="flex gap-2">
+                    <button
+                        id="start-btn"
+                        class="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                    >
+                        📹 Start Camera
+                    </button>
+                    <button
+                        id="stop-btn"
+                        class="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium hidden"
+                    >
+                        ⏹️ Stop
+                    </button>
+                    <button
+                        id="snapshot-btn"
+                        class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium hidden"
+                    >
+                        📸
+                    </button>
+                </div>
+
+                <!-- Mode Selection -->
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Detection Mode</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button class="mode-btn active px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm" data-mode="classify">
+                            🎯 Classification
+                        </button>
+                        <button class="mode-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm" data-mode="detect">
+                            📦 Object Detection
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Results -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Live Analysis</h2>
+
+                <div id="results-container" class="space-y-3">
+                    <div class="text-center text-gray-500 py-12">
+                        <p class="text-sm">Start camera to see live AI analysis</p>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="mt-6 pt-6 border-t">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-indigo-50 p-3 rounded-lg text-center">
+                            <p class="text-xs text-indigo-600">Detections</p>
+                            <p id="detection-count" class="text-2xl font-bold text-indigo-900">0</p>
+                        </div>
+                        <div class="bg-green-50 p-3 rounded-lg text-center">
+                            <p class="text-xs text-green-600">Confidence</p>
+                            <p id="avg-confidence" class="text-2xl font-bold text-green-900">0%</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Processing Time -->
+                <div class="mt-4">
+                    <div class="flex justify-between text-xs text-gray-600 mb-1">
+                        <span>Processing Time</span>
+                        <span id="process-time">0ms</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div id="process-bar" class="bg-indigo-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p class="text-sm text-blue-800">
+                <strong>Real-time AI Vision:</strong> This demo analyzes your webcam feed in real-time using WebGPU-accelerated AI models.
+                Choose between image classification or object detection. All processing happens locally in your browser - nothing is sent to any server!
+            </p>
+        </div>
+
+        <div class="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <p class="text-sm text-yellow-800">
+                <strong>⚠️ Camera Access Required:</strong> This demo needs camera permission. Your video never leaves your device.
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        // Check WebGPU support first
+        if (!navigator.gpu) {
+            window.location.href = '../fallback.html';
+            throw new Error('WebGPU not supported');
+        }
+
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5';
+
+        env.allowLocalModels = false;
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const videoContainer = document.getElementById('video-container');
+        const webcam = document.getElementById('webcam');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const snapshotBtn = document.getElementById('snapshot-btn');
+        const liveIndicator = document.getElementById('live-indicator');
+        const fpsCounter = document.getElementById('fps-counter');
+        const resultsContainer = document.getElementById('results-container');
+        const detectionCount = document.getElementById('detection-count');
+        const avgConfidence = document.getElementById('avg-confidence');
+        const processTime = document.getElementById('process-time');
+        const processBar = document.getElementById('process-bar');
+        const modeBtns = document.querySelectorAll('.mode-btn');
+
+        let classifier;
+        let detector;
+        let stream;
+        let isRunning = false;
+        let mode = 'classify';
+        let frameCount = 0;
+        let lastTime = Date.now();
+        let fps = 0;
+
+        // Initialize models
+        async function initModels() {
+            try {
+                // Load classifier
+                classifier = await pipeline('image-classification', 'Xenova/vit-base-patch16-224', {
+                    device: 'webgpu',
+                    progress_callback: (progress) => {
+                        if (progress.status === 'progress') {
+                            const percent = Math.round(progress.progress * 0.5); // 50% for first model
+                            progressBar.value = percent;
+                            progressText.textContent = percent + '%';
+                        }
+                    }
+                });
+
+                // Load detector
+                detector = await pipeline('object-detection', 'Xenova/yolos-tiny', {
+                    device: 'webgpu',
+                    progress_callback: (progress) => {
+                        if (progress.status === 'progress') {
+                            const percent = 50 + Math.round(progress.progress * 0.5); // 50-100%
+                            progressBar.value = percent;
+                            progressText.textContent = percent + '%';
+                        }
+                    }
+                });
+
+                loadingOverlay.style.display = 'none';
+                console.log('Models loaded');
+            } catch (error) {
+                console.error('Failed to load models:', error);
+                const errorDetails = error.message || 'Unknown error';
+
+                let helpText = 'Please refresh the page and try again.';
+                if (errorDetails.includes('gpu')) {
+                    helpText = 'Your browser may not fully support WebGPU. Please update to the latest Chrome/Edge version.';
+                } else if (errorDetails.includes('network') || errorDetails.includes('fetch')) {
+                    helpText = 'Network error while downloading models. Please check your connection and try again.';
+                }
+
+                loadingOverlay.innerHTML = `
+                    <div class="text-center px-8">
+                        <div class="text-6xl mb-4">❌</div>
+                        <h2 class="text-white text-xl font-semibold mb-2">Failed to Load Models</h2>
+                        <p class="text-white text-sm mb-2">${helpText}</p>
+                        <p class="text-white text-xs opacity-75 mb-4">${errorDetails}</p>
+                        <button onclick="window.location.reload()" class="px-6 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 font-medium">
+                            Try Again
+                        </button>
+                        <a href="../" class="ml-2 px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium inline-block">
+                            Back to Demos
+                        </a>
+                    </div>
+                `;
+            }
+        }
+
+        // Start webcam
+        async function startWebcam() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                });
+
+                webcam.srcObject = stream;
+                webcam.onloadedmetadata = () => {
+                    canvas.width = webcam.videoWidth;
+                    canvas.height = webcam.videoHeight;
+                };
+
+                isRunning = true;
+                startBtn.classList.add('hidden');
+                stopBtn.classList.remove('hidden');
+                snapshotBtn.classList.remove('hidden');
+                liveIndicator.classList.remove('hidden');
+
+                processFrame();
+
+            } catch (error) {
+                console.error('Camera access denied:', error);
+                alert('Camera access is required for this demo. Please allow camera access and try again.');
+            }
+        }
+
+        // Stop webcam
+        function stopWebcam() {
+            isRunning = false;
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            startBtn.classList.remove('hidden');
+            stopBtn.classList.add('hidden');
+            snapshotBtn.classList.add('hidden');
+            liveIndicator.classList.add('hidden');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Process frame
+        async function processFrame() {
+            if (!isRunning) return;
+
+            const startTime = performance.now();
+
+            // Draw current frame
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Capture frame
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = webcam.videoWidth;
+            tempCanvas.height = webcam.videoHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(webcam, 0, 0);
+
+            try {
+                if (mode === 'classify') {
+                    const results = await classifier(tempCanvas.toDataURL(), { topk: 5 });
+                    displayClassificationResults(results);
+                } else {
+                    const results = await detector(tempCanvas.toDataURL(), { threshold: 0.3, percentage: true });
+                    displayDetectionResults(results);
+                    drawDetections(results);
+                }
+            } catch (error) {
+                console.error('Processing error:', error);
+            }
+
+            const endTime = performance.now();
+            const elapsed = endTime - startTime;
+            processTime.textContent = Math.round(elapsed) + 'ms';
+            processBar.style.width = Math.min((elapsed / 1000) * 100, 100) + '%';
+
+            // Calculate FPS
+            frameCount++;
+            if (Date.now() - lastTime >= 1000) {
+                fps = frameCount;
+                fpsCounter.textContent = fps + ' FPS';
+                frameCount = 0;
+                lastTime = Date.now();
+            }
+
+            // Continue processing
+            requestAnimationFrame(processFrame);
+        }
+
+        function displayClassificationResults(results) {
+            resultsContainer.innerHTML = results.map((result, i) => {
+                const confidence = (result.score * 100).toFixed(1);
+                const barColor = i === 0 ? 'bg-indigo-600' : 'bg-gray-400';
+
+                return `
+                    <div class="detection-box">
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium text-gray-700">${result.label}</span>
+                            <span class="text-gray-600">${confidence}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="${barColor} h-2 rounded-full transition-all" style="width: ${confidence}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            detectionCount.textContent = results.length;
+            const avgConf = results.reduce((sum, r) => sum + r.score, 0) / results.length;
+            avgConfidence.textContent = (avgConf * 100).toFixed(0) + '%';
+        }
+
+        function displayDetectionResults(results) {
+            resultsContainer.innerHTML = results.map(result => {
+                const confidence = (result.score * 100).toFixed(1);
+
+                return `
+                    <div class="detection-box">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-gray-700">${result.label}</span>
+                            <span class="text-xs text-gray-600">${confidence}%</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            detectionCount.textContent = results.length;
+            if (results.length > 0) {
+                const avgConf = results.reduce((sum, r) => sum + r.score, 0) / results.length;
+                avgConfidence.textContent = (avgConf * 100).toFixed(0) + '%';
+            }
+        }
+
+        function drawDetections(results) {
+            results.forEach(detection => {
+                const { box, label, score } = detection;
+                const { xmin, ymin, xmax, ymax } = box;
+
+                // Draw box
+                ctx.strokeStyle = '#6366f1';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(xmin, ymin, xmax - xmin, ymax - ymin);
+
+                // Draw label
+                const text = `${label} ${(score * 100).toFixed(0)}%`;
+                ctx.font = '16px Inter, sans-serif';
+                const textMetrics = ctx.measureText(text);
+
+                ctx.fillStyle = '#6366f1';
+                ctx.fillRect(xmin, ymin - 25, textMetrics.width + 10, 25);
+
+                ctx.fillStyle = 'white';
+                ctx.fillText(text, xmin + 5, ymin - 7);
+            });
+        }
+
+        // Event listeners
+        startBtn.addEventListener('click', startWebcam);
+        stopBtn.addEventListener('click', stopWebcam);
+
+        snapshotBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `ai-kon-snapshot-${Date.now()}.png`;
+
+            const snapshotCanvas = document.createElement('canvas');
+            snapshotCanvas.width = webcam.videoWidth;
+            snapshotCanvas.height = webcam.videoHeight;
+            const snapshotCtx = snapshotCanvas.getContext('2d');
+            snapshotCtx.drawImage(webcam, 0, 0);
+            snapshotCtx.drawImage(canvas, 0, 0);
+
+            link.href = snapshotCanvas.toDataURL();
+            link.click();
+        });
+
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                mode = btn.dataset.mode;
+                modeBtns.forEach(b => {
+                    b.classList.remove('active', 'bg-indigo-600', 'text-white');
+                    b.classList.add('bg-gray-200', 'text-gray-700');
+                });
+                btn.classList.add('active', 'bg-indigo-600', 'text-white');
+                btn.classList.remove('bg-gray-200', 'text-gray-700');
+            });
+        });
+
+        // Initialize
+        initModels();
+    </script>
+</body>
+</html>
