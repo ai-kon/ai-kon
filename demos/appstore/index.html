@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>앱 스토어 - App Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+        }
+        .app-card {
+            transition: all 0.3s ease;
+        }
+        .app-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .carousel {
+            scroll-behavior: smooth;
+            scrollbar-width: none;
+        }
+        .carousel::-webkit-scrollbar {
+            display: none;
+        }
+        .star-rating {
+            color: #fbbf24;
+        }
+        .modal {
+            display: none;
+            background: rgba(0,0,0,0.7);
+        }
+        .modal.active {
+            display: flex;
+        }
+        .screenshot-gallery {
+            scroll-snap-type: x mandatory;
+        }
+        .screenshot-gallery img {
+            scroll-snap-align: start;
+        }
+        .installed-badge {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        .category-badge {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+        .tab-btn.active {
+            background: white;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-store text-3xl text-purple-600"></i>
+                    <h1 class="text-2xl font-bold text-gray-800">앱 스토어</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="showInstalledApps()" class="flex items-center space-x-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200">
+                        <i class="fas fa-download"></i>
+                        <span class="hidden md:inline">설치됨</span>
+                        <span id="installed-count" class="bg-purple-600 text-white text-xs rounded-full px-2 py-1">0</span>
+                    </button>
+                    <button class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white">
+                        <i class="fas fa-user"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="relative">
+                <input
+                    type="text"
+                    id="search-input"
+                    placeholder="앱, 게임 검색"
+                    class="w-full px-4 py-3 pl-12 rounded-full bg-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    oninput="searchApps(this.value)"
+                >
+                <i class="fas fa-search absolute left-4 top-4 text-gray-400"></i>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Featured Carousel -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold text-white mb-4 flex items-center">
+                <i class="fas fa-star mr-2"></i>
+                추천 앱
+            </h2>
+            <div class="carousel flex overflow-x-auto space-x-4 pb-4" id="featured-carousel">
+                <!-- Featured apps will be inserted here -->
+            </div>
+        </section>
+
+        <!-- Category Tabs -->
+        <section class="mb-8">
+            <div class="bg-white rounded-2xl shadow-lg p-2 flex space-x-2 overflow-x-auto">
+                <button class="tab-btn active px-6 py-3 rounded-xl font-medium whitespace-nowrap" onclick="filterCategory('all')">전체</button>
+                <button class="tab-btn px-6 py-3 rounded-xl font-medium whitespace-nowrap hover:bg-gray-100" onclick="filterCategory('게임')">게임</button>
+                <button class="tab-btn px-6 py-3 rounded-xl font-medium whitespace-nowrap hover:bg-gray-100" onclick="filterCategory('소셜')">소셜</button>
+                <button class="tab-btn px-6 py-3 rounded-xl font-medium whitespace-nowrap hover:bg-gray-100" onclick="filterCategory('생산성')">생산성</button>
+                <button class="tab-btn px-6 py-3 rounded-xl font-medium whitespace-nowrap hover:bg-gray-100" onclick="filterCategory('엔터테인먼트')">엔터테인먼트</button>
+                <button class="tab-btn px-6 py-3 rounded-xl font-medium whitespace-nowrap hover:bg-gray-100" onclick="filterCategory('유틸리티')">유틸리티</button>
+                <button class="tab-btn px-6 py-3 rounded-xl font-medium whitespace-nowrap hover:bg-gray-100" onclick="filterCategory('금융')">금융</button>
+            </div>
+        </section>
+
+        <!-- Top Charts -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold text-white mb-4 flex items-center">
+                <i class="fas fa-chart-line mr-2"></i>
+                차트
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-2 flex space-x-2 mb-4">
+                <button class="chart-tab active px-6 py-3 rounded-xl font-medium flex-1" onclick="showChart('popular')">인기</button>
+                <button class="chart-tab px-6 py-3 rounded-xl font-medium flex-1" onclick="showChart('revenue')">매출</button>
+                <button class="chart-tab px-6 py-3 rounded-xl font-medium flex-1" onclick="showChart('new')">신규</button>
+            </div>
+            <div id="chart-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Chart apps will be inserted here -->
+            </div>
+        </section>
+
+        <!-- All Apps Grid -->
+        <section>
+            <h2 class="text-2xl font-bold text-white mb-4 flex items-center">
+                <i class="fas fa-th-large mr-2"></i>
+                모든 앱
+            </h2>
+            <div id="apps-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Apps will be inserted here -->
+            </div>
+        </section>
+    </main>
+
+    <!-- App Detail Modal -->
+    <div id="app-modal" class="modal fixed inset-0 z-50 items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div id="modal-content">
+                <!-- Modal content will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // App Data
+        const appsData = [
+            {
+                id: 1,
+                name: "카카오톡",
+                nameEn: "KakaoTalk",
+                category: "소셜",
+                developer: "Kakao Corp.",
+                icon: "💬",
+                rating: 4.5,
+                downloads: "100,000,000+",
+                size: "156MB",
+                version: "10.5.2",
+                description: "대한민국 1위 메신저 앱! 무료 채팅과 무료 통화는 물론, 다양한 콘텐츠와 서비스를 즐겨보세요.",
+                screenshots: ["📱", "💬", "📞", "🎮"],
+                whatsNew: "- 채팅방 배경 테마 추가\n- 이모티콘 스토어 개선\n- 버그 수정 및 안정성 향상",
+                featured: true,
+                reviews: [
+                    { user: "김민수", rating: 5, comment: "최고의 메신저 앱입니다. 모두가 사용하고 있어요!", date: "2024.01.15" },
+                    { user: "이지은", rating: 4, comment: "편리하지만 가끔 느려질 때가 있어요.", date: "2024.01.10" }
+                ]
+            },
+            {
+                id: 2,
+                name: "네이버",
+                nameEn: "NAVER",
+                category: "유틸리티",
+                developer: "NAVER Corp.",
+                icon: "🟢",
+                rating: 4.3,
+                downloads: "50,000,000+",
+                size: "142MB",
+                version: "12.8.1",
+                description: "검색부터 쇼핑, 뉴스, 웹툰까지! 네이버 앱 하나로 모든 것을 편리하게 이용하세요.",
+                screenshots: ["🔍", "📰", "🛒", "📚"],
+                whatsNew: "- 스마트렌즈 기능 강화\n- UI 개선\n- 성능 최적화",
+                featured: true,
+                reviews: [
+                    { user: "박서준", rating: 5, comment: "필수 앱이에요. 없으면 안돼요!", date: "2024.01.12" },
+                    { user: "최유나", rating: 4, comment: "다양한 기능이 좋아요.", date: "2024.01.08" }
+                ]
+            },
+            {
+                id: 3,
+                name: "쿠팡",
+                nameEn: "Coupang",
+                category: "쇼핑",
+                developer: "Coupang Corp.",
+                icon: "🛍️",
+                rating: 4.6,
+                downloads: "50,000,000+",
+                size: "98MB",
+                version: "6.15.0",
+                description: "로켓배송으로 오늘 주문하면 내일 도착! 최저가 쇼핑의 모든 것.",
+                screenshots: ["📦", "🚀", "💳", "🎁"],
+                whatsNew: "- 로켓프레시 개선\n- 쿠팡플레이 통합\n- 검색 기능 강화",
+                featured: true,
+                reviews: [
+                    { user: "정민호", rating: 5, comment: "배송이 정말 빨라요!", date: "2024.01.14" },
+                    { user: "송하나", rating: 5, comment: "가격도 저렴하고 품질도 좋아요.", date: "2024.01.11" }
+                ]
+            },
+            {
+                id: 4,
+                name: "배달의민족",
+                nameEn: "Baemin",
+                category: "음식",
+                developer: "Woowa Bros.",
+                icon: "🍔",
+                rating: 4.4,
+                downloads: "30,000,000+",
+                size: "124MB",
+                version: "8.42.0",
+                description: "대한민국 최고의 배달 앱! 빠르고 정확한 배달, 다양한 메뉴 선택.",
+                screenshots: ["🍕", "🍜", "🍗", "🥘"],
+                whatsNew: "- B마트 서비스 확대\n- 배달비 할인 이벤트\n- 리뷰 시스템 개선",
+                featured: false,
+                reviews: [
+                    { user: "윤지수", rating: 4, comment: "자주 이용해요. 편리합니다!", date: "2024.01.13" },
+                    { user: "강태양", rating: 5, comment: "할인 쿠폰이 많아서 좋아요.", date: "2024.01.09" }
+                ]
+            },
+            {
+                id: 5,
+                name: "토스",
+                nameEn: "Toss",
+                category: "금융",
+                developer: "Viva Republica",
+                icon: "💳",
+                rating: 4.7,
+                downloads: "20,000,000+",
+                size: "89MB",
+                version: "5.121.0",
+                description: "간편 송금부터 투자, 보험까지! 토스 하나로 금융 생활을 간편하게.",
+                screenshots: ["💰", "📊", "🏦", "💸"],
+                whatsNew: "- 토스뱅크 신규 서비스\n- 주식 거래 수수료 인하\n- 보안 강화",
+                featured: true,
+                reviews: [
+                    { user: "임수빈", rating: 5, comment: "송금이 너무 쉬워요!", date: "2024.01.16" },
+                    { user: "한준우", rating: 5, comment: "금융 앱의 혁명이에요.", date: "2024.01.12" }
+                ]
+            },
+            {
+                id: 6,
+                name: "애니팡",
+                nameEn: "Anipang",
+                category: "게임",
+                developer: "SundayToz",
+                icon: "🐰",
+                rating: 4.2,
+                downloads: "50,000,000+",
+                size: "156MB",
+                version: "7.3.0",
+                description: "국민 퍼즐 게임! 귀여운 동물 친구들과 함께하는 즐거운 퍼즐 매칭.",
+                screenshots: ["🎮", "🌈", "⭐", "🎯"],
+                whatsNew: "- 새로운 스테이지 100개 추가\n- 특별 이벤트 진행\n- 게임 밸런스 조정",
+                featured: false,
+                reviews: [
+                    { user: "김도연", rating: 4, comment: "중독성 있어요! 재밌어요.", date: "2024.01.14" },
+                    { user: "박민재", rating: 4, comment: "시간 가는 줄 몰라요.", date: "2024.01.10" }
+                ]
+            },
+            {
+                id: 7,
+                name: "쿠키런: 킹덤",
+                nameEn: "Cookie Run: Kingdom",
+                category: "게임",
+                developer: "Devsisters",
+                icon: "🍪",
+                rating: 4.5,
+                downloads: "10,000,000+",
+                size: "1.2GB",
+                version: "4.8.102",
+                description: "쿠키들의 왕국을 건설하고 모험을 떠나세요! RPG와 전략이 결합된 게임.",
+                screenshots: ["🏰", "⚔️", "🎪", "🌟"],
+                whatsNew: "- 신규 쿠키 '달빛술사맛 쿠키' 출시\n- 길드전 시즌 시작\n- 버그 수정",
+                featured: true,
+                reviews: [
+                    { user: "이서연", rating: 5, comment: "그래픽이 정말 예뻐요!", date: "2024.01.15" },
+                    { user: "최민석", rating: 4, comment: "재밌지만 과금 유도가 심해요.", date: "2024.01.11" }
+                ]
+            },
+            {
+                id: 8,
+                name: "모두의마블",
+                nameEn: "Modoo Marble",
+                category: "게임",
+                developer: "Netmarble",
+                icon: "🎲",
+                rating: 4.3,
+                downloads: "30,000,000+",
+                size: "287MB",
+                version: "2.95.0",
+                description: "친구들과 함께 즐기는 부루마블! 전국 랜드마크를 차지하세요.",
+                screenshots: ["🗼", "🎰", "🏆", "💎"],
+                whatsNew: "- 크리스마스 시즌 맵 추가\n- 신규 캐릭터 출시\n- 이벤트 진행",
+                featured: false,
+                reviews: [
+                    { user: "정우진", rating: 4, comment: "친구들이랑 하면 재밌어요.", date: "2024.01.13" },
+                    { user: "한예원", rating: 4, comment: "추억의 게임이네요!", date: "2024.01.09" }
+                ]
+            },
+            {
+                id: 9,
+                name: "유튜브",
+                nameEn: "YouTube",
+                category: "엔터테인먼트",
+                developer: "Google LLC",
+                icon: "📺",
+                rating: 4.6,
+                downloads: "10,000,000,000+",
+                size: "145MB",
+                version: "18.49.35",
+                description: "전 세계 동영상 플랫폼! 좋아하는 콘텐츠를 무제한으로 시청하세요.",
+                screenshots: ["🎬", "🎵", "🎮", "📚"],
+                whatsNew: "- 쇼츠 기능 개선\n- 화질 향상\n- 재생 목록 관리 기능 추가",
+                featured: true,
+                reviews: [
+                    { user: "김하늘", rating: 5, comment: "없어서는 안 될 앱!", date: "2024.01.16" },
+                    { user: "이준호", rating: 4, comment: "광고가 좀 많아요.", date: "2024.01.12" }
+                ]
+            },
+            {
+                id: 10,
+                name: "인스타그램",
+                nameEn: "Instagram",
+                category: "소셜",
+                developer: "Meta Platforms",
+                icon: "📷",
+                rating: 4.4,
+                downloads: "5,000,000,000+",
+                size: "167MB",
+                version: "312.0.0.12.114",
+                description: "사진과 동영상을 공유하고 친구들과 소통하는 SNS 플랫폼.",
+                screenshots: ["📸", "🎨", "💬", "🎥"],
+                whatsNew: "- 릴스 편집 기능 강화\n- 스토리 템플릿 추가\n- 성능 개선",
+                featured: false,
+                reviews: [
+                    { user: "박지원", rating: 4, comment: "사진 공유하기 좋아요.", date: "2024.01.14" },
+                    { user: "최서현", rating: 5, comment: "매일 사용하는 앱이에요.", date: "2024.01.10" }
+                ]
+            },
+            {
+                id: 11,
+                name: "멜론",
+                nameEn: "Melon",
+                category: "엔터테인먼트",
+                developer: "Kakao Entertainment",
+                icon: "🎵",
+                rating: 4.2,
+                downloads: "10,000,000+",
+                size: "112MB",
+                version: "7.12.1",
+                description: "대한민국 최대 음악 스트리밍 서비스! 최신 차트와 플레이리스트를 즐기세요.",
+                screenshots: ["🎧", "🎤", "📻", "🎶"],
+                whatsNew: "- 고음질 스트리밍 지원\n- 개인화 추천 강화\n- DJ 모드 추가",
+                featured: false,
+                reviews: [
+                    { user: "윤서아", rating: 4, comment: "음질이 좋아요!", date: "2024.01.13" },
+                    { user: "강민우", rating: 4, comment: "차트가 정확해요.", date: "2024.01.09" }
+                ]
+            },
+            {
+                id: 12,
+                name: "넷플릭스",
+                nameEn: "Netflix",
+                category: "엔터테인먼트",
+                developer: "Netflix, Inc.",
+                icon: "🎬",
+                rating: 4.5,
+                downloads: "1,000,000,000+",
+                size: "234MB",
+                version: "8.93.0",
+                description: "전 세계 인기 영화와 시리즈를 무제한으로! 오리지널 콘텐츠도 풍성하게.",
+                screenshots: ["🍿", "📺", "🎭", "🎪"],
+                whatsNew: "- 한국 콘텐츠 확대\n- 다운로드 기능 개선\n- 프로필 관리 편의성 향상",
+                featured: true,
+                reviews: [
+                    { user: "정예진", rating: 5, comment: "콘텐츠가 정말 다양해요!", date: "2024.01.15" },
+                    { user: "한지우", rating: 4, comment: "한국 드라마 많아서 좋아요.", date: "2024.01.11" }
+                ]
+            },
+            {
+                id: 13,
+                name: "노션",
+                nameEn: "Notion",
+                category: "생산성",
+                developer: "Notion Labs",
+                icon: "📝",
+                rating: 4.7,
+                downloads: "50,000,000+",
+                size: "156MB",
+                version: "0.6.1320",
+                description: "올인원 워크스페이스! 노트, 작업 관리, 위키를 하나의 앱으로.",
+                screenshots: ["📋", "📊", "🗂️", "✅"],
+                whatsNew: "- AI 기능 추가\n- 협업 기능 강화\n- 템플릿 갤러리 확대",
+                featured: false,
+                reviews: [
+                    { user: "김태희", rating: 5, comment: "업무 효율이 10배 올랐어요!", date: "2024.01.14" },
+                    { user: "이동욱", rating: 5, comment: "최고의 생산성 앱입니다.", date: "2024.01.10" }
+                ]
+            },
+            {
+                id: 14,
+                name: "당근마켓",
+                nameEn: "Karrot",
+                category: "쇼핑",
+                developer: "Danggeun Market Inc.",
+                icon: "🥕",
+                rating: 4.5,
+                downloads: "20,000,000+",
+                size: "87MB",
+                version: "23.45.0",
+                description: "우리 동네 중고 거래의 시작! 믿을 수 있는 이웃과 안전하게 거래하세요.",
+                screenshots: ["📱", "🏘️", "💬", "🤝"],
+                whatsNew: "- 당근페이 출시\n- 동네 생활 탭 개선\n- 채팅 기능 강화",
+                featured: false,
+                reviews: [
+                    { user: "박수진", rating: 5, comment: "이웃과 거래하니 믿음이 가요!", date: "2024.01.13" },
+                    { user: "최현우", rating: 4, comment: "필요 없는 물건 팔기 좋아요.", date: "2024.01.09" }
+                ]
+            },
+            {
+                id: 15,
+                name: "카카오맵",
+                nameEn: "Kakao Map",
+                category: "유틸리티",
+                developer: "Kakao Mobility",
+                icon: "🗺️",
+                rating: 4.6,
+                downloads: "30,000,000+",
+                size: "178MB",
+                version: "6.15.2",
+                description: "대한민국 1등 지도 앱! 길찾기, 대중교통, 주차 정보까지.",
+                screenshots: ["🚗", "🚇", "🅿️", "🧭"],
+                whatsNew: "- 스카이뷰 3D 지도 추가\n- 실시간 교통 정보 강화\n- 음성 안내 개선",
+                featured: true,
+                reviews: [
+                    { user: "윤지혜", rating: 5, comment: "길찾기가 정확해요!", date: "2024.01.15" },
+                    { user: "강준영", rating: 5, comment: "주차 정보가 유용해요.", date: "2024.01.11" }
+                ]
+            },
+            {
+                id: 16,
+                name: "구글 포토",
+                nameEn: "Google Photos",
+                category: "유틸리티",
+                developer: "Google LLC",
+                icon: "📸",
+                rating: 4.5,
+                downloads: "5,000,000,000+",
+                size: "124MB",
+                version: "6.72.0.602",
+                description: "사진과 동영상을 안전하게 백업하고 정리하세요. AI 검색 기능으로 쉽게 찾을 수 있습니다.",
+                screenshots: ["🖼️", "☁️", "🔍", "✨"],
+                whatsNew: "- 매직 지우개 기능 추가\n- 콜라주 메이커 개선\n- 공유 앨범 기능 강화",
+                featured: false,
+                reviews: [
+                    { user: "송민지", rating: 5, comment: "사진 백업에 최고예요!", date: "2024.01.12" },
+                    { user: "이현수", rating: 4, comment: "검색 기능이 신기해요.", date: "2024.01.08" }
+                ]
+            },
+            {
+                id: 17,
+                name: "왓챠",
+                nameEn: "Watcha",
+                category: "엔터테인먼트",
+                developer: "Watcha Inc.",
+                icon: "🎥",
+                rating: 4.3,
+                downloads: "5,000,000+",
+                size: "98MB",
+                version: "5.32.1",
+                description: "취향 저격 콘텐츠 추천! 영화와 드라마를 스마트하게 발견하세요.",
+                screenshots: ["🎞️", "🍿", "⭐", "📺"],
+                whatsNew: "- 개인화 추천 알고리즘 개선\n- 댓글 기능 추가\n- 시청 이어보기 강화",
+                featured: false,
+                reviews: [
+                    { user: "김보라", rating: 4, comment: "추천이 정말 정확해요!", date: "2024.01.14" },
+                    { user: "박지훈", rating: 4, comment: "숨은 명작 찾기 좋아요.", date: "2024.01.10" }
+                ]
+            },
+            {
+                id: 18,
+                name: "배민커넥트",
+                nameEn: "Baemin Connect",
+                category: "생산성",
+                developer: "Woowa Bros.",
+                icon: "📦",
+                rating: 4.4,
+                downloads: "1,000,000+",
+                size: "67MB",
+                version: "3.12.0",
+                description: "배달의민족 라이더 전용 앱! 효율적인 배달 관리와 수익 확인.",
+                screenshots: ["🛵", "📍", "💰", "📊"],
+                whatsNew: "- 경로 최적화 기능 추가\n- 정산 내역 상세화\n- 긴급 콜 알림 개선",
+                featured: false,
+                reviews: [
+                    { user: "정민철", rating: 4, comment: "배달하기 편해졌어요.", date: "2024.01.13" },
+                    { user: "한상우", rating: 5, comment: "수익 관리가 쉬워요.", date: "2024.01.09" }
+                ]
+            },
+            {
+                id: 19,
+                name: "뱅크샐러드",
+                nameEn: "Banksalad",
+                category: "금융",
+                developer: "Rainist Co.",
+                icon: "💵",
+                rating: 4.6,
+                downloads: "10,000,000+",
+                size: "92MB",
+                version: "4.58.0",
+                description: "내 모든 금융 정보를 한눈에! 똑똑한 재무 관리의 시작.",
+                screenshots: ["💳", "📈", "🏦", "💸"],
+                whatsNew: "- 자동 가계부 기능 강화\n- 신용카드 추천 서비스\n- 자산 분석 리포트",
+                featured: false,
+                reviews: [
+                    { user: "이수정", rating: 5, comment: "자산 관리가 한눈에!", date: "2024.01.15" },
+                    { user: "김민규", rating: 5, comment: "카드 추천이 유용해요.", date: "2024.01.11" }
+                ]
+            },
+            {
+                id: 20,
+                name: "리디북스",
+                nameEn: "Ridibooks",
+                category: "엔터테인먼트",
+                developer: "Ridi Corporation",
+                icon: "📚",
+                rating: 4.4,
+                downloads: "10,000,000+",
+                size: "134MB",
+                version: "3.9.2",
+                description: "전자책과 웹소설의 모든 것! 언제 어디서나 독서를 즐기세요.",
+                screenshots: ["📖", "✍️", "🌙", "💡"],
+                whatsNew: "- 독서 통계 기능 추가\n- 밤 모드 개선\n- 신간 알림 기능",
+                featured: false,
+                reviews: [
+                    { user: "최서영", rating: 4, comment: "독서하기 너무 편해요!", date: "2024.01.12" },
+                    { user: "박준혁", rating: 4, comment: "웹소설 종류가 다양해요.", date: "2024.01.08" }
+                ]
+            }
+        ];
+
+        // Initialize
+        let installedApps = JSON.parse(localStorage.getItem('installedApps')) || [];
+        let currentCategory = 'all';
+        let currentChart = 'popular';
+
+        function init() {
+            renderFeaturedCarousel();
+            renderAppsGrid();
+            renderChart();
+            updateInstalledCount();
+        }
+
+        // Render Featured Carousel
+        function renderFeaturedCarousel() {
+            const carousel = document.getElementById('featured-carousel');
+            const featured = appsData.filter(app => app.featured);
+
+            carousel.innerHTML = featured.map(app => `
+                <div class="flex-shrink-0 w-80 bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl p-6 text-white cursor-pointer hover:scale-105 transition" onclick="openAppDetail(${app.id})">
+                    <div class="flex items-start space-x-4 mb-4">
+                        <div class="text-6xl">${app.icon}</div>
+                        <div class="flex-1">
+                            <h3 class="text-2xl font-bold mb-1">${app.name}</h3>
+                            <p class="text-purple-100 text-sm mb-2">${app.category}</p>
+                            <div class="flex items-center space-x-1">
+                                ${renderStars(app.rating)}
+                                <span class="ml-2 text-sm">${app.rating}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-purple-100 mb-4">${app.description.substring(0, 80)}...</p>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs">${app.downloads}</span>
+                        <button class="bg-white text-purple-600 px-6 py-2 rounded-full font-bold hover:bg-purple-50">
+                            ${isInstalled(app.id) ? '실행' : '설치'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Apps Grid
+        function renderAppsGrid(apps = null) {
+            const grid = document.getElementById('apps-grid');
+            const appsToRender = apps || (currentCategory === 'all' ? appsData : appsData.filter(app => app.category === currentCategory));
+
+            grid.innerHTML = appsToRender.map(app => `
+                <div class="app-card bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer" onclick="openAppDetail(${app.id})">
+                    <div class="p-6">
+                        <div class="flex items-start space-x-4 mb-4">
+                            <div class="text-5xl">${app.icon}</div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-lg font-bold text-gray-800 truncate">${app.name}</h3>
+                                <p class="text-sm text-gray-500">${app.developer}</p>
+                                <span class="category-badge inline-block text-white text-xs px-3 py-1 rounded-full mt-1">${app.category}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center mb-3">
+                            ${renderStars(app.rating)}
+                            <span class="ml-2 text-sm font-semibold text-gray-700">${app.rating}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                            <span><i class="fas fa-download mr-1"></i>${app.downloads}</span>
+                            <span><i class="fas fa-hdd mr-1"></i>${app.size}</span>
+                        </div>
+                        <button
+                            onclick="event.stopPropagation(); toggleInstall(${app.id})"
+                            class="${isInstalled(app.id) ? 'installed-badge' : 'bg-gradient-to-r from-purple-600 to-pink-600'} w-full text-white py-3 rounded-xl font-bold hover:shadow-lg transition"
+                        >
+                            ${isInstalled(app.id) ? '<i class="fas fa-check mr-2"></i>설치됨' : '<i class="fas fa-download mr-2"></i>설치'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Chart
+        function renderChart() {
+            const chartContent = document.getElementById('chart-content');
+            let sortedApps = [...appsData];
+
+            if (currentChart === 'popular') {
+                sortedApps.sort((a, b) => parseDownloads(b.downloads) - parseDownloads(a.downloads));
+            } else if (currentChart === 'revenue') {
+                sortedApps.sort((a, b) => b.rating - a.rating);
+            } else if (currentChart === 'new') {
+                sortedApps = sortedApps.slice(0, 10);
+            }
+
+            chartContent.innerHTML = sortedApps.slice(0, 9).map((app, index) => `
+                <div class="bg-white rounded-2xl p-4 shadow-lg hover:shadow-xl transition cursor-pointer" onclick="openAppDetail(${app.id})">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-2xl font-bold text-purple-600 w-8">${index + 1}</span>
+                        <div class="text-4xl">${app.icon}</div>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-bold text-gray-800 truncate">${app.name}</h3>
+                            <p class="text-sm text-gray-500 truncate">${app.developer}</p>
+                            <div class="flex items-center mt-1">
+                                ${renderStars(app.rating, 3)}
+                                <span class="ml-1 text-xs text-gray-600">${app.rating}</span>
+                            </div>
+                        </div>
+                        <button
+                            onclick="event.stopPropagation(); toggleInstall(${app.id})"
+                            class="px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap ${isInstalled(app.id) ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'}"
+                        >
+                            ${isInstalled(app.id) ? '실행' : '설치'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Open App Detail Modal
+        function openAppDetail(appId) {
+            const app = appsData.find(a => a.id === appId);
+            const modal = document.getElementById('app-modal');
+            const modalContent = document.getElementById('modal-content');
+
+            modalContent.innerHTML = `
+                <div class="sticky top-0 bg-white z-10 px-6 pt-6 pb-4 border-b flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-gray-800">${app.name}</h2>
+                    <button onclick="closeModal()" class="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center">
+                        <i class="fas fa-times text-xl text-gray-600"></i>
+                    </button>
+                </div>
+
+                <div class="p-6">
+                    <!-- App Header -->
+                    <div class="flex items-start space-x-6 mb-6">
+                        <div class="text-7xl">${app.icon}</div>
+                        <div class="flex-1">
+                            <h3 class="text-2xl font-bold text-gray-800 mb-1">${app.name}</h3>
+                            <p class="text-gray-600 mb-2">${app.developer}</p>
+                            <span class="category-badge inline-block text-white text-sm px-4 py-1 rounded-full">${app.category}</span>
+
+                            <div class="flex items-center space-x-6 mt-4 text-sm text-gray-600">
+                                <div>
+                                    <div class="text-2xl font-bold text-gray-800">${app.rating}</div>
+                                    <div>${renderStars(app.rating, 5)}</div>
+                                    <div class="text-xs">평가</div>
+                                </div>
+                                <div class="border-l pl-6">
+                                    <div class="text-lg font-bold text-gray-800">${app.downloads}</div>
+                                    <div class="text-xs">다운로드</div>
+                                </div>
+                                <div class="border-l pl-6">
+                                    <div class="text-lg font-bold text-gray-800">${app.size}</div>
+                                    <div class="text-xs">크기</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Install Button -->
+                    <button
+                        onclick="toggleInstall(${app.id})"
+                        class="${isInstalled(app.id) ? 'installed-badge' : 'bg-gradient-to-r from-purple-600 to-pink-600'} w-full text-white py-4 rounded-2xl font-bold text-lg hover:shadow-lg transition mb-6"
+                    >
+                        ${isInstalled(app.id) ? '<i class="fas fa-check mr-2"></i>설치됨 - 실행하기' : '<i class="fas fa-download mr-2"></i>설치하기'}
+                    </button>
+
+                    <!-- Screenshots -->
+                    <div class="mb-6">
+                        <h4 class="text-lg font-bold text-gray-800 mb-3">미리보기</h4>
+                        <div class="screenshot-gallery flex overflow-x-auto space-x-4 pb-4">
+                            ${app.screenshots.map(screenshot => `
+                                <div class="flex-shrink-0 w-48 h-96 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center text-6xl">
+                                    ${screenshot}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-6">
+                        <h4 class="text-lg font-bold text-gray-800 mb-3">소개</h4>
+                        <p class="text-gray-600 leading-relaxed">${app.description}</p>
+                    </div>
+
+                    <!-- What's New -->
+                    <div class="mb-6 bg-purple-50 rounded-2xl p-4">
+                        <h4 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-sparkles text-purple-600 mr-2"></i>
+                            새로운 소식
+                        </h4>
+                        <div class="flex items-start justify-between mb-2">
+                            <span class="text-sm text-gray-600">버전 ${app.version}</span>
+                            <span class="text-sm text-gray-500">2024.01.15</span>
+                        </div>
+                        <p class="text-gray-700 text-sm whitespace-pre-line">${app.whatsNew}</p>
+                    </div>
+
+                    <!-- App Info -->
+                    <div class="mb-6 bg-gray-50 rounded-2xl p-4">
+                        <h4 class="text-lg font-bold text-gray-800 mb-3">정보</h4>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">개발자</span>
+                                <span class="font-semibold text-gray-800">${app.developer}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">크기</span>
+                                <span class="font-semibold text-gray-800">${app.size}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">버전</span>
+                                <span class="font-semibold text-gray-800">${app.version}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">카테고리</span>
+                                <span class="font-semibold text-gray-800">${app.category}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reviews -->
+                    <div class="mb-6">
+                        <h4 class="text-lg font-bold text-gray-800 mb-4">평가 및 리뷰</h4>
+
+                        <!-- Rating Summary -->
+                        <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 mb-4">
+                            <div class="flex items-center space-x-8">
+                                <div class="text-center">
+                                    <div class="text-5xl font-bold text-gray-800 mb-2">${app.rating}</div>
+                                    <div class="mb-2">${renderStars(app.rating, 5)}</div>
+                                    <div class="text-sm text-gray-600">${app.reviews.length}개의 평가</div>
+                                </div>
+                                <div class="flex-1">
+                                    ${[5,4,3,2,1].map(star => {
+                                        const count = app.reviews.filter(r => Math.floor(r.rating) === star).length;
+                                        const percentage = (count / app.reviews.length * 100).toFixed(0);
+                                        return `
+                                            <div class="flex items-center space-x-2 mb-2">
+                                                <span class="text-xs text-gray-600 w-2">${star}</span>
+                                                <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div class="h-full bg-gradient-to-r from-purple-500 to-pink-500" style="width: ${percentage}%"></div>
+                                                </div>
+                                                <span class="text-xs text-gray-600 w-10 text-right">${percentage}%</span>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Individual Reviews -->
+                        <div class="space-y-4">
+                            ${app.reviews.map(review => `
+                                <div class="border-b pb-4">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">
+                                                ${review.user[0]}
+                                            </div>
+                                            <div>
+                                                <div class="font-semibold text-gray-800">${review.user}</div>
+                                                <div class="text-xs text-gray-500">${review.date}</div>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center">
+                                            ${renderStars(review.rating, 5)}
+                                        </div>
+                                    </div>
+                                    <p class="text-gray-700 text-sm">${review.comment}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Similar Apps -->
+                    <div>
+                        <h4 class="text-lg font-bold text-gray-800 mb-3">비슷한 앱</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            ${appsData.filter(a => a.category === app.category && a.id !== app.id).slice(0, 3).map(similarApp => `
+                                <div class="bg-gray-50 rounded-xl p-4 cursor-pointer hover:bg-gray-100 transition" onclick="openAppDetail(${similarApp.id})">
+                                    <div class="text-4xl mb-2">${similarApp.icon}</div>
+                                    <h5 class="font-bold text-gray-800 text-sm truncate">${similarApp.name}</h5>
+                                    <p class="text-xs text-gray-500 truncate mb-2">${similarApp.developer}</p>
+                                    <div class="flex items-center">
+                                        ${renderStars(similarApp.rating, 4)}
+                                        <span class="ml-1 text-xs text-gray-600">${similarApp.rating}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('app-modal').classList.remove('active');
+        }
+
+        // Toggle Install
+        function toggleInstall(appId) {
+            if (isInstalled(appId)) {
+                installedApps = installedApps.filter(id => id !== appId);
+                showToast('앱이 제거되었습니다', 'error');
+            } else {
+                installedApps.push(appId);
+                showToast('앱이 설치되었습니다', 'success');
+            }
+
+            localStorage.setItem('installedApps', JSON.stringify(installedApps));
+            updateInstalledCount();
+            renderAppsGrid();
+            renderFeaturedCarousel();
+            renderChart();
+
+            const modal = document.getElementById('app-modal');
+            if (modal.classList.contains('active')) {
+                openAppDetail(appId);
+            }
+        }
+
+        // Filter Category
+        function filterCategory(category) {
+            currentCategory = category;
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            renderAppsGrid();
+        }
+
+        // Show Chart
+        function showChart(chartType) {
+            currentChart = chartType;
+
+            document.querySelectorAll('.chart-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            renderChart();
+        }
+
+        // Search Apps
+        function searchApps(query) {
+            if (!query.trim()) {
+                renderAppsGrid();
+                return;
+            }
+
+            const filtered = appsData.filter(app =>
+                app.name.toLowerCase().includes(query.toLowerCase()) ||
+                app.nameEn.toLowerCase().includes(query.toLowerCase()) ||
+                app.developer.toLowerCase().includes(query.toLowerCase()) ||
+                app.category.toLowerCase().includes(query.toLowerCase())
+            );
+
+            renderAppsGrid(filtered);
+        }
+
+        // Show Installed Apps
+        function showInstalledApps() {
+            const installed = appsData.filter(app => isInstalled(app.id));
+
+            if (installed.length === 0) {
+                showToast('설치된 앱이 없습니다', 'info');
+                return;
+            }
+
+            renderAppsGrid(installed);
+            document.getElementById('search-input').value = '';
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        // Helper Functions
+        function isInstalled(appId) {
+            return installedApps.includes(appId);
+        }
+
+        function updateInstalledCount() {
+            document.getElementById('installed-count').textContent = installedApps.length;
+        }
+
+        function renderStars(rating, size = 5) {
+            const fullStars = Math.floor(rating);
+            const hasHalfStar = rating % 1 >= 0.5;
+            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
+            let stars = '';
+            for (let i = 0; i < fullStars; i++) {
+                stars += `<i class="fas fa-star star-rating text-${size === 3 ? 'xs' : size === 4 ? 'sm' : 'base'}"></i>`;
+            }
+            if (hasHalfStar) {
+                stars += `<i class="fas fa-star-half-alt star-rating text-${size === 3 ? 'xs' : size === 4 ? 'sm' : 'base'}"></i>`;
+            }
+            for (let i = 0; i < emptyStars; i++) {
+                stars += `<i class="far fa-star star-rating text-${size === 3 ? 'xs' : size === 4 ? 'sm' : 'base'}"></i>`;
+            }
+
+            return stars;
+        }
+
+        function parseDownloads(downloads) {
+            const num = downloads.replace(/[^0-9]/g, '');
+            return parseInt(num) || 0;
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-8 right-8 px-6 py-4 rounded-2xl text-white font-bold shadow-2xl z-50 transform transition-all duration-300 ${
+                type === 'success' ? 'bg-gradient-to-r from-green-500 to-green-600' :
+                type === 'error' ? 'bg-gradient-to-r from-red-500 to-red-600' :
+                'bg-gradient-to-r from-blue-500 to-blue-600'
+            }`;
+            toast.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'times-circle' : 'info-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Close modal on outside click
+        document.getElementById('app-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>

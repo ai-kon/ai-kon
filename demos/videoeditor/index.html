@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비디오 에디터 - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        .timeline-track {
+            background: linear-gradient(90deg, #2d3748 0%, #1a202c 100%);
+            border: 2px solid #4a5568;
+            border-radius: 8px;
+            position: relative;
+            min-height: 60px;
+            margin: 8px 0;
+        }
+
+        .timeline-clip {
+            position: absolute;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: 2px solid #fff;
+            border-radius: 4px;
+            cursor: move;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .timeline-clip:hover {
+            border-color: #fbbf24;
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.5);
+        }
+
+        .playhead {
+            position: absolute;
+            width: 2px;
+            background: #ef4444;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .playhead::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: -6px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid #ef4444;
+        }
+
+        .canvas-container {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .tool-btn {
+            transition: all 0.3s;
+        }
+
+        .tool-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .tool-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .media-item {
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .media-item:hover {
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+            border-radius: 3px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.5);
+            border-radius: 3px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 126, 234, 0.8);
+        }
+
+        .timeline-ruler {
+            background: #2d3748;
+            border-bottom: 2px solid #4a5568;
+            display: flex;
+            position: relative;
+        }
+
+        .timeline-marker {
+            border-left: 1px solid #718096;
+            padding: 4px 8px;
+            font-size: 10px;
+            color: #cbd5e0;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-track {
+            background: #e2e8f0;
+            height: 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            background: #667eea;
+            height: 1.25rem;
+            width: 1.25rem;
+            border-radius: 50%;
+            margin-top: -0.375rem;
+        }
+
+        .layer-item {
+            background: #2d3748;
+            border: 2px solid #4a5568;
+            border-radius: 8px;
+            padding: 8px;
+            margin: 4px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .layer-item:hover {
+            border-color: #667eea;
+        }
+
+        .layer-item.active {
+            border-color: #fbbf24;
+            background: #374151;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .recording {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white bg-opacity-95 shadow-lg px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+                <i class="fas fa-video mr-2"></i>비디오 에디터
+            </h1>
+            <div class="flex space-x-2">
+                <button onclick="newProject()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition">
+                    <i class="fas fa-file mr-2"></i>새 프로젝트
+                </button>
+                <button onclick="saveProject()" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                    <i class="fas fa-save mr-2"></i>저장
+                </button>
+                <button onclick="loadProject()" class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition">
+                    <i class="fas fa-folder-open mr-2"></i>불러오기
+                </button>
+                <button onclick="exportVideo()" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:shadow-lg transition">
+                    <i class="fas fa-download mr-2"></i>내보내기
+                </button>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button onclick="undo()" class="px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition" title="실행 취소">
+                <i class="fas fa-undo"></i>
+            </button>
+            <button onclick="redo()" class="px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition" title="다시 실행">
+                <i class="fas fa-redo"></i>
+            </button>
+            <div class="text-sm text-gray-600">
+                <span id="projectName">새 프로젝트</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex overflow-hidden p-4 space-x-4">
+        <!-- Left Sidebar - Media & Effects -->
+        <div class="w-80 flex flex-col space-y-4">
+            <!-- Media Library -->
+            <div class="panel p-4 flex-1 flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-lg text-gray-800">
+                        <i class="fas fa-photo-video mr-2 text-purple-600"></i>미디어 라이브러리
+                    </h3>
+                    <button onclick="document.getElementById('fileInput').click()" class="px-3 py-1 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition text-sm">
+                        <i class="fas fa-plus mr-1"></i>추가
+                    </button>
+                </div>
+                <input type="file" id="fileInput" multiple accept="video/*,image/*,audio/*" class="hidden" onchange="handleFileUpload(event)">
+                <div id="mediaLibrary" class="grid grid-cols-2 gap-3 overflow-y-auto scrollbar-thin flex-1">
+                    <!-- Sample media items -->
+                    <div class="media-item bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg p-4 text-white text-center" draggable="true" ondragstart="dragMedia(event, 'video', 'sample1')">
+                        <i class="fas fa-film text-3xl mb-2"></i>
+                        <div class="text-xs">샘플 영상 1</div>
+                        <div class="text-xs opacity-75">10초</div>
+                    </div>
+                    <div class="media-item bg-gradient-to-br from-green-500 to-teal-600 rounded-lg p-4 text-white text-center" draggable="true" ondragstart="dragMedia(event, 'video', 'sample2')">
+                        <i class="fas fa-film text-3xl mb-2"></i>
+                        <div class="text-xs">샘플 영상 2</div>
+                        <div class="text-xs opacity-75">8초</div>
+                    </div>
+                    <div class="media-item bg-gradient-to-br from-yellow-500 to-orange-600 rounded-lg p-4 text-white text-center" draggable="true" ondragstart="dragMedia(event, 'image', 'sample3')">
+                        <i class="fas fa-image text-3xl mb-2"></i>
+                        <div class="text-xs">이미지 1</div>
+                        <div class="text-xs opacity-75">5초</div>
+                    </div>
+                    <div class="media-item bg-gradient-to-br from-pink-500 to-red-600 rounded-lg p-4 text-white text-center" draggable="true" ondragstart="dragMedia(event, 'audio', 'sample4')">
+                        <i class="fas fa-music text-3xl mb-2"></i>
+                        <div class="text-xs">배경음악</div>
+                        <div class="text-xs opacity-75">30초</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Effects Panel -->
+            <div class="panel p-4 flex-1 flex flex-col">
+                <div class="mb-4">
+                    <div class="flex space-x-2 mb-4">
+                        <button onclick="showEffectTab('filters')" class="flex-1 px-3 py-2 bg-purple-500 text-white rounded-lg text-sm tool-btn active" id="filterTab">
+                            <i class="fas fa-magic mr-1"></i>필터
+                        </button>
+                        <button onclick="showEffectTab('transitions')" class="flex-1 px-3 py-2 bg-gray-200 rounded-lg text-sm tool-btn" id="transitionTab">
+                            <i class="fas fa-exchange-alt mr-1"></i>전환
+                        </button>
+                        <button onclick="showEffectTab('text')" class="flex-1 px-3 py-2 bg-gray-200 rounded-lg text-sm tool-btn" id="textTab">
+                            <i class="fas fa-text-height mr-1"></i>텍스트
+                        </button>
+                    </div>
+                </div>
+
+                <div id="effectsContent" class="overflow-y-auto scrollbar-thin flex-1">
+                    <!-- Filters -->
+                    <div id="filtersPanel" class="grid grid-cols-2 gap-3">
+                        <div class="media-item bg-gray-800 rounded-lg p-3 text-white text-center cursor-pointer" onclick="applyFilter('vintage')">
+                            <div class="text-sm font-semibold">빈티지</div>
+                            <div class="text-xs opacity-75 mt-1">Vintage</div>
+                        </div>
+                        <div class="media-item bg-gray-800 rounded-lg p-3 text-white text-center cursor-pointer" onclick="applyFilter('bw')">
+                            <div class="text-sm font-semibold">흑백</div>
+                            <div class="text-xs opacity-75 mt-1">B&W</div>
+                        </div>
+                        <div class="media-item bg-gray-800 rounded-lg p-3 text-white text-center cursor-pointer" onclick="applyFilter('vibrant')">
+                            <div class="text-sm font-semibold">생동감</div>
+                            <div class="text-xs opacity-75 mt-1">Vibrant</div>
+                        </div>
+                        <div class="media-item bg-gray-800 rounded-lg p-3 text-white text-center cursor-pointer" onclick="applyFilter('sepia')">
+                            <div class="text-sm font-semibold">세피아</div>
+                            <div class="text-xs opacity-75 mt-1">Sepia</div>
+                        </div>
+                        <div class="media-item bg-gray-800 rounded-lg p-3 text-white text-center cursor-pointer" onclick="applyFilter('blur')">
+                            <div class="text-sm font-semibold">블러</div>
+                            <div class="text-xs opacity-75 mt-1">Blur</div>
+                        </div>
+                        <div class="media-item bg-gray-800 rounded-lg p-3 text-white text-center cursor-pointer" onclick="applyFilter('sharpen')">
+                            <div class="text-sm font-semibold">선명하게</div>
+                            <div class="text-xs opacity-75 mt-1">Sharpen</div>
+                        </div>
+                    </div>
+
+                    <!-- Transitions -->
+                    <div id="transitionsPanel" class="hidden grid grid-cols-2 gap-3">
+                        <div class="media-item bg-gradient-to-r from-black to-white rounded-lg p-3 text-center cursor-pointer" onclick="applyTransition('fade')">
+                            <div class="text-sm font-semibold">페이드</div>
+                            <div class="text-xs opacity-75 mt-1">Fade</div>
+                        </div>
+                        <div class="media-item bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg p-3 text-white text-center cursor-pointer" onclick="applyTransition('slide')">
+                            <div class="text-sm font-semibold">슬라이드</div>
+                            <div class="text-xs opacity-75 mt-1">Slide</div>
+                        </div>
+                        <div class="media-item bg-gradient-to-r from-blue-500 to-green-500 rounded-lg p-3 text-white text-center cursor-pointer" onclick="applyTransition('zoom')">
+                            <div class="text-sm font-semibold">줌</div>
+                            <div class="text-xs opacity-75 mt-1">Zoom</div>
+                        </div>
+                        <div class="media-item bg-gradient-to-r from-yellow-500 to-red-500 rounded-lg p-3 text-white text-center cursor-pointer" onclick="applyTransition('wipe')">
+                            <div class="text-sm font-semibold">와이프</div>
+                            <div class="text-xs opacity-75 mt-1">Wipe</div>
+                        </div>
+                    </div>
+
+                    <!-- Text -->
+                    <div id="textPanel" class="hidden space-y-3">
+                        <input type="text" id="textContent" placeholder="텍스트 입력..." class="w-full px-3 py-2 border rounded-lg">
+                        <select id="textFont" class="w-full px-3 py-2 border rounded-lg">
+                            <option>Arial</option>
+                            <option>맑은 고딕</option>
+                            <option>나눔고딕</option>
+                            <option>굴림</option>
+                            <option>돋움</option>
+                        </select>
+                        <input type="color" id="textColor" value="#ffffff" class="w-full h-10 border rounded-lg">
+                        <input type="range" id="textSize" min="12" max="120" value="48" class="w-full">
+                        <button onclick="addTextOverlay()" class="w-full px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600">
+                            <i class="fas fa-plus mr-2"></i>텍스트 추가
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center - Preview & Timeline -->
+        <div class="flex-1 flex flex-col space-y-4">
+            <!-- Preview Area -->
+            <div class="panel p-4 flex flex-col" style="height: 55%;">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-bold text-lg text-gray-800">
+                        <i class="fas fa-play-circle mr-2 text-purple-600"></i>미리보기
+                    </h3>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-600" id="currentTime">00:00.000</span>
+                        <span class="text-sm text-gray-400">/</span>
+                        <span class="text-sm text-gray-600" id="totalTime">00:00.000</span>
+                    </div>
+                </div>
+                <div class="flex-1 flex items-center justify-center canvas-container">
+                    <canvas id="previewCanvas" width="1280" height="720"></canvas>
+                </div>
+                <div class="mt-4 flex items-center justify-center space-x-4">
+                    <button onclick="skipBackward()" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition">
+                        <i class="fas fa-backward"></i>
+                    </button>
+                    <button onclick="togglePlay()" id="playBtn" class="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:shadow-lg transition text-lg">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button onclick="skipForward()" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition">
+                        <i class="fas fa-forward"></i>
+                    </button>
+                    <div class="flex items-center space-x-2 ml-4">
+                        <i class="fas fa-volume-up text-gray-600"></i>
+                        <input type="range" id="volumeSlider" min="0" max="100" value="80" class="w-24" onchange="updateVolume(this.value)">
+                        <span class="text-sm text-gray-600" id="volumeValue">80%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline Area -->
+            <div class="panel p-4 flex-1 flex flex-col">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-bold text-lg text-gray-800">
+                        <i class="fas fa-film mr-2 text-purple-600"></i>타임라인
+                    </h3>
+                    <div class="flex space-x-2">
+                        <button onclick="zoomTimeline(-1)" class="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 transition text-sm">
+                            <i class="fas fa-search-minus"></i>
+                        </button>
+                        <button onclick="zoomTimeline(1)" class="px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 transition text-sm">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Timeline Ruler -->
+                <div class="timeline-ruler rounded-t-lg">
+                    <div id="timelineRuler" class="flex-1 relative h-8"></div>
+                </div>
+
+                <!-- Timeline Tracks -->
+                <div id="timelineContainer" class="flex-1 overflow-y-auto overflow-x-auto scrollbar-thin bg-gray-900 rounded-b-lg p-4 relative">
+                    <div class="playhead" id="playhead"></div>
+
+                    <!-- Video Track -->
+                    <div class="mb-2">
+                        <div class="text-white text-sm mb-1 flex items-center">
+                            <i class="fas fa-video mr-2"></i>비디오
+                        </div>
+                        <div class="timeline-track" id="videoTrack" ondrop="dropOnTimeline(event, 'video')" ondragover="allowDrop(event)">
+                            <!-- Clips will be added here -->
+                        </div>
+                    </div>
+
+                    <!-- Audio Track -->
+                    <div class="mb-2">
+                        <div class="text-white text-sm mb-1 flex items-center">
+                            <i class="fas fa-volume-up mr-2"></i>오디오
+                        </div>
+                        <div class="timeline-track" id="audioTrack" ondrop="dropOnTimeline(event, 'audio')" ondragover="allowDrop(event)">
+                            <!-- Clips will be added here -->
+                        </div>
+                    </div>
+
+                    <!-- Text Track -->
+                    <div class="mb-2">
+                        <div class="text-white text-sm mb-1 flex items-center">
+                            <i class="fas fa-text-height mr-2"></i>텍스트
+                        </div>
+                        <div class="timeline-track" id="textTrack" ondrop="dropOnTimeline(event, 'text')" ondragover="allowDrop(event)">
+                            <!-- Clips will be added here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar - Tools & Layers -->
+        <div class="w-80 flex flex-col space-y-4">
+            <!-- Tools Panel -->
+            <div class="panel p-4">
+                <h3 class="font-bold text-lg text-gray-800 mb-4">
+                    <i class="fas fa-tools mr-2 text-purple-600"></i>도구
+                </h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="selectTool('cut')" class="tool-btn px-4 py-3 bg-gray-200 rounded-lg hover:bg-gray-300 transition text-sm" id="cutTool">
+                        <i class="fas fa-cut mb-1 text-lg"></i>
+                        <div>자르기</div>
+                    </button>
+                    <button onclick="selectTool('trim')" class="tool-btn px-4 py-3 bg-gray-200 rounded-lg hover:bg-gray-300 transition text-sm" id="trimTool">
+                        <i class="fas fa-crop mb-1 text-lg"></i>
+                        <div>트림</div>
+                    </button>
+                    <button onclick="selectTool('split')" class="tool-btn px-4 py-3 bg-gray-200 rounded-lg hover:bg-gray-300 transition text-sm" id="splitTool">
+                        <i class="fas fa-scissors mb-1 text-lg"></i>
+                        <div>분할</div>
+                    </button>
+                    <button onclick="selectTool('crop')" class="tool-btn px-4 py-3 bg-gray-200 rounded-lg hover:bg-gray-300 transition text-sm" id="cropTool">
+                        <i class="fas fa-expand mb-1 text-lg"></i>
+                        <div>크롭</div>
+                    </button>
+                    <button onclick="selectTool('speed')" class="tool-btn px-4 py-3 bg-gray-200 rounded-lg hover:bg-gray-300 transition text-sm" id="speedTool">
+                        <i class="fas fa-tachometer-alt mb-1 text-lg"></i>
+                        <div>속도</div>
+                    </button>
+                    <button onclick="selectTool('rotate')" class="tool-btn px-4 py-3 bg-gray-200 rounded-lg hover:bg-gray-300 transition text-sm" id="rotateTool">
+                        <i class="fas fa-redo mb-1 text-lg"></i>
+                        <div>회전</div>
+                    </button>
+                </div>
+
+                <!-- Speed Control -->
+                <div id="speedControl" class="mt-4 hidden">
+                    <label class="text-sm text-gray-700 font-semibold mb-2 block">재생 속도</label>
+                    <div class="flex items-center space-x-2 mb-2">
+                        <button onclick="setSpeed(0.25)" class="px-3 py-1 bg-gray-200 rounded text-xs hover:bg-gray-300">0.25x</button>
+                        <button onclick="setSpeed(0.5)" class="px-3 py-1 bg-gray-200 rounded text-xs hover:bg-gray-300">0.5x</button>
+                        <button onclick="setSpeed(1)" class="px-3 py-1 bg-purple-500 text-white rounded text-xs">1x</button>
+                        <button onclick="setSpeed(2)" class="px-3 py-1 bg-gray-200 rounded text-xs hover:bg-gray-300">2x</button>
+                        <button onclick="setSpeed(4)" class="px-3 py-1 bg-gray-200 rounded text-xs hover:bg-gray-300">4x</button>
+                    </div>
+                    <input type="range" id="speedSlider" min="0.1" max="5" step="0.1" value="1" class="w-full" oninput="updateSpeed(this.value)">
+                    <div class="text-sm text-gray-600 text-center mt-1" id="speedValue">1.0x</div>
+                </div>
+
+                <!-- Color Grading -->
+                <div class="mt-4">
+                    <label class="text-sm text-gray-700 font-semibold mb-2 block">색상 보정</label>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between text-sm">
+                            <span>밝기</span>
+                            <input type="range" id="brightness" min="-100" max="100" value="0" class="w-40" oninput="updateColorGrading()">
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span>대비</span>
+                            <input type="range" id="contrast" min="-100" max="100" value="0" class="w-40" oninput="updateColorGrading()">
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span>채도</span>
+                            <input type="range" id="saturation" min="-100" max="100" value="0" class="w-40" oninput="updateColorGrading()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Layers Panel -->
+            <div class="panel p-4 flex-1 flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-lg text-gray-800">
+                        <i class="fas fa-layer-group mr-2 text-purple-600"></i>레이어
+                    </h3>
+                    <button onclick="addLayer()" class="px-3 py-1 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition text-sm">
+                        <i class="fas fa-plus mr-1"></i>추가
+                    </button>
+                </div>
+                <div id="layersContainer" class="overflow-y-auto scrollbar-thin flex-1">
+                    <div class="layer-item active" onclick="selectLayer(0)">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-eye text-white"></i>
+                            <span class="text-white text-sm">레이어 1</span>
+                        </div>
+                        <button onclick="deleteLayer(0); event.stopPropagation();" class="text-red-400 hover:text-red-600">
+                            <i class="fas fa-trash text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Settings -->
+            <div class="panel p-4">
+                <h3 class="font-bold text-lg text-gray-800 mb-4">
+                    <i class="fas fa-cog mr-2 text-purple-600"></i>내보내기 설정
+                </h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-sm text-gray-700 font-semibold mb-1 block">해상도</label>
+                        <select id="resolutionSelect" class="w-full px-3 py-2 border rounded-lg text-sm">
+                            <option>1920x1080 (Full HD)</option>
+                            <option>1280x720 (HD)</option>
+                            <option>3840x2160 (4K)</option>
+                            <option>640x480 (SD)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-700 font-semibold mb-1 block">포맷</label>
+                        <select id="formatSelect" class="w-full px-3 py-2 border rounded-lg text-sm">
+                            <option>MP4</option>
+                            <option>MOV</option>
+                            <option>AVI</option>
+                            <option>GIF</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-700 font-semibold mb-1 block">FPS</label>
+                        <select id="fpsSelect" class="w-full px-3 py-2 border rounded-lg text-sm">
+                            <option>60</option>
+                            <option selected>30</option>
+                            <option>24</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global State
+        let project = {
+            name: '새 프로젝트',
+            clips: [],
+            layers: [{ id: 0, name: '레이어 1', visible: true }],
+            timeline: {
+                videoTrack: [],
+                audioTrack: [],
+                textTrack: []
+            },
+            settings: {
+                resolution: '1920x1080',
+                format: 'MP4',
+                fps: 30
+            }
+        };
+
+        let state = {
+            isPlaying: false,
+            currentTime: 0,
+            totalTime: 0,
+            zoom: 1,
+            selectedTool: null,
+            selectedLayer: 0,
+            playbackSpeed: 1,
+            volume: 80,
+            filters: {},
+            history: [],
+            historyIndex: -1
+        };
+
+        let draggedClipId = null;
+
+        // Initialize Canvas
+        const canvas = document.getElementById('previewCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function initializeCanvas() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw placeholder
+            ctx.fillStyle = 'rgba(102, 126, 234, 0.3)';
+            ctx.fillRect(canvas.width/2 - 200, canvas.height/2 - 100, 400, 200);
+
+            ctx.fillStyle = '#fff';
+            ctx.font = '32px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('미리보기 영역', canvas.width/2, canvas.height/2 - 20);
+
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#aaa';
+            ctx.fillText('타임라인에 미디어를 추가하세요', canvas.width/2, canvas.height/2 + 20);
+
+            updateTimelineRuler();
+        }
+
+        // Timeline Functions
+        function updateTimelineRuler() {
+            const ruler = document.getElementById('timelineRuler');
+            ruler.innerHTML = '';
+            const duration = 60; // seconds
+            const markers = 12;
+
+            for (let i = 0; i <= markers; i++) {
+                const time = (duration / markers) * i;
+                const marker = document.createElement('div');
+                marker.className = 'timeline-marker';
+                marker.style.width = `${100/markers}%`;
+                marker.textContent = formatTime(time * 1000);
+                ruler.appendChild(marker);
+            }
+        }
+
+        function allowDrop(event) {
+            event.preventDefault();
+        }
+
+        function dragMedia(event, type, id) {
+            event.dataTransfer.setData('type', type);
+            event.dataTransfer.setData('id', id);
+        }
+
+        function dropOnTimeline(event, trackType) {
+            event.preventDefault();
+            const mediaType = event.dataTransfer.getData('type');
+            const mediaId = event.dataTransfer.getData('id');
+
+            const track = event.currentTarget;
+            const rect = track.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const position = (x / rect.width) * 60; // 60 seconds timeline
+
+            addClipToTimeline(trackType, mediaId, position);
+        }
+
+        function addClipToTimeline(trackType, mediaId, position) {
+            const clip = {
+                id: Date.now(),
+                mediaId: mediaId,
+                trackType: trackType,
+                position: position,
+                duration: 5, // default 5 seconds
+                effects: []
+            };
+
+            project.timeline[trackType + 'Track'].push(clip);
+            renderTimeline();
+            saveHistory();
+            showNotification(`${mediaId} 클립이 추가되었습니다`);
+        }
+
+        function renderTimeline() {
+            // Render video track
+            const videoTrack = document.getElementById('videoTrack');
+            videoTrack.innerHTML = '';
+            project.timeline.videoTrack.forEach(clip => {
+                const clipEl = createClipElement(clip);
+                videoTrack.appendChild(clipEl);
+            });
+
+            // Render audio track
+            const audioTrack = document.getElementById('audioTrack');
+            audioTrack.innerHTML = '';
+            project.timeline.audioTrack.forEach(clip => {
+                const clipEl = createClipElement(clip);
+                audioTrack.appendChild(clipEl);
+            });
+
+            // Render text track
+            const textTrack = document.getElementById('textTrack');
+            textTrack.innerHTML = '';
+            project.timeline.textTrack.forEach(clip => {
+                const clipEl = createClipElement(clip);
+                textTrack.appendChild(clipEl);
+            });
+
+            updateCanvasPreview();
+        }
+
+        function createClipElement(clip) {
+            const div = document.createElement('div');
+            div.className = 'timeline-clip';
+            div.id = `clip-${clip.id}`;
+            div.style.left = `${(clip.position / 60) * 100}%`;
+            div.style.width = `${(clip.duration / 60) * 100}%`;
+            div.draggable = true;
+
+            div.innerHTML = `
+                <span>${clip.mediaId}</span>
+                <button onclick="removeClip(${clip.id}, '${clip.trackType}')"
+                        class="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs hover:bg-red-600"
+                        style="line-height: 1.2;">
+                    ×
+                </button>
+            `;
+
+            div.ondragstart = (e) => {
+                draggedClipId = clip.id;
+                e.dataTransfer.effectAllowed = 'move';
+            };
+
+            div.ondragend = (e) => {
+                draggedClipId = null;
+            };
+
+            div.onclick = () => selectClip(clip.id);
+
+            return div;
+        }
+
+        function removeClip(clipId, trackType) {
+            const track = project.timeline[trackType + 'Track'];
+            const index = track.findIndex(c => c.id === clipId);
+            if (index > -1) {
+                track.splice(index, 1);
+                renderTimeline();
+                saveHistory();
+                showNotification('클립이 제거되었습니다');
+            }
+        }
+
+        function selectClip(clipId) {
+            document.querySelectorAll('.timeline-clip').forEach(el => {
+                el.style.borderColor = '#fff';
+            });
+            const clipEl = document.getElementById(`clip-${clipId}`);
+            if (clipEl) {
+                clipEl.style.borderColor = '#fbbf24';
+            }
+        }
+
+        // Playback Functions
+        function togglePlay() {
+            state.isPlaying = !state.isPlaying;
+            const playBtn = document.getElementById('playBtn');
+
+            if (state.isPlaying) {
+                playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                startPlayback();
+            } else {
+                playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                stopPlayback();
+            }
+        }
+
+        function startPlayback() {
+            const playbackInterval = setInterval(() => {
+                if (!state.isPlaying) {
+                    clearInterval(playbackInterval);
+                    return;
+                }
+
+                state.currentTime += 16.67 * state.playbackSpeed; // ~60fps
+
+                if (state.currentTime >= state.totalTime) {
+                    state.currentTime = 0;
+                    togglePlay();
+                }
+
+                updatePlayhead();
+                updateTimeDisplay();
+            }, 16.67);
+        }
+
+        function stopPlayback() {
+            // Playback stopped
+        }
+
+        function skipBackward() {
+            state.currentTime = Math.max(0, state.currentTime - 1000);
+            updatePlayhead();
+            updateTimeDisplay();
+        }
+
+        function skipForward() {
+            state.currentTime = Math.min(state.totalTime, state.currentTime + 1000);
+            updatePlayhead();
+            updateTimeDisplay();
+        }
+
+        function updatePlayhead() {
+            const playhead = document.getElementById('playhead');
+            const percentage = (state.currentTime / (60 * 1000)) * 100;
+            playhead.style.left = `${percentage}%`;
+        }
+
+        function updateTimeDisplay() {
+            document.getElementById('currentTime').textContent = formatTime(state.currentTime);
+        }
+
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const milliseconds = Math.floor((ms % 1000));
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
+        }
+
+        // Volume Control
+        function updateVolume(value) {
+            state.volume = value;
+            document.getElementById('volumeValue').textContent = `${value}%`;
+        }
+
+        // Timeline Zoom
+        function zoomTimeline(direction) {
+            state.zoom = Math.max(0.5, Math.min(4, state.zoom + (direction * 0.25)));
+            const container = document.getElementById('timelineContainer');
+            container.style.width = `${100 * state.zoom}%`;
+            showNotification(`줌: ${(state.zoom * 100).toFixed(0)}%`);
+        }
+
+        // Effect Functions
+        function showEffectTab(tab) {
+            document.getElementById('filtersPanel').classList.add('hidden');
+            document.getElementById('transitionsPanel').classList.add('hidden');
+            document.getElementById('textPanel').classList.add('hidden');
+
+            document.getElementById('filterTab').classList.remove('active');
+            document.getElementById('transitionTab').classList.remove('active');
+            document.getElementById('textTab').classList.remove('active');
+
+            if (tab === 'filters') {
+                document.getElementById('filtersPanel').classList.remove('hidden');
+                document.getElementById('filterTab').classList.add('active');
+            } else if (tab === 'transitions') {
+                document.getElementById('transitionsPanel').classList.remove('hidden');
+                document.getElementById('transitionTab').classList.add('active');
+            } else if (tab === 'text') {
+                document.getElementById('textPanel').classList.remove('hidden');
+                document.getElementById('textTab').classList.add('active');
+            }
+        }
+
+        function applyFilter(filterName) {
+            state.filters.current = filterName;
+            updateCanvasPreview();
+            showNotification(`${filterName} 필터 적용됨`);
+            saveHistory();
+        }
+
+        function applyTransition(transitionName) {
+            showNotification(`${transitionName} 전환 효과 적용됨`);
+            saveHistory();
+        }
+
+        function addTextOverlay() {
+            const text = document.getElementById('textContent').value;
+            const font = document.getElementById('textFont').value;
+            const color = document.getElementById('textColor').value;
+            const size = document.getElementById('textSize').value;
+
+            if (!text) {
+                showNotification('텍스트를 입력하세요', 'error');
+                return;
+            }
+
+            const clip = {
+                id: Date.now(),
+                mediaId: `text-${text.substring(0, 10)}`,
+                trackType: 'text',
+                position: state.currentTime / 1000,
+                duration: 5,
+                text: text,
+                font: font,
+                color: color,
+                size: size
+            };
+
+            project.timeline.textTrack.push(clip);
+            renderTimeline();
+            showNotification('텍스트 오버레이 추가됨');
+            saveHistory();
+
+            document.getElementById('textContent').value = '';
+        }
+
+        // Tool Functions
+        function selectTool(tool) {
+            state.selectedTool = tool;
+
+            // Reset all tools
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Activate selected tool
+            document.getElementById(tool + 'Tool').classList.add('active');
+
+            // Show/hide speed control
+            if (tool === 'speed') {
+                document.getElementById('speedControl').classList.remove('hidden');
+            } else {
+                document.getElementById('speedControl').classList.add('hidden');
+            }
+
+            showNotification(`${tool} 도구 선택됨`);
+        }
+
+        function setSpeed(speed) {
+            state.playbackSpeed = speed;
+            document.getElementById('speedSlider').value = speed;
+            document.getElementById('speedValue').textContent = `${speed.toFixed(1)}x`;
+        }
+
+        function updateSpeed(value) {
+            state.playbackSpeed = parseFloat(value);
+            document.getElementById('speedValue').textContent = `${value}x`;
+        }
+
+        function updateColorGrading() {
+            const brightness = document.getElementById('brightness').value;
+            const contrast = document.getElementById('contrast').value;
+            const saturation = document.getElementById('saturation').value;
+
+            state.filters.brightness = brightness;
+            state.filters.contrast = contrast;
+            state.filters.saturation = saturation;
+
+            updateCanvasPreview();
+        }
+
+        // Layer Functions
+        function addLayer() {
+            const newLayer = {
+                id: project.layers.length,
+                name: `레이어 ${project.layers.length + 1}`,
+                visible: true
+            };
+            project.layers.push(newLayer);
+            renderLayers();
+            saveHistory();
+        }
+
+        function selectLayer(layerId) {
+            state.selectedLayer = layerId;
+            document.querySelectorAll('.layer-item').forEach((el, idx) => {
+                if (idx === layerId) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+        }
+
+        function deleteLayer(layerId) {
+            if (project.layers.length <= 1) {
+                showNotification('마지막 레이어는 삭제할 수 없습니다', 'error');
+                return;
+            }
+            project.layers.splice(layerId, 1);
+            renderLayers();
+            saveHistory();
+        }
+
+        function renderLayers() {
+            const container = document.getElementById('layersContainer');
+            container.innerHTML = '';
+
+            project.layers.forEach((layer, idx) => {
+                const div = document.createElement('div');
+                div.className = `layer-item ${idx === state.selectedLayer ? 'active' : ''}`;
+                div.onclick = () => selectLayer(idx);
+                div.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-eye text-white"></i>
+                        <span class="text-white text-sm">${layer.name}</span>
+                    </div>
+                    ${project.layers.length > 1 ? `
+                        <button onclick="deleteLayer(${idx}); event.stopPropagation();" class="text-red-400 hover:text-red-600">
+                            <i class="fas fa-trash text-sm"></i>
+                        </button>
+                    ` : ''}
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Canvas Preview Update
+        function updateCanvasPreview() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Apply color grading filters
+            if (state.filters.brightness || state.filters.contrast || state.filters.saturation) {
+                ctx.filter = `
+                    brightness(${100 + parseInt(state.filters.brightness || 0)}%)
+                    contrast(${100 + parseInt(state.filters.contrast || 0)}%)
+                    saturate(${100 + parseInt(state.filters.saturation || 0)}%)
+                `;
+            }
+
+            // Apply current filter
+            if (state.filters.current === 'bw') {
+                ctx.filter = 'grayscale(100%)';
+            } else if (state.filters.current === 'sepia') {
+                ctx.filter = 'sepia(100%)';
+            } else if (state.filters.current === 'blur') {
+                ctx.filter = 'blur(5px)';
+            } else if (state.filters.current === 'vintage') {
+                ctx.filter = 'sepia(50%) contrast(120%) brightness(90%)';
+            } else if (state.filters.current === 'vibrant') {
+                ctx.filter = 'saturate(200%) contrast(120%)';
+            }
+
+            // Draw placeholder content
+            ctx.fillStyle = 'rgba(102, 126, 234, 0.3)';
+            ctx.fillRect(canvas.width/2 - 200, canvas.height/2 - 100, 400, 200);
+
+            ctx.fillStyle = '#fff';
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('미리보기 화면', canvas.width/2, canvas.height/2);
+
+            // Draw text overlays from timeline
+            project.timeline.textTrack.forEach(clip => {
+                if (state.currentTime >= clip.position * 1000 &&
+                    state.currentTime <= (clip.position + clip.duration) * 1000) {
+                    ctx.filter = 'none';
+                    ctx.fillStyle = clip.color;
+                    ctx.font = `${clip.size}px ${clip.font}`;
+                    ctx.fillText(clip.text, canvas.width/2, canvas.height - 100);
+                }
+            });
+
+            ctx.filter = 'none';
+        }
+
+        // File Upload
+        function handleFileUpload(event) {
+            const files = event.target.files;
+            for (let file of files) {
+                const mediaItem = document.createElement('div');
+                mediaItem.className = 'media-item bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg p-4 text-white text-center';
+                mediaItem.draggable = true;
+
+                const type = file.type.startsWith('video') ? 'video' :
+                            file.type.startsWith('audio') ? 'audio' : 'image';
+                const icon = type === 'video' ? 'fa-film' :
+                            type === 'audio' ? 'fa-music' : 'fa-image';
+
+                mediaItem.ondragstart = (e) => dragMedia(e, type, file.name);
+                mediaItem.innerHTML = `
+                    <i class="fas ${icon} text-3xl mb-2"></i>
+                    <div class="text-xs">${file.name.substring(0, 15)}</div>
+                `;
+
+                document.getElementById('mediaLibrary').appendChild(mediaItem);
+            }
+            showNotification(`${files.length}개 파일 추가됨`);
+        }
+
+        // Project Management
+        function newProject() {
+            if (confirm('새 프로젝트를 만드시겠습니까? 저장하지 않은 변경사항은 손실됩니다.')) {
+                project = {
+                    name: '새 프로젝트',
+                    clips: [],
+                    layers: [{ id: 0, name: '레이어 1', visible: true }],
+                    timeline: {
+                        videoTrack: [],
+                        audioTrack: [],
+                        textTrack: []
+                    },
+                    settings: {
+                        resolution: '1920x1080',
+                        format: 'MP4',
+                        fps: 30
+                    }
+                };
+                state.history = [];
+                state.historyIndex = -1;
+                renderTimeline();
+                renderLayers();
+                initializeCanvas();
+                document.getElementById('projectName').textContent = '새 프로젝트';
+                showNotification('새 프로젝트 생성됨');
+            }
+        }
+
+        function saveProject() {
+            const projectData = JSON.stringify(project);
+            localStorage.setItem('videoEditorProject', projectData);
+
+            // Also save to file
+            const blob = new Blob([projectData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${project.name}.json`;
+            a.click();
+
+            showNotification('프로젝트 저장됨');
+        }
+
+        function loadProject() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        project = JSON.parse(event.target.result);
+                        renderTimeline();
+                        renderLayers();
+                        document.getElementById('projectName').textContent = project.name;
+                        showNotification('프로젝트 불러오기 완료');
+                    } catch (error) {
+                        showNotification('프로젝트 불러오기 실패', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function exportVideo() {
+            const resolution = document.getElementById('resolutionSelect').value;
+            const format = document.getElementById('formatSelect').value;
+            const fps = document.getElementById('fpsSelect').value;
+
+            // Simulate export
+            showNotification('비디오 내보내기 시작...', 'info');
+
+            setTimeout(() => {
+                showNotification(`비디오 내보내기 완료! (${resolution}, ${format}, ${fps}fps)`, 'success');
+            }, 2000);
+        }
+
+        // History Management
+        function saveHistory() {
+            const snapshot = JSON.parse(JSON.stringify(project));
+            state.history = state.history.slice(0, state.historyIndex + 1);
+            state.history.push(snapshot);
+            state.historyIndex++;
+
+            if (state.history.length > 50) {
+                state.history.shift();
+                state.historyIndex--;
+            }
+        }
+
+        function undo() {
+            if (state.historyIndex > 0) {
+                state.historyIndex--;
+                project = JSON.parse(JSON.stringify(state.history[state.historyIndex]));
+                renderTimeline();
+                renderLayers();
+                showNotification('실행 취소');
+            }
+        }
+
+        function redo() {
+            if (state.historyIndex < state.history.length - 1) {
+                state.historyIndex++;
+                project = JSON.parse(JSON.stringify(state.history[state.historyIndex]));
+                renderTimeline();
+                renderLayers();
+                showNotification('다시 실행');
+            }
+        }
+
+        // Notifications
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-20 right-6 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${
+                type === 'success' ? 'bg-green-500' :
+                type === 'error' ? 'bg-red-500' :
+                type === 'info' ? 'bg-blue-500' : 'bg-gray-500'
+            }`;
+            notification.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <i class="fas ${
+                        type === 'success' ? 'fa-check-circle' :
+                        type === 'error' ? 'fa-exclamation-circle' :
+                        'fa-info-circle'
+                    }"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.transition = 'opacity 0.3s';
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            initializeCanvas();
+            updateTimeDisplay();
+            state.totalTime = 60000; // 60 seconds
+            document.getElementById('totalTime').textContent = formatTime(state.totalTime);
+
+            // Load from localStorage if available
+            const savedProject = localStorage.getItem('videoEditorProject');
+            if (savedProject) {
+                try {
+                    project = JSON.parse(savedProject);
+                    renderTimeline();
+                    renderLayers();
+                    document.getElementById('projectName').textContent = project.name;
+                } catch (e) {
+                    console.error('Failed to load saved project');
+                }
+            }
+
+            saveHistory();
+            showNotification('비디오 에디터 준비 완료!', 'success');
+        });
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'z':
+                        e.preventDefault();
+                        if (e.shiftKey) {
+                            redo();
+                        } else {
+                            undo();
+                        }
+                        break;
+                    case 's':
+                        e.preventDefault();
+                        saveProject();
+                        break;
+                    case 'o':
+                        e.preventDefault();
+                        loadProject();
+                        break;
+                }
+            } else {
+                switch(e.key) {
+                    case ' ':
+                        e.preventDefault();
+                        togglePlay();
+                        break;
+                    case 'ArrowLeft':
+                        skipBackward();
+                        break;
+                    case 'ArrowRight':
+                        skipForward();
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

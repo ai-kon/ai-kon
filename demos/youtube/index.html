@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Clone - 한국</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #4a4a4a #1a1a1a;
+        }
+
+        *::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        *::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background: #4a4a4a;
+            border-radius: 4px;
+        }
+
+        *::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0000 50%, #0a0a0a 100%);
+            background-attachment: fixed;
+        }
+
+        .video-thumbnail {
+            position: relative;
+            padding-bottom: 56.25%;
+            background: linear-gradient(45deg, #2a0000, #1a1a1a);
+            overflow: hidden;
+        }
+
+        .video-thumbnail img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .video-card:hover .video-thumbnail img {
+            transform: scale(1.05);
+        }
+
+        .duration-badge {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .gradient-btn {
+            background: linear-gradient(135deg, #cc0000 0%, #ff0000 100%);
+            transition: all 0.3s;
+        }
+
+        .gradient-btn:hover {
+            background: linear-gradient(135deg, #ff0000 0%, #ff3333 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
+        }
+
+        .sidebar-item {
+            transition: all 0.3s;
+        }
+
+        .sidebar-item:hover {
+            background: linear-gradient(90deg, rgba(255, 0, 0, 0.1) 0%, transparent 100%);
+            border-left: 3px solid #ff0000;
+            padding-left: 21px;
+        }
+
+        .sidebar-item.active {
+            background: linear-gradient(90deg, rgba(255, 0, 0, 0.2) 0%, transparent 100%);
+            border-left: 3px solid #ff0000;
+            padding-left: 21px;
+        }
+
+        .video-player-container {
+            background: #000;
+            position: relative;
+        }
+
+        .comment-input:focus {
+            border-bottom: 2px solid #ff0000;
+        }
+
+        .category-chip {
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+        }
+
+        .category-chip:hover {
+            background: rgba(255, 0, 0, 0.3);
+        }
+
+        .category-chip.active {
+            background: linear-gradient(135deg, #cc0000 0%, #ff0000 100%);
+        }
+
+        .verified-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            background: #909090;
+            border-radius: 50%;
+            margin-left: 4px;
+        }
+
+        .theater-mode {
+            max-width: 100% !important;
+        }
+
+        .like-btn, .dislike-btn {
+            transition: all 0.3s;
+        }
+
+        .like-btn.active {
+            color: #ff0000;
+        }
+
+        .dislike-btn.active {
+            color: #ff0000;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-black text-white">
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 bg-gradient-to-r from-black via-red-950 to-black border-b border-red-900/30 z-50">
+        <div class="flex items-center justify-between px-4 py-2">
+            <div class="flex items-center space-x-4">
+                <button id="menuBtn" class="text-white hover:bg-white/10 p-2 rounded-full">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <div class="flex items-center space-x-2 cursor-pointer" onclick="showHome()">
+                    <i class="fab fa-youtube text-red-600 text-3xl"></i>
+                    <span class="text-xl font-bold">YouTube<span class="text-xs text-gray-400">KR</span></span>
+                </div>
+            </div>
+
+            <div class="flex-1 max-w-2xl mx-8">
+                <div class="flex items-center">
+                    <input id="searchInput" type="text" placeholder="검색"
+                           class="w-full bg-black/50 border border-gray-700 rounded-l-full px-6 py-2 focus:outline-none focus:border-red-600">
+                    <button onclick="searchVideos()" class="bg-gray-800 border border-gray-700 border-l-0 rounded-r-full px-6 py-2 hover:bg-gray-700">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <button class="text-white hover:bg-white/10 p-2 rounded-full">
+                    <i class="fas fa-video text-xl"></i>
+                </button>
+                <button class="text-white hover:bg-white/10 p-2 rounded-full">
+                    <i class="fas fa-bell text-xl"></i>
+                </button>
+                <button class="bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">
+                    K
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed left-0 top-16 h-full w-64 bg-gradient-to-b from-black to-gray-900 overflow-y-auto z-40 transition-transform">
+        <div class="py-2">
+            <div class="sidebar-item active px-6 py-3 cursor-pointer flex items-center space-x-4" onclick="showHome()">
+                <i class="fas fa-home text-xl w-6"></i>
+                <span>홈</span>
+            </div>
+            <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center space-x-4" onclick="showTrending()">
+                <i class="fas fa-fire text-xl w-6"></i>
+                <span>인기</span>
+            </div>
+            <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center space-x-4" onclick="showSubscriptions()">
+                <i class="fas fa-play-circle text-xl w-6"></i>
+                <span>구독</span>
+            </div>
+            <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center space-x-4" onclick="showLibrary()">
+                <i class="fas fa-folder text-xl w-6"></i>
+                <span>보관함</span>
+            </div>
+        </div>
+
+        <hr class="border-gray-700 my-2">
+
+        <div class="py-2">
+            <div class="px-6 py-2 text-gray-400 text-sm font-semibold">카테고리</div>
+            <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center space-x-4" onclick="filterCategory('음악')">
+                <i class="fas fa-music text-xl w-6"></i>
+                <span>음악</span>
+            </div>
+            <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center space-x-4" onclick="filterCategory('게임')">
+                <i class="fas fa-gamepad text-xl w-6"></i>
+                <span>게임</span>
+            </div>
+            <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center space-x-4" onclick="filterCategory('뉴스')">
+                <i class="fas fa-newspaper text-xl w-6"></i>
+                <span>뉴스</span>
+            </div>
+            <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center space-x-4" onclick="filterCategory('스포츠')">
+                <i class="fas fa-futbol text-xl w-6"></i>
+                <span>스포츠</span>
+            </div>
+            <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center space-x-4" onclick="filterCategory('엔터테인먼트')">
+                <i class="fas fa-star text-xl w-6"></i>
+                <span>엔터테인먼트</span>
+            </div>
+            <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center space-x-4" onclick="filterCategory('교육')">
+                <i class="fas fa-graduation-cap text-xl w-6"></i>
+                <span>교육</span>
+            </div>
+            <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center space-x-4" onclick="filterCategory('과학기술')">
+                <i class="fas fa-microchip text-xl w-6"></i>
+                <span>과학기술</span>
+            </div>
+        </div>
+
+        <hr class="border-gray-700 my-2">
+
+        <div class="py-2">
+            <div class="px-6 py-2 text-gray-400 text-sm font-semibold">내 재생목록</div>
+            <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center space-x-4" onclick="showWatchLater()">
+                <i class="fas fa-clock text-xl w-6"></i>
+                <span>나중에 볼 동영상</span>
+            </div>
+            <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center space-x-4" onclick="showHistory()">
+                <i class="fas fa-history text-xl w-6"></i>
+                <span>시청 기록</span>
+            </div>
+            <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center space-x-4" onclick="showLiked()">
+                <i class="fas fa-thumbs-up text-xl w-6"></i>
+                <span>좋아요 표시한 동영상</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="mainContent" class="ml-64 mt-16 min-h-screen">
+        <!-- Home Page -->
+        <div id="homePage" class="p-6">
+            <!-- Category Pills -->
+            <div class="flex space-x-3 mb-6 overflow-x-auto pb-2">
+                <button class="category-chip active px-4 py-2 rounded-full whitespace-nowrap" onclick="filterCategory('전체')">전체</button>
+                <button class="category-chip px-4 py-2 rounded-full whitespace-nowrap" onclick="filterCategory('음악')">음악</button>
+                <button class="category-chip px-4 py-2 rounded-full whitespace-nowrap" onclick="filterCategory('게임')">게임</button>
+                <button class="category-chip px-4 py-2 rounded-full whitespace-nowrap" onclick="filterCategory('뉴스')">뉴스</button>
+                <button class="category-chip px-4 py-2 rounded-full whitespace-nowrap" onclick="filterCategory('스포츠')">스포츠</button>
+                <button class="category-chip px-4 py-2 rounded-full whitespace-nowrap" onclick="filterCategory('엔터테인먼트')">엔터테인먼트</button>
+                <button class="category-chip px-4 py-2 rounded-full whitespace-nowrap" onclick="filterCategory('교육')">교육</button>
+                <button class="category-chip px-4 py-2 rounded-full whitespace-nowrap" onclick="filterCategory('과학기술')">과학기술</button>
+            </div>
+
+            <!-- Video Grid -->
+            <div id="videoGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <!-- Videos will be rendered here -->
+            </div>
+        </div>
+
+        <!-- Video Player Page -->
+        <div id="videoPage" class="hidden">
+            <div class="flex flex-col lg:flex-row p-6 gap-6">
+                <!-- Main Video Section -->
+                <div class="flex-1">
+                    <!-- Video Player -->
+                    <div id="videoPlayerContainer" class="video-player-container rounded-lg overflow-hidden mb-4">
+                        <video id="videoPlayer" class="w-full" controls>
+                            <source src="" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+
+                    <!-- Video Controls -->
+                    <div class="flex items-center space-x-2 mb-4">
+                        <button onclick="toggleTheaterMode()" class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg">
+                            <i class="fas fa-expand-arrows-alt mr-2"></i>극장 모드
+                        </button>
+                        <button onclick="toggleAutoplay()" id="autoplayBtn" class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg">
+                            <i class="fas fa-play-circle mr-2"></i>자동재생: 켜짐
+                        </button>
+                        <select class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg">
+                            <option>화질: 자동</option>
+                            <option>1080p</option>
+                            <option>720p</option>
+                            <option>480p</option>
+                            <option>360p</option>
+                        </select>
+                    </div>
+
+                    <!-- Video Info -->
+                    <div id="videoInfo" class="bg-gradient-to-r from-gray-900 to-black rounded-lg p-4 mb-4 border border-gray-800">
+                        <h1 id="videoTitle" class="text-2xl font-bold mb-2"></h1>
+                        <div class="flex items-center justify-between flex-wrap gap-4">
+                            <div class="flex items-center space-x-4">
+                                <div class="flex items-center space-x-3">
+                                    <img id="channelAvatar" class="w-10 h-10 rounded-full" src="" alt="">
+                                    <div>
+                                        <div class="flex items-center">
+                                            <span id="channelName" class="font-semibold"></span>
+                                        </div>
+                                        <span id="subscriberCount" class="text-sm text-gray-400"></span>
+                                    </div>
+                                </div>
+                                <button id="subscribeBtn" onclick="toggleSubscribe()" class="gradient-btn text-white px-6 py-2 rounded-full font-semibold">
+                                    구독
+                                </button>
+                            </div>
+
+                            <div class="flex items-center space-x-2">
+                                <div class="bg-gray-800 rounded-full flex items-center">
+                                    <button id="likeBtn" onclick="toggleLike()" class="like-btn hover:bg-gray-700 px-4 py-2 rounded-l-full">
+                                        <i class="fas fa-thumbs-up mr-2"></i><span id="likeCount">0</span>
+                                    </button>
+                                    <div class="w-px h-6 bg-gray-700"></div>
+                                    <button id="dislikeBtn" onclick="toggleDislike()" class="dislike-btn hover:bg-gray-700 px-4 py-2 rounded-r-full">
+                                        <i class="fas fa-thumbs-down"></i>
+                                    </button>
+                                </div>
+
+                                <button onclick="shareVideo()" class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-full">
+                                    <i class="fas fa-share mr-2"></i>공유
+                                </button>
+
+                                <button onclick="saveToWatchLater()" class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-full">
+                                    <i class="fas fa-clock mr-2"></i>나중에 보기
+                                </button>
+
+                                <button onclick="saveToPlaylist()" class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-full">
+                                    <i class="fas fa-list mr-2"></i>재생목록
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Video Description -->
+                    <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg p-4 mb-6 border border-gray-800">
+                        <div class="flex items-center space-x-4 text-sm text-gray-400 mb-2">
+                            <span id="viewCount"></span>
+                            <span id="uploadDate"></span>
+                        </div>
+                        <div id="videoDescription" class="text-sm whitespace-pre-line"></div>
+                    </div>
+
+                    <!-- Comments Section -->
+                    <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg p-4 border border-gray-800">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-semibold"><span id="commentCount">0</span>개의 댓글</h3>
+                            <select id="commentSort" onchange="sortComments()" class="bg-gray-800 px-3 py-1 rounded">
+                                <option value="popular">인기순</option>
+                                <option value="recent">최신순</option>
+                            </select>
+                        </div>
+
+                        <!-- Add Comment -->
+                        <div class="flex items-start space-x-3 mb-6">
+                            <div class="bg-red-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold flex-shrink-0">
+                                K
+                            </div>
+                            <div class="flex-1">
+                                <input id="commentInput" type="text" placeholder="댓글 추가..."
+                                       class="comment-input w-full bg-transparent border-b border-gray-700 pb-2 focus:outline-none">
+                                <div id="commentButtons" class="hidden mt-2 flex justify-end space-x-2">
+                                    <button onclick="cancelComment()" class="px-4 py-2 rounded hover:bg-gray-800">취소</button>
+                                    <button onclick="postComment()" class="gradient-btn px-4 py-2 rounded text-white">댓글</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Comments List -->
+                        <div id="commentsList" class="space-y-4">
+                            <!-- Comments will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommended Videos Sidebar -->
+                <div class="lg:w-96">
+                    <h3 class="text-lg font-semibold mb-4">추천 동영상</h3>
+                    <div id="recommendedVideos" class="space-y-3">
+                        <!-- Recommended videos will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Sample Video Data
+        const videos = [
+            {
+                id: 1,
+                title: "BTS - Dynamite (Official MV)",
+                channel: "HYBE LABELS",
+                channelAvatar: "https://via.placeholder.com/40/ff0000/ffffff?text=H",
+                thumbnail: "https://via.placeholder.com/320x180/ff0000/ffffff?text=BTS+Dynamite",
+                duration: "3:45",
+                views: 1234567890,
+                uploadDate: "2023-08-15",
+                likes: 15000000,
+                category: "음악",
+                verified: true,
+                subscribers: "7200만",
+                description: "BTS (방탄소년단) 'Dynamite' Official MV\n\n첫 번째 영어 싱글 'Dynamite'로 전 세계를 사로잡은 BTS의 공식 뮤직비디오입니다.\n\n#BTS #Dynamite #HYBE",
+                comments: [
+                    { user: "팬1", avatar: "F", text: "역시 방탄!! 최고!", likes: 1234, time: "1일 전", replies: [] },
+                    { user: "K-pop Lover", avatar: "K", text: "이 노래 들을 때마다 기분이 좋아져요", likes: 892, time: "3일 전", replies: [] }
+                ]
+            },
+            {
+                id: 2,
+                title: "리그 오브 레전드 월드 챔피언십 2023 결승전 하이라이트",
+                channel: "Riot Games Korea",
+                channelAvatar: "https://via.placeholder.com/40/0088cc/ffffff?text=R",
+                thumbnail: "https://via.placeholder.com/320x180/0088cc/ffffff?text=LOL+Worlds",
+                duration: "12:34",
+                views: 5678901,
+                uploadDate: "2023-11-10",
+                likes: 234567,
+                category: "게임",
+                verified: true,
+                subscribers: "540만",
+                description: "2023 롤드컵 결승전의 가장 뜨거웠던 순간들을 모았습니다!\n\n#LOL #월드챔피언십 #e스포츠",
+                comments: [
+                    { user: "게이머123", avatar: "G", text: "이 경기 진짜 레전드였음", likes: 456, time: "5시간 전", replies: [] }
+                ]
+            },
+            {
+                id: 3,
+                title: "서울 맛집 투어 VLOG | 강남역 근처 숨은 맛집 5곳",
+                channel: "맛집탐험가",
+                channelAvatar: "https://via.placeholder.com/40/ff9900/ffffff?text=M",
+                thumbnail: "https://via.placeholder.com/320x180/ff9900/ffffff?text=Seoul+Food",
+                duration: "18:22",
+                views: 987654,
+                uploadDate: "2024-01-20",
+                likes: 45678,
+                category: "엔터테인먼트",
+                verified: false,
+                subscribers: "89만",
+                description: "강남역 근처에서 찾은 정말 맛있는 맛집 5곳을 소개합니다!\n\n촬영 협조해주신 모든 식당 사장님들께 감사드립니다.",
+                comments: [
+                    { user: "미식가", avatar: "M", text: "오 저기 저번주에 갔는데 진짜 맛있더라구요!", likes: 78, time: "2일 전", replies: [] }
+                ]
+            },
+            {
+                id: 4,
+                title: "30분 만에 완성하는 김치찌개 황금 레시피",
+                channel: "백종원의 요리비책",
+                channelAvatar: "https://via.placeholder.com/40/00cc00/ffffff?text=B",
+                thumbnail: "https://via.placeholder.com/320x180/00cc00/ffffff?text=Kimchi+Stew",
+                duration: "15:47",
+                views: 3456789,
+                uploadDate: "2024-02-05",
+                likes: 156789,
+                category: "엔터테인먼트",
+                verified: true,
+                subscribers: "620만",
+                description: "집에서 쉽게 만들 수 있는 김치찌개 레시피입니다.\n\n재료:\n- 김치 300g\n- 돼지고기 200g\n- 두부 1/2모\n- 대파, 마늘\n\n자세한 레시피는 영상에서 확인하세요!",
+                comments: [
+                    { user: "요리초보", avatar: "Y", text: "따라하기 정말 쉬워요! 감사합니다", likes: 234, time: "1주 전", replies: [] }
+                ]
+            },
+            {
+                id: 5,
+                title: "삼성 갤럭시 S24 Ultra 리얼 리뷰 - 2주 사용 후기",
+                channel: "테크리뷰어",
+                channelAvatar: "https://via.placeholder.com/40/9900ff/ffffff?text=T",
+                thumbnail: "https://via.placeholder.com/320x180/9900ff/ffffff?text=Galaxy+S24",
+                duration: "22:15",
+                views: 2345678,
+                uploadDate: "2024-02-28",
+                likes: 89012,
+                category: "과학기술",
+                verified: true,
+                subscribers: "310만",
+                description: "갤럭시 S24 Ultra를 2주간 메인폰으로 사용하면서 느낀 장단점을 솔직하게 이야기합니다.\n\n장점:\n- 뛰어난 카메라 성능\n- 긴 배터리 수명\n- S펜 기능\n\n단점:\n- 무거운 무게\n- 높은 가격\n\n#갤럭시S24Ultra #삼성 #스마트폰리뷰",
+                comments: [
+                    { user: "테크매니아", avatar: "T", text: "상세한 리뷰 감사합니다!", likes: 167, time: "4일 전", replies: [] }
+                ]
+            },
+            {
+                id: 6,
+                title: "미적분 완벽 정복 - 1강. 극한의 개념",
+                channel: "수학의 정석",
+                channelAvatar: "https://via.placeholder.com/40/0066ff/ffffff?text=S",
+                thumbnail: "https://via.placeholder.com/320x180/0066ff/ffffff?text=Calculus",
+                duration: "45:30",
+                views: 567890,
+                uploadDate: "2024-03-01",
+                likes: 34567,
+                category: "교육",
+                verified: true,
+                subscribers: "180만",
+                description: "미적분의 기초인 극한의 개념을 쉽게 설명합니다.\n\n이 영상을 통해:\n1. 극한의 정의 이해\n2. 좌극한과 우극한\n3. 극한의 기본 성질\n\n수험생 여러분 화이팅!",
+                comments: [
+                    { user: "수험생", avatar: "S", text: "이해가 잘 돼요! 시험 잘 볼 수 있을 것 같아요", likes: 89, time: "1일 전", replies: [] }
+                ]
+            },
+            {
+                id: 7,
+                title: "BLACKPINK - '뚜두뚜두(DDU-DU DDU-DU)' M/V",
+                channel: "BLACKPINK",
+                channelAvatar: "https://via.placeholder.com/40/ff1493/ffffff?text=BP",
+                thumbnail: "https://via.placeholder.com/320x180/ff1493/ffffff?text=BLACKPINK",
+                duration: "3:29",
+                views: 2000000000,
+                uploadDate: "2023-06-15",
+                likes: 25000000,
+                category: "음악",
+                verified: true,
+                subscribers: "9300만",
+                description: "BLACKPINK - '뚜두뚜두(DDU-DU DDU-DU)' M/V\n\n전 세계를 강타한 블랙핑크의 메가히트곡!\n\n#BLACKPINK #뚜두뚜두 #DDUDUDDUDU",
+                comments: [
+                    { user: "BLINK", avatar: "B", text: "블핑 사랑해 ❤️", likes: 5678, time: "2시간 전", replies: [] }
+                ]
+            },
+            {
+                id: 8,
+                title: "2024 KBO 리그 개막전 하이라이트",
+                channel: "KBO Official",
+                channelAvatar: "https://via.placeholder.com/40/003366/ffffff?text=KBO",
+                thumbnail: "https://via.placeholder.com/320x180/003366/ffffff?text=KBO+Baseball",
+                duration: "8:15",
+                views: 876543,
+                uploadDate: "2024-03-23",
+                likes: 23456,
+                category: "스포츠",
+                verified: true,
+                subscribers: "450만",
+                description: "2024 KBO 리그 개막전의 뜨거운 순간들!\n\n드디어 시작된 새 시즌, 각 팀의 활약상을 확인해보세요.\n\n#KBO #프로야구 #개막전",
+                comments: [
+                    { user: "야구팬", avatar: "Y", text: "올해도 재미있을 것 같네요!", likes: 234, time: "6시간 전", replies: [] }
+                ]
+            },
+            {
+                id: 9,
+                title: "오늘의 주요 뉴스 TOP 5 (2024.03.25)",
+                channel: "뉴스 데일리",
+                channelAvatar: "https://via.placeholder.com/40/cc0000/ffffff?text=N",
+                thumbnail: "https://via.placeholder.com/320x180/cc0000/ffffff?text=News",
+                duration: "10:30",
+                views: 654321,
+                uploadDate: "2024-03-25",
+                likes: 12345,
+                category: "뉴스",
+                verified: true,
+                subscribers: "280만",
+                description: "오늘 하루 꼭 알아야 할 주요 뉴스 5가지를 정리했습니다.\n\n1. 경제 뉴스\n2. 국제 정세\n3. 사회 이슈\n4. 날씨 예보\n5. 문화 소식",
+                comments: [
+                    { user: "시청자", avatar: "S", text: "매일 챙겨보고 있습니다!", likes: 67, time: "3시간 전", replies: [] }
+                ]
+            },
+            {
+                id: 10,
+                title: "AI 프로그래밍 입문 - ChatGPT API 활용하기",
+                channel: "코딩 마스터",
+                channelAvatar: "https://via.placeholder.com/40/00ff00/000000?text=C",
+                thumbnail: "https://via.placeholder.com/320x180/00ff00/000000?text=AI+Programming",
+                duration: "32:18",
+                views: 432109,
+                uploadDate: "2024-03-20",
+                likes: 19876,
+                category: "과학기술",
+                verified: true,
+                subscribers: "520만",
+                description: "ChatGPT API를 활용한 AI 애플리케이션 개발 방법을 배워봅시다!\n\n필요한 것:\n- Python 기초 지식\n- OpenAI API 키\n\n전체 소스코드는 GitHub에서 확인하세요.",
+                comments: [
+                    { user: "개발자", avatar: "D", text: "따라하기 쉽게 설명해주셔서 감사합니다!", likes: 145, time: "2일 전", replies: [] }
+                ]
+            },
+            {
+                id: 11,
+                title: "배틀그라운드 월드 챔피언십 결승전 풀영상",
+                channel: "PUBG Esports",
+                channelAvatar: "https://via.placeholder.com/40/ff6600/ffffff?text=P",
+                thumbnail: "https://via.placeholder.com/320x180/ff6600/ffffff?text=PUBG",
+                duration: "2:15:45",
+                views: 1234567,
+                uploadDate: "2024-03-18",
+                likes: 67890,
+                category: "게임",
+                verified: true,
+                subscribers: "380만",
+                description: "PUBG 월드 챔피언십 결승전의 모든 순간!\n\n최고의 팀들이 펼치는 치열한 승부를 확인하세요.\n\n#PUBG #배틀그라운드 #e스포츠",
+                comments: [
+                    { user: "게임러", avatar: "G", text: "마지막 경기 진짜 미쳤네요", likes: 456, time: "1일 전", replies: [] }
+                ]
+            },
+            {
+                id: 12,
+                title: "양자역학의 세계 - 슈뢰딩거의 고양이",
+                channel: "과학 쿠키",
+                channelAvatar: "https://via.placeholder.com/40/00cccc/ffffff?text=SC",
+                thumbnail: "https://via.placeholder.com/320x180/00cccc/ffffff?text=Quantum",
+                duration: "16:42",
+                views: 345678,
+                uploadDate: "2024-03-15",
+                likes: 23456,
+                category: "교육",
+                verified: true,
+                subscribers: "210만",
+                description: "양자역학의 대표적인 사고실험 '슈뢰딩거의 고양이'를 쉽게 설명합니다.\n\n이 영상에서 다루는 내용:\n- 양자 중첩의 원리\n- 관측의 역할\n- 확률과 불확정성\n\n과학은 재미있습니다!",
+                comments: [
+                    { user: "과학도", avatar: "K", text: "어려운 내용을 쉽게 설명해주셔서 감사해요", likes: 189, time: "4일 전", replies: [] }
+                ]
+            }
+        ];
+
+        // State Management
+        let currentVideo = null;
+        let currentCategory = '전체';
+        let subscriptions = JSON.parse(localStorage.getItem('subscriptions') || '[]');
+        let watchHistory = JSON.parse(localStorage.getItem('watchHistory') || '[]');
+        let watchLater = JSON.parse(localStorage.getItem('watchLater') || '[]');
+        let likedVideos = JSON.parse(localStorage.getItem('likedVideos') || '[]');
+        let playlists = JSON.parse(localStorage.getItem('playlists') || '{}');
+        let autoplay = true;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderVideoGrid(videos);
+
+            // Search on Enter key
+            document.getElementById('searchInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') searchVideos();
+            });
+
+            // Comment input focus
+            document.getElementById('commentInput').addEventListener('focus', () => {
+                document.getElementById('commentButtons').classList.remove('hidden');
+            });
+
+            // Menu toggle
+            document.getElementById('menuBtn').addEventListener('click', toggleSidebar);
+        });
+
+        // Toggle Sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            sidebar.classList.toggle('-translate-x-full');
+            mainContent.classList.toggle('ml-64');
+            mainContent.classList.toggle('ml-0');
+        }
+
+        // Render Video Grid
+        function renderVideoGrid(videosToRender) {
+            const grid = document.getElementById('videoGrid');
+            grid.innerHTML = videosToRender.map(video => `
+                <div class="video-card cursor-pointer fade-in" onclick="playVideo(${video.id})">
+                    <div class="video-thumbnail rounded-lg mb-3">
+                        <img src="${video.thumbnail}" alt="${video.title}">
+                        <span class="duration-badge">${video.duration}</span>
+                    </div>
+                    <div class="flex space-x-3">
+                        <img src="${video.channelAvatar}" class="w-9 h-9 rounded-full flex-shrink-0" alt="${video.channel}">
+                        <div class="flex-1">
+                            <h3 class="font-semibold line-clamp-2 mb-1">${video.title}</h3>
+                            <div class="text-sm text-gray-400">
+                                <div class="flex items-center">
+                                    <span>${video.channel}</span>
+                                    ${video.verified ? '<span class="verified-badge"><i class="fas fa-check text-white text-xs"></i></span>' : ''}
+                                </div>
+                                <div>${formatViews(video.views)} 조회수 • ${formatDate(video.uploadDate)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Play Video
+        function playVideo(videoId) {
+            currentVideo = videos.find(v => v.id === videoId);
+            if (!currentVideo) return;
+
+            // Add to watch history
+            if (!watchHistory.includes(videoId)) {
+                watchHistory.unshift(videoId);
+                if (watchHistory.length > 50) watchHistory.pop();
+                localStorage.setItem('watchHistory', JSON.stringify(watchHistory));
+            }
+
+            // Hide home page, show video page
+            document.getElementById('homePage').classList.add('hidden');
+            document.getElementById('videoPage').classList.remove('hidden');
+
+            // Set video source (using placeholder)
+            document.getElementById('videoPlayer').src = 'https://www.w3schools.com/html/mov_bbb.mp4';
+
+            // Update video info
+            document.getElementById('videoTitle').textContent = currentVideo.title;
+            document.getElementById('channelAvatar').src = currentVideo.channelAvatar;
+            document.getElementById('channelName').innerHTML = currentVideo.channel +
+                (currentVideo.verified ? '<span class="verified-badge"><i class="fas fa-check text-white text-xs"></i></span>' : '');
+            document.getElementById('subscriberCount').textContent = `구독자 ${currentVideo.subscribers}명`;
+            document.getElementById('viewCount').textContent = `조회수 ${formatViews(currentVideo.views)}회`;
+            document.getElementById('uploadDate').textContent = formatDate(currentVideo.uploadDate);
+            document.getElementById('videoDescription').textContent = currentVideo.description;
+            document.getElementById('likeCount').textContent = formatNumber(currentVideo.likes);
+
+            // Update subscribe button
+            updateSubscribeButton();
+
+            // Update like/dislike buttons
+            updateLikeButtons();
+
+            // Render comments
+            renderComments(currentVideo.comments);
+
+            // Render recommended videos
+            renderRecommendedVideos();
+
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        // Render Comments
+        function renderComments(comments) {
+            const commentsList = document.getElementById('commentsList');
+            document.getElementById('commentCount').textContent = comments.length;
+
+            commentsList.innerHTML = comments.map((comment, index) => `
+                <div class="flex space-x-3">
+                    <div class="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold flex-shrink-0">
+                        ${comment.avatar}
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-2 mb-1">
+                            <span class="font-semibold">${comment.user}</span>
+                            <span class="text-sm text-gray-400">${comment.time}</span>
+                        </div>
+                        <p class="mb-2">${comment.text}</p>
+                        <div class="flex items-center space-x-4 text-sm">
+                            <button class="hover:text-red-500">
+                                <i class="fas fa-thumbs-up mr-1"></i>${formatNumber(comment.likes)}
+                            </button>
+                            <button class="hover:text-red-500">
+                                <i class="fas fa-thumbs-down"></i>
+                            </button>
+                            <button class="hover:text-red-500">답글</button>
+                        </div>
+                        ${comment.replies && comment.replies.length > 0 ? `
+                            <div class="mt-3 space-y-3 pl-4 border-l-2 border-gray-700">
+                                ${comment.replies.map(reply => `
+                                    <div class="flex space-x-3">
+                                        <div class="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                            ${reply.avatar}
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex items-center space-x-2 mb-1">
+                                                <span class="font-semibold text-sm">${reply.user}</span>
+                                                <span class="text-xs text-gray-400">${reply.time}</span>
+                                            </div>
+                                            <p class="text-sm">${reply.text}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Post Comment
+        function postComment() {
+            const input = document.getElementById('commentInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const newComment = {
+                user: "나",
+                avatar: "K",
+                text: text,
+                likes: 0,
+                time: "방금",
+                replies: []
+            };
+
+            currentVideo.comments.unshift(newComment);
+            renderComments(currentVideo.comments);
+            input.value = '';
+            cancelComment();
+        }
+
+        // Cancel Comment
+        function cancelComment() {
+            document.getElementById('commentInput').value = '';
+            document.getElementById('commentButtons').classList.add('hidden');
+        }
+
+        // Sort Comments
+        function sortComments() {
+            const sortType = document.getElementById('commentSort').value;
+            if (sortType === 'popular') {
+                currentVideo.comments.sort((a, b) => b.likes - a.likes);
+            } else {
+                // Most recent first (already in that order typically)
+            }
+            renderComments(currentVideo.comments);
+        }
+
+        // Render Recommended Videos
+        function renderRecommendedVideos() {
+            const container = document.getElementById('recommendedVideos');
+            const recommended = videos.filter(v => v.id !== currentVideo.id).slice(0, 10);
+
+            container.innerHTML = recommended.map(video => `
+                <div class="flex space-x-2 cursor-pointer hover:bg-white/5 p-2 rounded-lg" onclick="playVideo(${video.id})">
+                    <div class="relative w-40 flex-shrink-0">
+                        <div class="video-thumbnail rounded-lg">
+                            <img src="${video.thumbnail}" alt="${video.title}">
+                            <span class="duration-badge">${video.duration}</span>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-sm line-clamp-2 mb-1">${video.title}</h4>
+                        <div class="text-xs text-gray-400">
+                            <div>${video.channel}</div>
+                            <div>${formatViews(video.views)} 조회수</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Toggle Subscribe
+        function toggleSubscribe() {
+            const btn = document.getElementById('subscribeBtn');
+            const channelName = currentVideo.channel;
+
+            if (subscriptions.includes(channelName)) {
+                subscriptions = subscriptions.filter(s => s !== channelName);
+                btn.textContent = '구독';
+                btn.classList.add('gradient-btn');
+                btn.classList.remove('bg-gray-700');
+            } else {
+                subscriptions.push(channelName);
+                btn.textContent = '구독중';
+                btn.classList.remove('gradient-btn');
+                btn.classList.add('bg-gray-700');
+            }
+
+            localStorage.setItem('subscriptions', JSON.stringify(subscriptions));
+        }
+
+        // Update Subscribe Button
+        function updateSubscribeButton() {
+            const btn = document.getElementById('subscribeBtn');
+            if (subscriptions.includes(currentVideo.channel)) {
+                btn.textContent = '구독중';
+                btn.classList.remove('gradient-btn');
+                btn.classList.add('bg-gray-700');
+            } else {
+                btn.textContent = '구독';
+                btn.classList.add('gradient-btn');
+                btn.classList.remove('bg-gray-700');
+            }
+        }
+
+        // Toggle Like
+        function toggleLike() {
+            const btn = document.getElementById('likeBtn');
+            const dislikeBtn = document.getElementById('dislikeBtn');
+
+            btn.classList.toggle('active');
+            dislikeBtn.classList.remove('active');
+
+            if (btn.classList.contains('active')) {
+                if (!likedVideos.includes(currentVideo.id)) {
+                    likedVideos.push(currentVideo.id);
+                    localStorage.setItem('likedVideos', JSON.stringify(likedVideos));
+                }
+            } else {
+                likedVideos = likedVideos.filter(id => id !== currentVideo.id);
+                localStorage.setItem('likedVideos', JSON.stringify(likedVideos));
+            }
+        }
+
+        // Toggle Dislike
+        function toggleDislike() {
+            const btn = document.getElementById('dislikeBtn');
+            const likeBtn = document.getElementById('likeBtn');
+
+            btn.classList.toggle('active');
+            likeBtn.classList.remove('active');
+
+            if (likeBtn.classList.contains('active')) {
+                likedVideos = likedVideos.filter(id => id !== currentVideo.id);
+                localStorage.setItem('likedVideos', JSON.stringify(likedVideos));
+            }
+        }
+
+        // Update Like Buttons
+        function updateLikeButtons() {
+            const likeBtn = document.getElementById('likeBtn');
+            const dislikeBtn = document.getElementById('dislikeBtn');
+
+            likeBtn.classList.remove('active');
+            dislikeBtn.classList.remove('active');
+
+            if (likedVideos.includes(currentVideo.id)) {
+                likeBtn.classList.add('active');
+            }
+        }
+
+        // Share Video
+        function shareVideo() {
+            alert('공유 링크가 클립보드에 복사되었습니다!\n\n' + window.location.href + '?v=' + currentVideo.id);
+        }
+
+        // Save to Watch Later
+        function saveToWatchLater() {
+            if (!watchLater.includes(currentVideo.id)) {
+                watchLater.push(currentVideo.id);
+                localStorage.setItem('watchLater', JSON.stringify(watchLater));
+                alert('나중에 볼 동영상에 추가되었습니다.');
+            } else {
+                alert('이미 나중에 볼 동영상에 추가되어 있습니다.');
+            }
+        }
+
+        // Save to Playlist
+        function saveToPlaylist() {
+            const playlistName = prompt('재생목록 이름을 입력하세요:');
+            if (!playlistName) return;
+
+            if (!playlists[playlistName]) {
+                playlists[playlistName] = [];
+            }
+
+            if (!playlists[playlistName].includes(currentVideo.id)) {
+                playlists[playlistName].push(currentVideo.id);
+                localStorage.setItem('playlists', JSON.stringify(playlists));
+                alert(`"${playlistName}" 재생목록에 추가되었습니다.`);
+            } else {
+                alert('이미 해당 재생목록에 추가되어 있습니다.');
+            }
+        }
+
+        // Toggle Theater Mode
+        function toggleTheaterMode() {
+            const container = document.getElementById('videoPlayerContainer');
+            container.classList.toggle('theater-mode');
+        }
+
+        // Toggle Autoplay
+        function toggleAutoplay() {
+            autoplay = !autoplay;
+            const btn = document.getElementById('autoplayBtn');
+            btn.innerHTML = autoplay ?
+                '<i class="fas fa-play-circle mr-2"></i>자동재생: 켜짐' :
+                '<i class="fas fa-pause-circle mr-2"></i>자동재생: 꺼짐';
+        }
+
+        // Show Home
+        function showHome() {
+            document.getElementById('videoPage').classList.add('hidden');
+            document.getElementById('homePage').classList.remove('hidden');
+            currentCategory = '전체';
+            updateActiveCategory();
+            renderVideoGrid(videos);
+            updateSidebarActive('홈');
+        }
+
+        // Show Trending
+        function showTrending() {
+            document.getElementById('videoPage').classList.add('hidden');
+            document.getElementById('homePage').classList.remove('hidden');
+            const trending = [...videos].sort((a, b) => b.views - a.views);
+            renderVideoGrid(trending);
+            updateSidebarActive('인기');
+        }
+
+        // Show Subscriptions
+        function showSubscriptions() {
+            document.getElementById('videoPage').classList.add('hidden');
+            document.getElementById('homePage').classList.remove('hidden');
+            const subscribed = videos.filter(v => subscriptions.includes(v.channel));
+            renderVideoGrid(subscribed);
+            updateSidebarActive('구독');
+        }
+
+        // Show Library
+        function showLibrary() {
+            document.getElementById('videoPage').classList.add('hidden');
+            document.getElementById('homePage').classList.remove('hidden');
+            const library = videos.filter(v =>
+                watchHistory.includes(v.id) ||
+                watchLater.includes(v.id) ||
+                likedVideos.includes(v.id)
+            );
+            renderVideoGrid(library);
+            updateSidebarActive('보관함');
+        }
+
+        // Show Watch Later
+        function showWatchLater() {
+            document.getElementById('videoPage').classList.add('hidden');
+            document.getElementById('homePage').classList.remove('hidden');
+            const later = videos.filter(v => watchLater.includes(v.id));
+            renderVideoGrid(later);
+        }
+
+        // Show History
+        function showHistory() {
+            document.getElementById('videoPage').classList.add('hidden');
+            document.getElementById('homePage').classList.remove('hidden');
+            const history = watchHistory.map(id => videos.find(v => v.id === id)).filter(v => v);
+            renderVideoGrid(history);
+        }
+
+        // Show Liked
+        function showLiked() {
+            document.getElementById('videoPage').classList.add('hidden');
+            document.getElementById('homePage').classList.remove('hidden');
+            const liked = videos.filter(v => likedVideos.includes(v.id));
+            renderVideoGrid(liked);
+        }
+
+        // Filter Category
+        function filterCategory(category) {
+            currentCategory = category;
+            updateActiveCategory();
+
+            if (category === '전체') {
+                renderVideoGrid(videos);
+            } else {
+                const filtered = videos.filter(v => v.category === category);
+                renderVideoGrid(filtered);
+            }
+
+            // Show home page if on video page
+            if (!document.getElementById('homePage').classList.contains('hidden')) {
+                // Already on home
+            } else {
+                document.getElementById('videoPage').classList.add('hidden');
+                document.getElementById('homePage').classList.remove('hidden');
+            }
+        }
+
+        // Update Active Category
+        function updateActiveCategory() {
+            document.querySelectorAll('.category-chip').forEach(chip => {
+                chip.classList.remove('active');
+            });
+
+            const categories = ['전체', '음악', '게임', '뉴스', '스포츠', '엔터테인먼트', '교육', '과학기술'];
+            const index = categories.indexOf(currentCategory);
+            if (index !== -1) {
+                document.querySelectorAll('.category-chip')[index].classList.add('active');
+            }
+        }
+
+        // Update Sidebar Active
+        function updateSidebarActive(section) {
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            const items = document.querySelectorAll('.sidebar-item');
+            const sections = ['홈', '인기', '구독', '보관함'];
+            const index = sections.indexOf(section);
+            if (index !== -1 && items[index]) {
+                items[index].classList.add('active');
+            }
+        }
+
+        // Search Videos
+        function searchVideos() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            if (!query) {
+                renderVideoGrid(videos);
+                return;
+            }
+
+            const results = videos.filter(v =>
+                v.title.toLowerCase().includes(query) ||
+                v.channel.toLowerCase().includes(query) ||
+                v.category.toLowerCase().includes(query) ||
+                v.description.toLowerCase().includes(query)
+            );
+
+            document.getElementById('videoPage').classList.add('hidden');
+            document.getElementById('homePage').classList.remove('hidden');
+            renderVideoGrid(results);
+        }
+
+        // Format Views
+        function formatViews(views) {
+            if (views >= 1000000000) return (views / 1000000000).toFixed(1) + '십억';
+            if (views >= 100000000) return (views / 100000000).toFixed(1) + '억';
+            if (views >= 10000) return (views / 10000).toFixed(1) + '만';
+            return views.toLocaleString();
+        }
+
+        // Format Number
+        function formatNumber(num) {
+            if (num >= 10000) return (num / 10000).toFixed(1) + '만';
+            return num.toLocaleString();
+        }
+
+        // Format Date
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+            if (days === 0) return '오늘';
+            if (days === 1) return '1일 전';
+            if (days < 7) return days + '일 전';
+            if (days < 30) return Math.floor(days / 7) + '주 전';
+            if (days < 365) return Math.floor(days / 30) + '개월 전';
+            return Math.floor(days / 365) + '년 전';
+        }
+    </script>
+</body>
+</html>

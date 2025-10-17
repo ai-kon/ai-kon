@@ -1,0 +1,2004 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아마존 코리아 - 온라인 쇼핑몰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .amazon-gradient {
+            background: linear-gradient(135deg, #ff9900 0%, #ffb84d 50%, #ff9900 100%);
+        }
+
+        .amazon-gradient-dark {
+            background: linear-gradient(135deg, #232f3e 0%, #131921 100%);
+        }
+
+        .product-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .star-rating {
+            color: #ff9900;
+        }
+
+        .prime-badge {
+            background: linear-gradient(135deg, #00a8e1 0%, #0066c0 100%);
+        }
+
+        .deal-badge {
+            background: linear-gradient(135deg, #c7511f 0%, #d13212 100%);
+        }
+
+        .btn-amazon {
+            background: linear-gradient(135deg, #ff9900 0%, #ffb84d 100%);
+            transition: all 0.3s ease;
+        }
+
+        .btn-amazon:hover {
+            background: linear-gradient(135deg, #ffb84d 0%, #ff9900 100%);
+            transform: scale(1.05);
+        }
+
+        .category-item {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .category-item:hover {
+            background: #ff9900;
+            color: white;
+        }
+
+        .thumbnail {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .thumbnail:hover {
+            border-color: #ff9900;
+        }
+
+        .review-img {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .review-img:hover {
+            transform: scale(1.05);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .filter-checkbox:checked + label {
+            background: #ff9900;
+            color: white;
+        }
+
+        input[type="range"] {
+            accent-color: #ff9900;
+        }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .cart-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #c7511f;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .price-history {
+            max-width: 600px;
+            height: 300px;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Header -->
+    <header class="amazon-gradient-dark text-white sticky-header">
+        <div class="container mx-auto px-4">
+            <!-- Top Header -->
+            <div class="flex items-center justify-between py-3">
+                <div class="flex items-center space-x-6">
+                    <h1 class="text-3xl font-bold cursor-pointer" onclick="showHomePage()">
+                        <i class="fab fa-amazon"></i> amazon.kr
+                    </h1>
+                    <div class="text-sm">
+                        <div class="text-gray-300">배송지</div>
+                        <div class="font-bold"><i class="fas fa-map-marker-alt"></i> 서울특별시</div>
+                    </div>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="flex-1 mx-8">
+                    <div class="flex">
+                        <select id="searchCategory" class="bg-gray-200 text-gray-800 px-3 py-2 rounded-l-md focus:outline-none">
+                            <option value="">전체</option>
+                            <option value="electronics">전자제품</option>
+                            <option value="fashion">패션</option>
+                            <option value="home">홈&리빙</option>
+                            <option value="beauty">뷰티</option>
+                            <option value="food">식품</option>
+                            <option value="books">도서</option>
+                            <option value="sports">스포츠</option>
+                        </select>
+                        <input type="text" id="searchInput" placeholder="아마존에서 검색"
+                               class="flex-1 px-4 py-2 focus:outline-none text-gray-800">
+                        <button onclick="searchProducts()" class="amazon-gradient px-6 py-2 rounded-r-md font-bold">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Menu -->
+                <div class="flex items-center space-x-6">
+                    <div class="text-sm cursor-pointer hover:underline">
+                        <div class="text-gray-300">안녕하세요</div>
+                        <div class="font-bold">계정 및 목록 <i class="fas fa-caret-down"></i></div>
+                    </div>
+                    <div class="text-sm cursor-pointer hover:underline" onclick="showOrders()">
+                        <div class="text-gray-300">반품</div>
+                        <div class="font-bold">주문 내역</div>
+                    </div>
+                    <div class="relative cursor-pointer" onclick="showCart()">
+                        <i class="fas fa-shopping-cart text-3xl"></i>
+                        <span id="cartCount" class="cart-badge">0</span>
+                        <div class="text-sm font-bold">장바구니</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="flex items-center space-x-6 py-2 text-sm border-t border-gray-700">
+                <div class="category-item px-3 py-1 rounded" onclick="toggleCategories()">
+                    <i class="fas fa-bars"></i> 전체 카테고리
+                </div>
+                <div class="category-item px-3 py-1 rounded" onclick="filterByCategory('')">전체상품</div>
+                <div class="category-item px-3 py-1 rounded" onclick="filterByCategory('electronics')">전자제품</div>
+                <div class="category-item px-3 py-1 rounded" onclick="filterByCategory('fashion')">패션</div>
+                <div class="category-item px-3 py-1 rounded" onclick="filterByCategory('home')">홈&리빙</div>
+                <div class="category-item px-3 py-1 rounded" onclick="filterByCategory('beauty')">뷰티</div>
+                <div class="category-item px-3 py-1 rounded" onclick="filterByCategory('food')">식품</div>
+                <div class="category-item px-3 py-1 rounded" onclick="showWishlist()">위시리스트</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+
+        <!-- Home Page -->
+        <div id="homePage">
+            <!-- Deal of the Day Banner -->
+            <div class="deal-badge text-white rounded-lg p-6 mb-6 shadow-lg">
+                <h2 class="text-2xl font-bold mb-4">
+                    <i class="fas fa-bolt"></i> 오늘의 특가 딜
+                </h2>
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-white text-gray-800 rounded-lg p-4 cursor-pointer" onclick="showProductDetail(0)">
+                        <img src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300" alt="스마트폰" class="w-full h-40 object-cover rounded mb-2">
+                        <div class="text-red-600 font-bold text-xl">-40% OFF</div>
+                        <div class="font-bold">삼성 갤럭시 S24 Ultra</div>
+                        <div class="text-2xl font-bold text-red-600">₩899,000</div>
+                        <div class="text-sm text-gray-500 line-through">₩1,499,000</div>
+                        <div class="text-sm text-blue-600 font-bold mt-2">
+                            <i class="fas fa-clock"></i> 12시간 남음
+                        </div>
+                    </div>
+                    <div class="bg-white text-gray-800 rounded-lg p-4 cursor-pointer" onclick="showProductDetail(5)">
+                        <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300" alt="헤드폰" class="w-full h-40 object-cover rounded mb-2">
+                        <div class="text-red-600 font-bold text-xl">-35% OFF</div>
+                        <div class="font-bold">소니 WH-1000XM5</div>
+                        <div class="text-2xl font-bold text-red-600">₩289,000</div>
+                        <div class="text-sm text-gray-500 line-through">₩445,000</div>
+                        <div class="text-sm text-blue-600 font-bold mt-2">
+                            <i class="fas fa-clock"></i> 8시간 남음
+                        </div>
+                    </div>
+                    <div class="bg-white text-gray-800 rounded-lg p-4 cursor-pointer" onclick="showProductDetail(11)">
+                        <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300" alt="시계" class="w-full h-40 object-cover rounded mb-2">
+                        <div class="text-red-600 font-bold text-xl">-50% OFF</div>
+                        <div class="font-bold">애플워치 Series 9</div>
+                        <div class="text-2xl font-bold text-red-600">₩299,000</div>
+                        <div class="text-sm text-gray-500 line-through">₩599,000</div>
+                        <div class="text-sm text-blue-600 font-bold mt-2">
+                            <i class="fas fa-clock"></i> 5시간 남음
+                        </div>
+                    </div>
+                    <div class="bg-white text-gray-800 rounded-lg p-4 cursor-pointer" onclick="showProductDetail(2)">
+                        <img src="https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300" alt="노트북" class="w-full h-40 object-cover rounded mb-2">
+                        <div class="text-red-600 font-bold text-xl">-30% OFF</div>
+                        <div class="font-bold">맥북 프로 M3</div>
+                        <div class="text-2xl font-bold text-red-600">₩2,099,000</div>
+                        <div class="text-sm text-gray-500 line-through">₩2,999,000</div>
+                        <div class="text-sm text-blue-600 font-bold mt-2">
+                            <i class="fas fa-clock"></i> 15시간 남음
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters and Sort -->
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex space-x-4">
+                    <button onclick="toggleFilters()" class="bg-white px-4 py-2 rounded shadow hover:bg-gray-50">
+                        <i class="fas fa-filter"></i> 필터
+                    </button>
+                    <select id="sortSelect" onchange="sortProducts()" class="bg-white px-4 py-2 rounded shadow">
+                        <option value="featured">추천순</option>
+                        <option value="price-low">낮은 가격순</option>
+                        <option value="price-high">높은 가격순</option>
+                        <option value="rating">평점순</option>
+                        <option value="newest">최신순</option>
+                    </select>
+                </div>
+                <div class="text-gray-600">
+                    총 <span id="productCount" class="font-bold">0</span>개 상품
+                </div>
+            </div>
+
+            <div class="flex gap-6">
+                <!-- Sidebar Filters -->
+                <div id="filterSidebar" class="w-64 bg-white rounded-lg shadow p-4 hidden">
+                    <h3 class="font-bold text-lg mb-4">필터</h3>
+
+                    <!-- Price Range -->
+                    <div class="mb-6">
+                        <h4 class="font-bold mb-2">가격대</h4>
+                        <input type="range" id="priceRange" min="0" max="5000000" step="10000"
+                               value="5000000" class="w-full" onchange="applyFilters()">
+                        <div class="text-sm text-gray-600">
+                            최대: <span id="priceRangeValue">₩5,000,000</span>
+                        </div>
+                    </div>
+
+                    <!-- Brands -->
+                    <div class="mb-6">
+                        <h4 class="font-bold mb-2">브랜드</h4>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" class="brand-filter mr-2" value="Samsung" onchange="applyFilters()">
+                                <span>삼성</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" class="brand-filter mr-2" value="Apple" onchange="applyFilters()">
+                                <span>애플</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" class="brand-filter mr-2" value="Sony" onchange="applyFilters()">
+                                <span>소니</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" class="brand-filter mr-2" value="LG" onchange="applyFilters()">
+                                <span>LG</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" class="brand-filter mr-2" value="Nike" onchange="applyFilters()">
+                                <span>나이키</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Rating -->
+                    <div class="mb-6">
+                        <h4 class="font-bold mb-2">평점</h4>
+                        <div class="space-y-2">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="radio" name="rating" class="mr-2" value="4" onchange="applyFilters()">
+                                <span class="star-rating">★★★★☆ 이상</span>
+                            </label>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="radio" name="rating" class="mr-2" value="3" onchange="applyFilters()">
+                                <span class="star-rating">★★★☆☆ 이상</span>
+                            </label>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="radio" name="rating" class="mr-2" value="0" onchange="applyFilters()" checked>
+                                <span>전체</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Shipping -->
+                    <div class="mb-6">
+                        <h4 class="font-bold mb-2">배송</h4>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="primeOnly" class="mr-2" onchange="applyFilters()">
+                            <span class="text-blue-600 font-bold">프라임 무료배송</span>
+                        </label>
+                    </div>
+
+                    <button onclick="resetFilters()" class="w-full bg-gray-200 py-2 rounded hover:bg-gray-300">
+                        필터 초기화
+                    </button>
+                </div>
+
+                <!-- Product Grid -->
+                <div class="flex-1">
+                    <div id="productGrid" class="grid grid-cols-4 gap-6">
+                        <!-- Products will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Detail Page -->
+        <div id="productDetailPage" class="hidden">
+            <!-- Will be populated dynamically -->
+        </div>
+
+        <!-- Cart Page -->
+        <div id="cartPage" class="hidden">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-3xl font-bold mb-6">장바구니</h2>
+                <div id="cartItems"></div>
+                <div class="border-t pt-6 mt-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-xl font-bold">총 상품금액:</span>
+                        <span id="cartTotal" class="text-3xl font-bold text-red-600">₩0</span>
+                    </div>
+                    <button onclick="proceedToCheckout()" class="w-full btn-amazon text-white py-4 rounded-lg font-bold text-xl">
+                        <i class="fas fa-check"></i> 구매하기
+                    </button>
+                    <button onclick="showHomePage()" class="w-full bg-gray-200 text-gray-800 py-3 rounded-lg font-bold mt-3 hover:bg-gray-300">
+                        쇼핑 계속하기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Checkout Page -->
+        <div id="checkoutPage" class="hidden">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-3xl font-bold mb-6">주문/결제</h2>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="text-xl font-bold mb-4">배송 정보</h3>
+                        <div class="space-y-4">
+                            <input type="text" placeholder="받는 분 성함" class="w-full border px-4 py-2 rounded">
+                            <input type="text" placeholder="휴대폰 번호" class="w-full border px-4 py-2 rounded">
+                            <input type="text" placeholder="우편번호" class="w-full border px-4 py-2 rounded">
+                            <input type="text" placeholder="주소" class="w-full border px-4 py-2 rounded">
+                            <input type="text" placeholder="상세주소" class="w-full border px-4 py-2 rounded">
+                            <textarea placeholder="배송 메모" class="w-full border px-4 py-2 rounded h-24"></textarea>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-xl font-bold mb-4">결제 정보</h3>
+                        <div class="space-y-4">
+                            <select class="w-full border px-4 py-2 rounded">
+                                <option>신용카드</option>
+                                <option>체크카드</option>
+                                <option>무통장입금</option>
+                                <option>카카오페이</option>
+                                <option>네이버페이</option>
+                            </select>
+
+                            <div class="border rounded p-4">
+                                <div class="flex justify-between mb-2">
+                                    <span>상품금액</span>
+                                    <span id="checkoutSubtotal" class="font-bold">₩0</span>
+                                </div>
+                                <div class="flex justify-between mb-2">
+                                    <span>배송비</span>
+                                    <span class="font-bold text-green-600">무료</span>
+                                </div>
+                                <div class="border-t pt-2 flex justify-between">
+                                    <span class="text-xl font-bold">총 결제금액</span>
+                                    <span id="checkoutTotal" class="text-2xl font-bold text-red-600">₩0</span>
+                                </div>
+                            </div>
+
+                            <label class="flex items-center">
+                                <input type="checkbox" class="mr-2" required>
+                                <span class="text-sm">주문 내용을 확인하였으며, 결제에 동의합니다.</span>
+                            </label>
+
+                            <button onclick="completeOrder()" class="w-full btn-amazon text-white py-4 rounded-lg font-bold text-xl">
+                                <i class="fas fa-credit-card"></i> 결제하기
+                            </button>
+                            <button onclick="showCart()" class="w-full bg-gray-200 text-gray-800 py-3 rounded-lg font-bold hover:bg-gray-300">
+                                장바구니로 돌아가기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders Page -->
+        <div id="ordersPage" class="hidden">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-3xl font-bold mb-6">주문 내역</h2>
+                <div id="ordersList"></div>
+            </div>
+        </div>
+
+        <!-- Wishlist Page -->
+        <div id="wishlistPage" class="hidden">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-3xl font-bold mb-6">
+                    <i class="fas fa-heart text-red-500"></i> 위시리스트
+                </h2>
+                <div id="wishlistGrid" class="grid grid-cols-4 gap-6"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal" onclick="closeModal()">
+        <div class="relative">
+            <img id="modalImage" src="" alt="" class="max-w-4xl max-h-screen rounded-lg">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-white text-4xl">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Product Database
+        const products = [
+            {
+                id: 0,
+                name: '삼성 갤럭시 S24 Ultra',
+                category: 'electronics',
+                brand: 'Samsung',
+                price: 1499000,
+                salePrice: 899000,
+                rating: 4.8,
+                reviews: 2456,
+                image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400',
+                    'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=400',
+                    'https://images.unsplash.com/photo-1567581935884-3349723552ca?w=400'
+                ],
+                prime: true,
+                stock: 45,
+                description: '최신 삼성 갤럭시 플래그십 스마트폰. 200MP 카메라와 강력한 성능을 자랑합니다.',
+                specs: {
+                    '디스플레이': '6.8인치 QHD+ AMOLED',
+                    '프로세서': 'Snapdragon 8 Gen 3',
+                    '메모리': '12GB RAM',
+                    '저장공간': '256GB',
+                    '카메라': '200MP 메인 + 50MP 망원 + 12MP 초광각',
+                    '배터리': '5000mAh'
+                },
+                seller: '아마존코리아',
+                priceHistory: [1499000, 1450000, 1399000, 1299000, 1199000, 999000, 899000]
+            },
+            {
+                id: 1,
+                name: '아이폰 15 Pro Max',
+                category: 'electronics',
+                brand: 'Apple',
+                price: 1890000,
+                rating: 4.9,
+                reviews: 3821,
+                image: 'https://images.unsplash.com/photo-1592286927505-19e6242e3e04?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1592286927505-19e6242e3e04?w=400',
+                    'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=400',
+                    'https://images.unsplash.com/photo-1556656793-08538906a9f8?w=400'
+                ],
+                prime: true,
+                stock: 23,
+                description: '티타늄 디자인의 최신 아이폰. A17 Pro 칩과 향상된 카메라 시스템.',
+                specs: {
+                    '디스플레이': '6.7인치 Super Retina XDR',
+                    '프로세서': 'A17 Pro',
+                    '메모리': '8GB RAM',
+                    '저장공간': '256GB',
+                    '카메라': '48MP 메인 + 12MP 망원 + 12MP 초광각',
+                    '배터리': '최대 29시간 비디오 재생'
+                },
+                seller: '애플코리아',
+                priceHistory: [1890000, 1890000, 1850000, 1850000, 1890000, 1890000, 1890000]
+            },
+            {
+                id: 2,
+                name: '맥북 프로 M3 14인치',
+                category: 'electronics',
+                brand: 'Apple',
+                price: 2999000,
+                salePrice: 2099000,
+                rating: 4.9,
+                reviews: 1567,
+                image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400',
+                    'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=400',
+                    'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400'
+                ],
+                prime: true,
+                stock: 18,
+                description: 'M3 칩 탑재 맥북 프로. 전문가를 위한 최고의 노트북.',
+                specs: {
+                    '디스플레이': '14.2인치 Liquid Retina XDR',
+                    '프로세서': 'Apple M3',
+                    '메모리': '16GB',
+                    '저장공간': '512GB SSD',
+                    '그래픽': '10코어 GPU',
+                    '배터리': '최대 17시간'
+                },
+                seller: '애플코리아',
+                priceHistory: [2999000, 2899000, 2799000, 2599000, 2399000, 2199000, 2099000]
+            },
+            {
+                id: 3,
+                name: 'LG 그램 17인치',
+                category: 'electronics',
+                brand: 'LG',
+                price: 2290000,
+                rating: 4.6,
+                reviews: 892,
+                image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=400',
+                    'https://images.unsplash.com/photo-1484788984921-03950022c9ef?w=400'
+                ],
+                prime: true,
+                stock: 32,
+                description: '초경량 17인치 대화면 노트북. 1.35kg의 가벼운 무게.',
+                specs: {
+                    '디스플레이': '17인치 WQXGA',
+                    '프로세서': 'Intel Core i7-13세대',
+                    '메모리': '16GB',
+                    '저장공간': '512GB SSD',
+                    '무게': '1.35kg',
+                    '배터리': '최대 20시간'
+                },
+                seller: 'LG전자',
+                priceHistory: [2290000, 2290000, 2250000, 2290000, 2290000, 2290000, 2290000]
+            },
+            {
+                id: 4,
+                name: '소니 A7 IV 미러리스 카메라',
+                category: 'electronics',
+                brand: 'Sony',
+                price: 3290000,
+                rating: 4.9,
+                reviews: 445,
+                image: 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400',
+                    'https://images.unsplash.com/photo-1606980624887-b0e5dd82ac3b?w=400'
+                ],
+                prime: false,
+                stock: 12,
+                description: '33MP 풀프레임 센서 탑재 프로 미러리스 카메라.',
+                specs: {
+                    '센서': '33MP 풀프레임 CMOS',
+                    '동영상': '4K 60fps',
+                    'ISO 범위': '100-51200',
+                    '손떨림방지': '5축 보정',
+                    '연속촬영': '최대 10fps',
+                    '무게': '658g'
+                },
+                seller: '소니코리아',
+                priceHistory: [3290000, 3290000, 3290000, 3250000, 3290000, 3290000, 3290000]
+            },
+            {
+                id: 5,
+                name: '소니 WH-1000XM5 헤드폰',
+                category: 'electronics',
+                brand: 'Sony',
+                price: 445000,
+                salePrice: 289000,
+                rating: 4.8,
+                reviews: 3214,
+                image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400',
+                    'https://images.unsplash.com/photo-1484704849700-f032a568e944?w=400'
+                ],
+                prime: true,
+                stock: 156,
+                description: '업계 최고 수준의 노이즈 캔슬링 헤드폰.',
+                specs: {
+                    '노이즈캔슬링': 'HD 노이즈 캔슬링',
+                    '배터리': '최대 30시간',
+                    '충전': 'USB-C 급속충전',
+                    '연결': 'Bluetooth 5.2',
+                    '무게': '250g',
+                    '기능': '멀티포인트 연결'
+                },
+                seller: '소니코리아',
+                priceHistory: [445000, 429000, 399000, 369000, 339000, 309000, 289000]
+            },
+            {
+                id: 6,
+                name: '나이키 에어맥스 270',
+                category: 'fashion',
+                brand: 'Nike',
+                price: 189000,
+                rating: 4.7,
+                reviews: 1823,
+                image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
+                    'https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=400'
+                ],
+                prime: true,
+                stock: 243,
+                description: '최대의 쿠셔닝을 제공하는 라이프스타일 운동화.',
+                specs: {
+                    '사이즈': '230-290mm',
+                    '컬러': '블랙/화이트',
+                    '소재': '메쉬/합성피혁',
+                    '중창': 'Max Air 유닛',
+                    '용도': '라이프스타일/러닝'
+                },
+                seller: '나이키코리아',
+                priceHistory: [189000, 189000, 179000, 189000, 189000, 189000, 189000]
+            },
+            {
+                id: 7,
+                name: '아디다스 울트라부스트 22',
+                category: 'fashion',
+                brand: 'Adidas',
+                price: 239000,
+                rating: 4.6,
+                reviews: 1456,
+                image: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400',
+                    'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400'
+                ],
+                prime: true,
+                stock: 178,
+                description: 'Boost 기술이 적용된 프리미엄 러닝화.',
+                specs: {
+                    '사이즈': '230-295mm',
+                    '컬러': '화이트/그레이',
+                    '소재': '프라임니트/합성피혁',
+                    '중창': 'Boost 폼',
+                    '용도': '러닝/트레이닝'
+                },
+                seller: '아디다스코리아',
+                priceHistory: [239000, 239000, 229000, 239000, 239000, 239000, 239000]
+            },
+            {
+                id: 8,
+                name: '노스페이스 다운재킷',
+                category: 'fashion',
+                brand: 'The North Face',
+                price: 429000,
+                rating: 4.8,
+                reviews: 2134,
+                image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400',
+                    'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400'
+                ],
+                prime: true,
+                stock: 89,
+                description: '700 필파워 프리미엄 구스다운 재킷.',
+                specs: {
+                    '사이즈': 'S/M/L/XL',
+                    '컬러': '블랙',
+                    '충전재': '700FP 구스다운',
+                    '겉감': '나일론 립스탑',
+                    '기능': '방수/방풍'
+                },
+                seller: '노스페이스',
+                priceHistory: [429000, 429000, 399000, 429000, 429000, 429000, 429000]
+            },
+            {
+                id: 9,
+                name: '리바이스 501 청바지',
+                category: 'fashion',
+                brand: "Levi's",
+                price: 129000,
+                rating: 4.5,
+                reviews: 3456,
+                image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400',
+                    'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400'
+                ],
+                prime: true,
+                stock: 456,
+                description: '클래식한 오리지널 핏 데님 진.',
+                specs: {
+                    '사이즈': '28-38인치',
+                    '컬러': '인디고',
+                    '소재': '100% 코튼 데님',
+                    '핏': '스트레이트 핏',
+                    '스타일': '클래식'
+                },
+                seller: '리바이스코리아',
+                priceHistory: [129000, 129000, 119000, 129000, 129000, 129000, 129000]
+            },
+            {
+                id: 10,
+                name: 'LG 스타일러',
+                category: 'home',
+                brand: 'LG',
+                price: 1990000,
+                rating: 4.7,
+                reviews: 678,
+                image: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=400',
+                    'https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=400'
+                ],
+                prime: false,
+                stock: 34,
+                description: '의류 관리기. 스팀으로 옷의 주름과 냄새를 제거.',
+                specs: {
+                    '용량': '5벌',
+                    '기능': '트루스팀/건조/살균',
+                    '크기': '445x1850x585mm',
+                    '색상': '미러/메탈실버',
+                    '특징': '무선 Wi-Fi 연결'
+                },
+                seller: 'LG전자',
+                priceHistory: [1990000, 1990000, 1950000, 1990000, 1990000, 1990000, 1990000]
+            },
+            {
+                id: 11,
+                name: '애플워치 Series 9',
+                category: 'fashion',
+                brand: 'Apple',
+                price: 599000,
+                salePrice: 299000,
+                rating: 4.8,
+                reviews: 2341,
+                image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400',
+                    'https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=400'
+                ],
+                prime: true,
+                stock: 234,
+                description: '가장 강력한 스마트워치. 건강과 피트니스 추적.',
+                specs: {
+                    '디스플레이': '1.9인치 OLED',
+                    '프로세서': 'S9 SiP',
+                    '센서': '심박/혈중산소/심전도',
+                    '배터리': '최대 18시간',
+                    '방수': '50m 방수',
+                    '연결': 'GPS + Cellular'
+                },
+                seller: '애플코리아',
+                priceHistory: [599000, 579000, 549000, 499000, 449000, 349000, 299000]
+            },
+            {
+                id: 12,
+                name: '다이슨 V15 무선청소기',
+                category: 'home',
+                brand: 'Dyson',
+                price: 990000,
+                rating: 4.6,
+                reviews: 1234,
+                image: 'https://images.unsplash.com/photo-1558317374-067fb4340adf?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1558317374-067fb4340adf?w=400',
+                    'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?w=400'
+                ],
+                prime: true,
+                stock: 67,
+                description: '레이저로 먼지를 감지하는 스마트 무선청소기.',
+                specs: {
+                    '흡입력': '230 AW',
+                    '배터리': '최대 60분',
+                    '먼지통': '0.76L',
+                    '필터': 'HEPA 필터',
+                    '무게': '3.1kg'
+                },
+                seller: '다이슨코리아',
+                priceHistory: [990000, 990000, 950000, 990000, 990000, 990000, 990000]
+            },
+            {
+                id: 13,
+                name: '샤넬 No.5 향수',
+                category: 'beauty',
+                brand: 'Chanel',
+                price: 189000,
+                rating: 4.9,
+                reviews: 4567,
+                image: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1541643600914-78b084683601?w=400',
+                    'https://images.unsplash.com/photo-1594035910387-fea47794261f?w=400'
+                ],
+                prime: true,
+                stock: 234,
+                description: '세계에서 가장 유명한 향수. 클래식한 플로럴 향.',
+                specs: {
+                    '용량': '100ml',
+                    '향조': '플로럴 알데하이드',
+                    '탑노트': '알데하이드/네롤리',
+                    '미들노트': '재스민/로즈',
+                    '베이스노트': '샌달우드/바닐라'
+                },
+                seller: '샤넬코리아',
+                priceHistory: [189000, 189000, 189000, 189000, 189000, 189000, 189000]
+            },
+            {
+                id: 14,
+                name: 'SK-II 페이셜 트리트먼트 에센스',
+                category: 'beauty',
+                brand: 'SK-II',
+                price: 259000,
+                rating: 4.7,
+                reviews: 3421,
+                image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400',
+                    'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=400'
+                ],
+                prime: true,
+                stock: 145,
+                description: '피테라 함유 프리미엄 에센스. 피부결 개선.',
+                specs: {
+                    '용량': '230ml',
+                    '피부타입': '모든 피부',
+                    '주성분': '피테라 90%',
+                    '효능': '피부결 개선/보습',
+                    '용도': '기초 에센스'
+                },
+                seller: 'SK-II',
+                priceHistory: [259000, 259000, 249000, 259000, 259000, 259000, 259000]
+            },
+            {
+                id: 15,
+                name: '라네즈 워터 슬리핑 마스크',
+                category: 'beauty',
+                brand: 'Laneige',
+                price: 32000,
+                rating: 4.6,
+                reviews: 8934,
+                image: 'https://images.unsplash.com/photo-1617897903246-719242758050?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1617897903246-719242758050?w=400',
+                    'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=400'
+                ],
+                prime: true,
+                stock: 567,
+                description: '밤사이 수분 충전하는 수면 마스크.',
+                specs: {
+                    '용량': '70ml',
+                    '피부타입': '건성/복합성',
+                    '주성분': '수분 바이탈 콤플렉스',
+                    '효능': '수분 공급/진정',
+                    '사용시간': '취침 전'
+                },
+                seller: '아모레퍼시픽',
+                priceHistory: [32000, 32000, 29000, 32000, 32000, 32000, 32000]
+            },
+            {
+                id: 16,
+                name: '설화수 윤조에센스',
+                category: 'beauty',
+                brand: 'Sulwhasoo',
+                price: 85000,
+                rating: 4.8,
+                reviews: 2341,
+                image: 'https://images.unsplash.com/photo-1571875257727-256c39da42af?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1571875257727-256c39da42af?w=400',
+                    'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=400'
+                ],
+                prime: true,
+                stock: 234,
+                description: '한방 성분의 프리미엄 에센스. 탄력과 윤기.',
+                specs: {
+                    '용량': '90ml',
+                    '피부타입': '모든 피부',
+                    '주성분': '자음단/옥용산',
+                    '효능': '탄력/윤기',
+                    '용도': '기초 에센스'
+                },
+                seller: '아모레퍼시픽',
+                priceHistory: [85000, 85000, 79000, 85000, 85000, 85000, 85000]
+            },
+            {
+                id: 17,
+                name: '백설 햇반 210g x 24개',
+                category: 'food',
+                brand: 'CJ',
+                price: 34900,
+                rating: 4.7,
+                reviews: 12345,
+                image: 'https://images.unsplash.com/photo-1516684732162-798a0062be99?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1516684732162-798a0062be99?w=400',
+                    'https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?w=400'
+                ],
+                prime: true,
+                stock: 890,
+                description: '전자레인지 2분이면 완성되는 즉석밥.',
+                specs: {
+                    '내용량': '210g x 24개',
+                    '원료': '국내산 쌀 100%',
+                    '조리시간': '전자레인지 2분',
+                    '유통기한': '제조일로부터 8개월',
+                    '보관방법': '실온 보관'
+                },
+                seller: 'CJ제일제당',
+                priceHistory: [34900, 34900, 32900, 34900, 34900, 34900, 34900]
+            },
+            {
+                id: 18,
+                name: '스타벅스 캡슐커피 네스프레소 호환',
+                category: 'food',
+                brand: 'Starbucks',
+                price: 28900,
+                rating: 4.5,
+                reviews: 5678,
+                image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400',
+                    'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400'
+                ],
+                prime: true,
+                stock: 456,
+                description: '스타벅스 에스프레소를 집에서. 네스프레소 호환.',
+                specs: {
+                    '내용량': '10캡슐 x 6박스',
+                    '원두': '100% 아라비카',
+                    '로스팅': '미디엄 로스트',
+                    '강도': '7/12',
+                    '호환': '네스프레소 오리지널'
+                },
+                seller: '스타벅스코리아',
+                priceHistory: [28900, 28900, 26900, 28900, 28900, 28900, 28900]
+            },
+            {
+                id: 19,
+                name: '삼다수 2L x 12병',
+                category: 'food',
+                brand: '제주개발공사',
+                price: 12900,
+                rating: 4.8,
+                reviews: 23456,
+                image: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',
+                    'https://images.unsplash.com/photo-1523362628745-0c100150b504?w=400'
+                ],
+                prime: true,
+                stock: 1234,
+                description: '제주 화산암반수. 깨끗하고 청정한 물.',
+                specs: {
+                    '내용량': '2L x 12병',
+                    '수원지': '제주도',
+                    '종류': '천연 화산암반수',
+                    'pH': '7.4 약알칼리',
+                    '미네랄': '칼슘/마그네슘 함유'
+                },
+                seller: '제주개발공사',
+                priceHistory: [12900, 12900, 11900, 12900, 12900, 12900, 12900]
+            },
+            {
+                id: 20,
+                name: '해리포터 전집 (전7권)',
+                category: 'books',
+                brand: '문학수첩',
+                price: 98000,
+                rating: 4.9,
+                reviews: 8765,
+                image: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400',
+                    'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400'
+                ],
+                prime: true,
+                stock: 345,
+                description: 'J.K. 롤링의 판타지 명작 완결 세트.',
+                specs: {
+                    '저자': 'J.K. 롤링',
+                    '출판사': '문학수첩',
+                    '쪽수': '약 4000쪽',
+                    '구성': '전7권 세트',
+                    '번역': '김혜원'
+                },
+                seller: '문학수첩',
+                priceHistory: [98000, 98000, 89000, 98000, 98000, 98000, 98000]
+            },
+            {
+                id: 21,
+                name: '나이키 프로 요가매트',
+                category: 'sports',
+                brand: 'Nike',
+                price: 59000,
+                rating: 4.6,
+                reviews: 1234,
+                image: 'https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?w=400',
+                    'https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=400'
+                ],
+                prime: true,
+                stock: 234,
+                description: '논슬립 표면의 프리미엄 요가매트.',
+                specs: {
+                    '크기': '180 x 60cm',
+                    '두께': '5mm',
+                    '소재': '친환경 TPE',
+                    '무게': '1.2kg',
+                    '특징': '양면 논슬립'
+                },
+                seller: '나이키코리아',
+                priceHistory: [59000, 59000, 54000, 59000, 59000, 59000, 59000]
+            },
+            {
+                id: 22,
+                name: '던롭 테니스 라켓',
+                category: 'sports',
+                brand: 'Dunlop',
+                price: 189000,
+                rating: 4.5,
+                reviews: 567,
+                image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400',
+                    'https://images.unsplash.com/photo-1617083278859-7d8db0c7b611?w=400'
+                ],
+                prime: true,
+                stock: 89,
+                description: '중급자용 테니스 라켓. 균형잡힌 성능.',
+                specs: {
+                    '헤드 크기': '100 sq in',
+                    '무게': '295g',
+                    '길이': '27인치',
+                    '소재': '카본 그라파이트',
+                    '레벨': '중급'
+                },
+                seller: '던롭코리아',
+                priceHistory: [189000, 189000, 179000, 189000, 189000, 189000, 189000]
+            },
+            {
+                id: 23,
+                name: '윌슨 농구공',
+                category: 'sports',
+                brand: 'Wilson',
+                price: 45000,
+                rating: 4.7,
+                reviews: 2345,
+                image: 'https://images.unsplash.com/photo-1519861531473-9200262188bf?w=400',
+                images: [
+                    'https://images.unsplash.com/photo-1519861531473-9200262188bf?w=400',
+                    'https://images.unsplash.com/photo-1608245449230-4ac19066d2d0?w=400'
+                ],
+                prime: true,
+                stock: 456,
+                description: 'NBA 공식 농구공. 실내외겸용.',
+                specs: {
+                    '크기': '7호',
+                    '소재': '합성피혁',
+                    '용도': '실내외 겸용',
+                    '컬러': '오렌지/블랙',
+                    '인증': 'NBA 공식'
+                },
+                seller: '윌슨코리아',
+                priceHistory: [45000, 45000, 42000, 45000, 45000, 45000, 45000]
+            }
+        ];
+
+        // Reviews Database
+        const reviewsData = {
+            0: [
+                {
+                    name: '김철수',
+                    rating: 5,
+                    date: '2025-10-15',
+                    title: '최고의 스마트폰!',
+                    content: '카메라 성능이 정말 뛰어나네요. 200MP 카메라로 찍은 사진이 DSLR 못지않습니다. 배터리도 하루 종일 문제없고요.',
+                    images: ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200'],
+                    helpful: 234
+                },
+                {
+                    name: '이영희',
+                    rating: 5,
+                    date: '2025-10-12',
+                    title: '갤럭시는 역시!',
+                    content: 'S펜 기능이 너무 유용해요. 디스플레이도 엄청 선명하고 게임할 때 발열도 거의 없습니다.',
+                    images: ['https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200'],
+                    helpful: 189
+                },
+                {
+                    name: '박민준',
+                    rating: 4,
+                    date: '2025-10-08',
+                    title: '좋긴한데 가격이...',
+                    content: '성능은 최고인데 가격이 좀 부담스럽네요. 그래도 만족합니다.',
+                    images: [],
+                    helpful: 145
+                }
+            ],
+            5: [
+                {
+                    name: '정수진',
+                    rating: 5,
+                    date: '2025-10-14',
+                    title: '노이즈캔슬링 끝판왕',
+                    content: '지하철에서 써봤는데 소음이 정말 말끔하게 사라져요. 음질도 최고!',
+                    images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200'],
+                    helpful: 456
+                },
+                {
+                    name: '최지훈',
+                    rating: 5,
+                    date: '2025-10-10',
+                    title: '배터리 지속시간 대박',
+                    content: '30시간 배터리 정말 맞아요. 충전 한 번으로 일주일 쓸 수 있습니다.',
+                    images: [],
+                    helpful: 312
+                }
+            ]
+        };
+
+        // QnA Database
+        const qnaData = {
+            0: [
+                {
+                    question: '색상 옵션은 어떤게 있나요?',
+                    asker: '홍길동',
+                    date: '2025-10-16',
+                    answer: '티타늄 그레이, 티타늄 블랙, 티타늄 바이올렛 3가지 색상이 있습니다.',
+                    answerer: '판매자',
+                    answerDate: '2025-10-16'
+                },
+                {
+                    question: '무선충전 지원하나요?',
+                    asker: '김영수',
+                    date: '2025-10-15',
+                    answer: '네, 무선충전 및 역무선충전 모두 지원합니다.',
+                    answerer: '판매자',
+                    answerDate: '2025-10-15'
+                }
+            ]
+        };
+
+        // Global State
+        let cart = JSON.parse(localStorage.getItem('cart')) || [];
+        let wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+        let orders = JSON.parse(localStorage.getItem('orders')) || [];
+        let recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
+        let currentCategory = '';
+        let filteredProducts = [...products];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCartCount();
+            renderProducts();
+            updateProductCount();
+        });
+
+        // Search Products
+        function searchProducts() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const category = document.getElementById('searchCategory').value;
+
+            filteredProducts = products.filter(p => {
+                const matchesQuery = p.name.toLowerCase().includes(query) ||
+                                    p.description.toLowerCase().includes(query) ||
+                                    p.brand.toLowerCase().includes(query);
+                const matchesCategory = !category || p.category === category;
+                return matchesQuery && matchesCategory;
+            });
+
+            renderProducts();
+            updateProductCount();
+        }
+
+        // Filter by Category
+        function filterByCategory(category) {
+            currentCategory = category;
+            applyFilters();
+        }
+
+        // Toggle Filters
+        function toggleFilters() {
+            const sidebar = document.getElementById('filterSidebar');
+            sidebar.classList.toggle('hidden');
+        }
+
+        // Toggle Categories (dummy function)
+        function toggleCategories() {
+            alert('카테고리 메뉴 - 더 많은 카테고리를 보려면 여기를 클릭하세요!');
+        }
+
+        // Apply Filters
+        function applyFilters() {
+            const priceMax = parseInt(document.getElementById('priceRange').value);
+            const selectedBrands = Array.from(document.querySelectorAll('.brand-filter:checked')).map(cb => cb.value);
+            const minRating = parseInt(document.querySelector('input[name="rating"]:checked')?.value || 0);
+            const primeOnly = document.getElementById('primeOnly').checked;
+
+            document.getElementById('priceRangeValue').textContent = '₩' + priceMax.toLocaleString();
+
+            filteredProducts = products.filter(p => {
+                const matchesCategory = !currentCategory || p.category === currentCategory;
+                const matchesPrice = (p.salePrice || p.price) <= priceMax;
+                const matchesBrand = selectedBrands.length === 0 || selectedBrands.includes(p.brand);
+                const matchesRating = p.rating >= minRating;
+                const matchesPrime = !primeOnly || p.prime;
+
+                return matchesCategory && matchesPrice && matchesBrand && matchesRating && matchesPrime;
+            });
+
+            renderProducts();
+            updateProductCount();
+        }
+
+        // Reset Filters
+        function resetFilters() {
+            document.getElementById('priceRange').value = 5000000;
+            document.getElementById('priceRangeValue').textContent = '₩5,000,000';
+            document.querySelectorAll('.brand-filter').forEach(cb => cb.checked = false);
+            document.querySelector('input[name="rating"][value="0"]').checked = true;
+            document.getElementById('primeOnly').checked = false;
+            currentCategory = '';
+            applyFilters();
+        }
+
+        // Sort Products
+        function sortProducts() {
+            const sortBy = document.getElementById('sortSelect').value;
+
+            switch(sortBy) {
+                case 'price-low':
+                    filteredProducts.sort((a, b) => (a.salePrice || a.price) - (b.salePrice || b.price));
+                    break;
+                case 'price-high':
+                    filteredProducts.sort((a, b) => (b.salePrice || b.price) - (a.salePrice || a.price));
+                    break;
+                case 'rating':
+                    filteredProducts.sort((a, b) => b.rating - a.rating);
+                    break;
+                case 'newest':
+                    filteredProducts.sort((a, b) => b.id - a.id);
+                    break;
+                default:
+                    filteredProducts.sort((a, b) => b.reviews - a.reviews);
+            }
+
+            renderProducts();
+        }
+
+        // Render Products
+        function renderProducts() {
+            const grid = document.getElementById('productGrid');
+            grid.innerHTML = '';
+
+            filteredProducts.forEach(product => {
+                const price = product.salePrice || product.price;
+                const hasDiscount = product.salePrice;
+
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow product-card p-4';
+                card.innerHTML = `
+                    <div class="relative" onclick="showProductDetail(${product.id})">
+                        ${hasDiscount ? '<div class="absolute top-2 left-2 deal-badge text-white px-2 py-1 rounded text-sm font-bold">SALE</div>' : ''}
+                        ${product.prime ? '<div class="absolute top-2 right-2 prime-badge text-white px-2 py-1 rounded text-xs font-bold">Prime</div>' : ''}
+                        <img src="${product.image}" alt="${product.name}" class="w-full h-48 object-cover rounded mb-3">
+                    </div>
+                    <div class="mb-2">
+                        <div class="text-xs text-gray-500 mb-1">${product.brand}</div>
+                        <h3 class="font-bold text-sm mb-2 h-10 overflow-hidden" onclick="showProductDetail(${product.id})">${product.name}</h3>
+                        <div class="flex items-center mb-2">
+                            <span class="star-rating text-sm">${'★'.repeat(Math.floor(product.rating))}${'☆'.repeat(5-Math.floor(product.rating))}</span>
+                            <span class="text-xs text-gray-500 ml-2">(${product.reviews.toLocaleString()})</span>
+                        </div>
+                        ${hasDiscount ? `
+                            <div class="text-xs text-gray-500 line-through">₩${product.price.toLocaleString()}</div>
+                            <div class="text-red-600 text-2xl font-bold">₩${price.toLocaleString()}</div>
+                            <div class="text-xs text-red-600 font-bold">-${Math.round((1-product.salePrice/product.price)*100)}% OFF</div>
+                        ` : `
+                            <div class="text-2xl font-bold">₩${price.toLocaleString()}</div>
+                        `}
+                        ${product.prime ? '<div class="text-xs text-blue-600 font-bold mt-1"><i class="fas fa-shipping-fast"></i> 무료배송</div>' : ''}
+                        <div class="text-xs text-gray-500 mt-1">재고: ${product.stock}개</div>
+                    </div>
+                    <div class="space-y-2">
+                        <button onclick="addToCart(${product.id}); event.stopPropagation();" class="w-full btn-amazon text-white py-2 rounded font-bold">
+                            <i class="fas fa-shopping-cart"></i> 장바구니
+                        </button>
+                        <button onclick="toggleWishlist(${product.id}); event.stopPropagation();" class="w-full ${isInWishlist(product.id) ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-800'} py-2 rounded font-bold hover:bg-red-600 hover:text-white">
+                            <i class="fas fa-heart"></i> ${isInWishlist(product.id) ? '위시리스트에 있음' : '위시리스트'}
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Show Product Detail
+        function showProductDetail(productId) {
+            hideAllPages();
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            // Add to recently viewed
+            addToRecentlyViewed(productId);
+
+            const page = document.getElementById('productDetailPage');
+            const reviews = reviewsData[productId] || [];
+            const qna = qnaData[productId] || [];
+            const relatedProducts = products.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4);
+
+            page.innerHTML = `
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <div class="grid grid-cols-2 gap-8">
+                        <!-- Left: Images -->
+                        <div>
+                            <img id="mainProductImage" src="${product.images[0]}" alt="${product.name}" class="w-full rounded-lg mb-4">
+                            <div class="flex space-x-2">
+                                ${product.images.map((img, idx) => `
+                                    <img src="${img}" alt="${product.name}"
+                                         class="w-20 h-20 object-cover rounded thumbnail border-2 ${idx === 0 ? 'border-orange-500' : 'border-gray-300'}"
+                                         onclick="changeMainImage('${img}', event)">
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Right: Details -->
+                        <div>
+                            <div class="text-sm text-gray-500 mb-2">${product.brand}</div>
+                            <h1 class="text-3xl font-bold mb-4">${product.name}</h1>
+
+                            <div class="flex items-center mb-4">
+                                <span class="star-rating text-xl">${'★'.repeat(Math.floor(product.rating))}${'☆'.repeat(5-Math.floor(product.rating))}</span>
+                                <span class="text-gray-600 ml-3">${product.rating} (${product.reviews.toLocaleString()}개 리뷰)</span>
+                            </div>
+
+                            ${product.salePrice ? `
+                                <div class="mb-4">
+                                    <div class="text-sm text-gray-500 line-through">₩${product.price.toLocaleString()}</div>
+                                    <div class="flex items-center">
+                                        <div class="text-4xl font-bold text-red-600">₩${product.salePrice.toLocaleString()}</div>
+                                        <div class="ml-4 deal-badge text-white px-3 py-1 rounded font-bold">-${Math.round((1-product.salePrice/product.price)*100)}% OFF</div>
+                                    </div>
+                                </div>
+                            ` : `
+                                <div class="text-4xl font-bold mb-4">₩${product.price.toLocaleString()}</div>
+                            `}
+
+                            ${product.prime ? `
+                                <div class="prime-badge text-white px-4 py-2 rounded inline-block mb-4">
+                                    <i class="fas fa-shipping-fast"></i> Prime 무료배송 - 내일 도착
+                                </div>
+                            ` : ''}
+
+                            <div class="border-t border-b py-4 mb-4">
+                                <p class="text-gray-700 mb-4">${product.description}</p>
+                                <div class="flex items-center text-sm">
+                                    <span class="font-bold mr-2">재고:</span>
+                                    <span class="${product.stock > 50 ? 'text-green-600' : 'text-orange-600'} font-bold">
+                                        ${product.stock > 50 ? '충분' : product.stock > 10 ? '보통' : '품절 임박'} (${product.stock}개)
+                                    </span>
+                                </div>
+                                <div class="text-sm mt-2">
+                                    <span class="font-bold">판매자:</span> ${product.seller}
+                                </div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <button onclick="buyNow(${product.id})" class="w-full amazon-gradient text-white py-4 rounded-lg font-bold text-xl">
+                                    <i class="fas fa-bolt"></i> 지금 구매하기
+                                </button>
+                                <button onclick="addToCart(${product.id})" class="w-full btn-amazon text-white py-3 rounded-lg font-bold text-lg">
+                                    <i class="fas fa-shopping-cart"></i> 장바구니에 담기
+                                </button>
+                                <button onclick="toggleWishlist(${product.id})" class="w-full ${isInWishlist(product.id) ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-800'} py-3 rounded-lg font-bold hover:bg-red-600 hover:text-white">
+                                    <i class="fas fa-heart"></i> ${isInWishlist(product.id) ? '위시리스트에 있음' : '위시리스트에 추가'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="bg-white rounded-lg shadow mb-6">
+                    <div class="flex border-b">
+                        <button class="px-6 py-3 font-bold border-b-2 border-orange-500" onclick="showTab('specs')">상품정보</button>
+                        <button class="px-6 py-3 font-bold text-gray-500" onclick="showTab('reviews')">리뷰 (${reviews.length})</button>
+                        <button class="px-6 py-3 font-bold text-gray-500" onclick="showTab('qna')">Q&A (${qna.length})</button>
+                        <button class="px-6 py-3 font-bold text-gray-500" onclick="showTab('price-history')">가격 히스토리</button>
+                    </div>
+
+                    <div id="tabContent" class="p-6">
+                        <!-- Specs Tab -->
+                        <div id="specsTab">
+                            <h3 class="text-2xl font-bold mb-4">제품 사양</h3>
+                            <table class="w-full">
+                                ${Object.entries(product.specs).map(([key, value]) => `
+                                    <tr class="border-b">
+                                        <td class="py-3 font-bold w-1/4">${key}</td>
+                                        <td class="py-3">${value}</td>
+                                    </tr>
+                                `).join('')}
+                            </table>
+                        </div>
+
+                        <!-- Reviews Tab -->
+                        <div id="reviewsTab" class="hidden">
+                            <h3 class="text-2xl font-bold mb-4">고객 리뷰</h3>
+                            <div class="mb-6 bg-gray-50 p-4 rounded">
+                                <div class="text-4xl font-bold mb-2">${product.rating} <span class="star-rating text-3xl">${'★'.repeat(Math.floor(product.rating))}${'☆'.repeat(5-Math.floor(product.rating))}</span></div>
+                                <div class="text-gray-600">${product.reviews.toLocaleString()}개의 전체 리뷰</div>
+                            </div>
+
+                            ${reviews.map(review => `
+                                <div class="border-b pb-6 mb-6">
+                                    <div class="flex items-center mb-2">
+                                        <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center font-bold mr-3">
+                                            ${review.name[0]}
+                                        </div>
+                                        <div>
+                                            <div class="font-bold">${review.name}</div>
+                                            <div class="text-sm text-gray-500">${review.date}</div>
+                                        </div>
+                                    </div>
+                                    <div class="star-rating mb-2">${'★'.repeat(review.rating)}${'☆'.repeat(5-review.rating)}</div>
+                                    <h4 class="font-bold mb-2">${review.title}</h4>
+                                    <p class="text-gray-700 mb-3">${review.content}</p>
+                                    ${review.images.length > 0 ? `
+                                        <div class="flex space-x-2 mb-3">
+                                            ${review.images.map(img => `
+                                                <img src="${img}" alt="리뷰 이미지" class="w-20 h-20 object-cover rounded review-img" onclick="openImageModal('${img}')">
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
+                                    <div class="text-sm text-gray-500">
+                                        <i class="fas fa-thumbs-up"></i> 도움이 됨 (${review.helpful})
+                                    </div>
+                                </div>
+                            `).join('')}
+
+                            ${reviews.length === 0 ? '<p class="text-gray-500">아직 리뷰가 없습니다. 첫 번째 리뷰를 작성해보세요!</p>' : ''}
+                        </div>
+
+                        <!-- QnA Tab -->
+                        <div id="qnaTab" class="hidden">
+                            <h3 class="text-2xl font-bold mb-4">Q&A</h3>
+                            <button class="btn-amazon text-white px-6 py-2 rounded font-bold mb-6">
+                                <i class="fas fa-question"></i> 질문하기
+                            </button>
+
+                            ${qna.map(item => `
+                                <div class="border-b pb-6 mb-6">
+                                    <div class="mb-3">
+                                        <div class="font-bold text-lg mb-2">Q: ${item.question}</div>
+                                        <div class="text-sm text-gray-500">${item.asker} | ${item.date}</div>
+                                    </div>
+                                    ${item.answer ? `
+                                        <div class="bg-gray-50 p-4 rounded">
+                                            <div class="font-bold mb-2">A: ${item.answer}</div>
+                                            <div class="text-sm text-gray-500">${item.answerer} | ${item.answerDate}</div>
+                                        </div>
+                                    ` : '<div class="text-gray-500">답변 대기중</div>'}
+                                </div>
+                            `).join('')}
+
+                            ${qna.length === 0 ? '<p class="text-gray-500">아직 질문이 없습니다. 궁금한 점을 질문해보세요!</p>' : ''}
+                        </div>
+
+                        <!-- Price History Tab -->
+                        <div id="priceHistoryTab" class="hidden">
+                            <h3 class="text-2xl font-bold mb-4">가격 히스토리</h3>
+                            <div class="price-history">
+                                <canvas id="priceChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Related Products -->
+                ${relatedProducts.length > 0 ? `
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <h3 class="text-2xl font-bold mb-4">관련 상품</h3>
+                        <div class="grid grid-cols-4 gap-4">
+                            ${relatedProducts.map(p => `
+                                <div class="border rounded p-3 cursor-pointer hover:shadow-lg" onclick="showProductDetail(${p.id})">
+                                    <img src="${p.image}" alt="${p.name}" class="w-full h-32 object-cover rounded mb-2">
+                                    <div class="text-sm font-bold mb-1">${p.name}</div>
+                                    <div class="text-lg font-bold text-red-600">₩${(p.salePrice || p.price).toLocaleString()}</div>
+                                    <div class="star-rating text-xs">${'★'.repeat(Math.floor(p.rating))}${'☆'.repeat(5-Math.floor(p.rating))}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Recently Viewed -->
+                ${recentlyViewed.length > 1 ? `
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-2xl font-bold mb-4">최근 본 상품</h3>
+                        <div class="grid grid-cols-4 gap-4">
+                            ${recentlyViewed.filter(id => id !== productId).slice(0, 4).map(id => {
+                                const p = products.find(prod => prod.id === id);
+                                return p ? `
+                                    <div class="border rounded p-3 cursor-pointer hover:shadow-lg" onclick="showProductDetail(${p.id})">
+                                        <img src="${p.image}" alt="${p.name}" class="w-full h-32 object-cover rounded mb-2">
+                                        <div class="text-sm font-bold mb-1">${p.name}</div>
+                                        <div class="text-lg font-bold text-red-600">₩${(p.salePrice || p.price).toLocaleString()}</div>
+                                    </div>
+                                ` : '';
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <button onclick="showHomePage()" class="mt-6 bg-gray-200 text-gray-800 px-6 py-3 rounded font-bold hover:bg-gray-300">
+                    <i class="fas fa-arrow-left"></i> 쇼핑 계속하기
+                </button>
+            `;
+
+            page.classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        // Show Tab
+        function showTab(tabName) {
+            // Update button styles
+            const buttons = document.querySelectorAll('#productDetailPage .flex button');
+            buttons.forEach(btn => {
+                btn.className = 'px-6 py-3 font-bold text-gray-500';
+            });
+            event.target.className = 'px-6 py-3 font-bold border-b-2 border-orange-500';
+
+            // Hide all tabs
+            document.getElementById('specsTab').classList.add('hidden');
+            document.getElementById('reviewsTab').classList.add('hidden');
+            document.getElementById('qnaTab').classList.add('hidden');
+            document.getElementById('priceHistoryTab').classList.add('hidden');
+
+            // Show selected tab
+            if (tabName === 'specs') {
+                document.getElementById('specsTab').classList.remove('hidden');
+            } else if (tabName === 'reviews') {
+                document.getElementById('reviewsTab').classList.remove('hidden');
+            } else if (tabName === 'qna') {
+                document.getElementById('qnaTab').classList.remove('hidden');
+            } else if (tabName === 'price-history') {
+                document.getElementById('priceHistoryTab').classList.remove('hidden');
+                renderPriceChart();
+            }
+        }
+
+        // Render Price Chart
+        function renderPriceChart() {
+            const canvas = document.getElementById('priceChart');
+            if (!canvas) return;
+
+            const productId = parseInt(document.getElementById('productDetailPage').innerHTML.match(/showProductDetail\((\d+)\)/)[1]);
+            const product = products.find(p => p.id === productId);
+
+            const ctx = canvas.getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['7일전', '6일전', '5일전', '4일전', '3일전', '2일전', '오늘'],
+                    datasets: [{
+                        label: '가격 (원)',
+                        data: product.priceHistory,
+                        borderColor: '#ff9900',
+                        backgroundColor: 'rgba(255, 153, 0, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₩' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Change Main Image
+        function changeMainImage(src, event) {
+            document.getElementById('mainProductImage').src = src;
+            document.querySelectorAll('.thumbnail').forEach(img => {
+                img.classList.remove('border-orange-500');
+                img.classList.add('border-gray-300');
+            });
+            event.target.classList.remove('border-gray-300');
+            event.target.classList.add('border-orange-500');
+        }
+
+        // Add to Cart
+        function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            const existingItem = cart.find(item => item.id === productId);
+
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                cart.push({
+                    id: productId,
+                    quantity: 1
+                });
+            }
+
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartCount();
+            alert(`${product.name}이(가) 장바구니에 추가되었습니다.`);
+        }
+
+        // Buy Now
+        function buyNow(productId) {
+            addToCart(productId);
+            showCart();
+        }
+
+        // Toggle Wishlist
+        function toggleWishlist(productId) {
+            const product = products.find(p => p.id === productId);
+            const index = wishlist.indexOf(productId);
+
+            if (index > -1) {
+                wishlist.splice(index, 1);
+                alert(`${product.name}이(가) 위시리스트에서 제거되었습니다.`);
+            } else {
+                wishlist.push(productId);
+                alert(`${product.name}이(가) 위시리스트에 추가되었습니다.`);
+            }
+
+            localStorage.setItem('wishlist', JSON.stringify(wishlist));
+
+            // Update UI if on detail page
+            if (!document.getElementById('productDetailPage').classList.contains('hidden')) {
+                showProductDetail(productId);
+            }
+
+            // Update UI if on home page
+            if (!document.getElementById('homePage').classList.contains('hidden')) {
+                renderProducts();
+            }
+        }
+
+        // Check if in Wishlist
+        function isInWishlist(productId) {
+            return wishlist.includes(productId);
+        }
+
+        // Show Wishlist
+        function showWishlist() {
+            hideAllPages();
+            const page = document.getElementById('wishlistPage');
+            const grid = document.getElementById('wishlistGrid');
+
+            if (wishlist.length === 0) {
+                grid.innerHTML = '<div class="col-span-4 text-center text-gray-500 py-12">위시리스트가 비어있습니다.</div>';
+            } else {
+                grid.innerHTML = '';
+                wishlist.forEach(productId => {
+                    const product = products.find(p => p.id === productId);
+                    if (!product) return;
+
+                    const price = product.salePrice || product.price;
+
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-lg shadow product-card p-4 relative';
+                    card.innerHTML = `
+                        <button onclick="toggleWishlist(${product.id}); showWishlist();" class="absolute top-2 right-2 text-red-500 text-2xl z-10">
+                            <i class="fas fa-heart"></i>
+                        </button>
+                        <div onclick="showProductDetail(${product.id})">
+                            <img src="${product.image}" alt="${product.name}" class="w-full h-48 object-cover rounded mb-3">
+                            <h3 class="font-bold text-sm mb-2 h-10 overflow-hidden">${product.name}</h3>
+                            <div class="text-2xl font-bold text-red-600">₩${price.toLocaleString()}</div>
+                            <div class="star-rating text-sm">${'★'.repeat(Math.floor(product.rating))}${'☆'.repeat(5-Math.floor(product.rating))}</div>
+                        </div>
+                        <button onclick="addToCart(${product.id}); event.stopPropagation();" class="w-full btn-amazon text-white py-2 rounded font-bold mt-3">
+                            <i class="fas fa-shopping-cart"></i> 장바구니
+                        </button>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+
+            page.classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        // Show Cart
+        function showCart() {
+            hideAllPages();
+            const page = document.getElementById('cartPage');
+            const container = document.getElementById('cartItems');
+
+            if (cart.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-12">장바구니가 비어있습니다.</div>';
+                document.getElementById('cartTotal').textContent = '₩0';
+            } else {
+                container.innerHTML = '';
+                let total = 0;
+
+                cart.forEach(item => {
+                    const product = products.find(p => p.id === item.id);
+                    if (!product) return;
+
+                    const price = product.salePrice || product.price;
+                    const subtotal = price * item.quantity;
+                    total += subtotal;
+
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center border-b pb-4 mb-4';
+                    div.innerHTML = `
+                        <img src="${product.image}" alt="${product.name}" class="w-32 h-32 object-cover rounded mr-4">
+                        <div class="flex-1">
+                            <h3 class="font-bold text-lg mb-2">${product.name}</h3>
+                            <div class="text-gray-600 mb-2">${product.brand}</div>
+                            <div class="text-2xl font-bold text-red-600">₩${price.toLocaleString()}</div>
+                            ${product.prime ? '<div class="text-sm text-blue-600 font-bold"><i class="fas fa-shipping-fast"></i> 무료배송</div>' : ''}
+                            <div class="text-sm text-green-600 font-bold">재고 있음</div>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <div class="flex items-center border rounded">
+                                <button onclick="updateCartQuantity(${product.id}, -1)" class="px-3 py-2 hover:bg-gray-100">-</button>
+                                <span class="px-4 py-2 border-x">${item.quantity}</span>
+                                <button onclick="updateCartQuantity(${product.id}, 1)" class="px-3 py-2 hover:bg-gray-100">+</button>
+                            </div>
+                            <div class="text-xl font-bold w-32 text-right">₩${subtotal.toLocaleString()}</div>
+                            <button onclick="removeFromCart(${product.id})" class="text-red-500 hover:text-red-700">
+                                <i class="fas fa-trash text-xl"></i>
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+
+                document.getElementById('cartTotal').textContent = '₩' + total.toLocaleString();
+            }
+
+            page.classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        // Update Cart Quantity
+        function updateCartQuantity(productId, change) {
+            const item = cart.find(i => i.id === productId);
+            if (!item) return;
+
+            item.quantity += change;
+
+            if (item.quantity <= 0) {
+                removeFromCart(productId);
+            } else {
+                localStorage.setItem('cart', JSON.stringify(cart));
+                showCart();
+                updateCartCount();
+            }
+        }
+
+        // Remove from Cart
+        function removeFromCart(productId) {
+            cart = cart.filter(item => item.id !== productId);
+            localStorage.setItem('cart', JSON.stringify(cart));
+            showCart();
+            updateCartCount();
+        }
+
+        // Update Cart Count
+        function updateCartCount() {
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cartCount').textContent = count;
+        }
+
+        // Proceed to Checkout
+        function proceedToCheckout() {
+            if (cart.length === 0) {
+                alert('장바구니가 비어있습니다.');
+                return;
+            }
+
+            hideAllPages();
+            const page = document.getElementById('checkoutPage');
+
+            const total = cart.reduce((sum, item) => {
+                const product = products.find(p => p.id === item.id);
+                return sum + (product.salePrice || product.price) * item.quantity;
+            }, 0);
+
+            document.getElementById('checkoutSubtotal').textContent = '₩' + total.toLocaleString();
+            document.getElementById('checkoutTotal').textContent = '₩' + total.toLocaleString();
+
+            page.classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        // Complete Order
+        function completeOrder() {
+            if (cart.length === 0) {
+                alert('장바구니가 비어있습니다.');
+                return;
+            }
+
+            const order = {
+                id: Date.now(),
+                date: new Date().toISOString().split('T')[0],
+                items: [...cart],
+                total: cart.reduce((sum, item) => {
+                    const product = products.find(p => p.id === item.id);
+                    return sum + (product.salePrice || product.price) * item.quantity;
+                }, 0),
+                status: '배송 준비중'
+            };
+
+            orders.push(order);
+            localStorage.setItem('orders', JSON.stringify(orders));
+
+            cart = [];
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartCount();
+
+            alert('주문이 완료되었습니다!\n주문번호: ' + order.id);
+            showOrders();
+        }
+
+        // Show Orders
+        function showOrders() {
+            hideAllPages();
+            const page = document.getElementById('ordersPage');
+            const container = document.getElementById('ordersList');
+
+            if (orders.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-12">주문 내역이 없습니다.</div>';
+            } else {
+                container.innerHTML = '';
+
+                orders.reverse().forEach(order => {
+                    const div = document.createElement('div');
+                    div.className = 'border rounded-lg p-6 mb-4';
+
+                    let itemsHtml = '';
+                    order.items.forEach(item => {
+                        const product = products.find(p => p.id === item.id);
+                        if (!product) return;
+
+                        itemsHtml += `
+                            <div class="flex items-center mb-4">
+                                <img src="${product.image}" alt="${product.name}" class="w-20 h-20 object-cover rounded mr-4">
+                                <div class="flex-1">
+                                    <div class="font-bold">${product.name}</div>
+                                    <div class="text-sm text-gray-600">수량: ${item.quantity}개</div>
+                                </div>
+                                <div class="text-lg font-bold">₩${((product.salePrice || product.price) * item.quantity).toLocaleString()}</div>
+                            </div>
+                        `;
+                    });
+
+                    div.innerHTML = `
+                        <div class="flex justify-between mb-4">
+                            <div>
+                                <div class="text-sm text-gray-500">주문번호: ${order.id}</div>
+                                <div class="text-sm text-gray-500">주문일자: ${order.date}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-bold text-red-600">₩${order.total.toLocaleString()}</div>
+                                <div class="text-sm font-bold text-blue-600">${order.status}</div>
+                            </div>
+                        </div>
+                        ${itemsHtml}
+                    `;
+
+                    container.appendChild(div);
+                });
+            }
+
+            page.classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        // Add to Recently Viewed
+        function addToRecentlyViewed(productId) {
+            recentlyViewed = recentlyViewed.filter(id => id !== productId);
+            recentlyViewed.unshift(productId);
+            recentlyViewed = recentlyViewed.slice(0, 10);
+            localStorage.setItem('recentlyViewed', JSON.stringify(recentlyViewed));
+        }
+
+        // Show Home Page
+        function showHomePage() {
+            hideAllPages();
+            document.getElementById('homePage').classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        // Hide All Pages
+        function hideAllPages() {
+            document.getElementById('homePage').classList.add('hidden');
+            document.getElementById('productDetailPage').classList.add('hidden');
+            document.getElementById('cartPage').classList.add('hidden');
+            document.getElementById('checkoutPage').classList.add('hidden');
+            document.getElementById('ordersPage').classList.add('hidden');
+            document.getElementById('wishlistPage').classList.add('hidden');
+        }
+
+        // Update Product Count
+        function updateProductCount() {
+            document.getElementById('productCount').textContent = filteredProducts.length;
+        }
+
+        // Open Image Modal
+        function openImageModal(src) {
+            document.getElementById('modalImage').src = src;
+            document.getElementById('imageModal').classList.add('active');
+        }
+
+        // Close Modal
+        function closeModal() {
+            document.getElementById('imageModal').classList.remove('active');
+        }
+
+        // Search on Enter
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchProducts();
+            }
+        });
+    </script>
+</body>
+</html>

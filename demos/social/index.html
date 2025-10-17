@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>소셜 네트워크 - Social Network</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #fda085 100%);
+            background-attachment: fixed;
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .story-ring {
+            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+            padding: 3px;
+        }
+
+        .like-animation {
+            animation: likeScale 0.3s ease-in-out;
+        }
+
+        @keyframes likeScale {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hover-scale {
+            transition: transform 0.2s;
+        }
+
+        .hover-scale:hover {
+            transform: scale(1.05);
+        }
+
+        .nav-item.active {
+            color: #e91e63;
+        }
+
+        .post-image {
+            max-height: 600px;
+            object-fit: cover;
+        }
+
+        .story-image {
+            width: 70px;
+            height: 70px;
+            object-fit: cover;
+        }
+
+        .profile-pic {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .explore-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+        }
+
+        .explore-item {
+            aspect-ratio: 1;
+            overflow: hidden;
+        }
+
+        .explore-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .notification-dot {
+            width: 8px;
+            height: 8px;
+            background: #e91e63;
+            border-radius: 50%;
+            position: absolute;
+            top: -2px;
+            right: -2px;
+        }
+    </style>
+</head>
+<body class="font-sans">
+    <div class="min-h-screen pb-20">
+        <!-- Header -->
+        <header class="glass-effect fixed top-0 left-0 right-0 z-50 shadow-lg">
+            <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    <i class="fas fa-camera-retro"></i> 소셜콘
+                </h1>
+                <div class="flex items-center space-x-6">
+                    <button onclick="showSearch()" class="text-gray-700 hover:text-pink-600">
+                        <i class="fas fa-search text-xl"></i>
+                    </button>
+                    <button onclick="showNotifications()" class="text-gray-700 hover:text-pink-600 relative">
+                        <i class="fas fa-heart text-xl"></i>
+                        <span class="notification-dot" id="notifDot"></span>
+                    </button>
+                    <button onclick="showCreatePost()" class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full hover:shadow-lg">
+                        <i class="fas fa-plus"></i> 새 게시물
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Container -->
+        <div class="max-w-6xl mx-auto px-4 pt-20">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left Sidebar - Profile & Trending -->
+                <div class="hidden lg:block">
+                    <div class="glass-effect rounded-2xl p-6 mb-6 shadow-lg sticky top-24">
+                        <div class="text-center">
+                            <div class="story-ring rounded-full inline-block mb-3">
+                                <img src="https://i.pravatar.cc/150?img=33" alt="프로필" class="rounded-full w-20 h-20">
+                            </div>
+                            <h3 class="font-bold text-lg">김민수</h3>
+                            <p class="text-gray-600 text-sm">@minsu_kim</p>
+                            <p class="text-gray-700 mt-2 text-sm">여행과 음식을 사랑하는 사람 ✈️🍕</p>
+                            <div class="flex justify-around mt-4 text-sm">
+                                <div>
+                                    <div class="font-bold text-lg">256</div>
+                                    <div class="text-gray-600">게시물</div>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-lg">1.2K</div>
+                                    <div class="text-gray-600">팔로워</div>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-lg">345</div>
+                                    <div class="text-gray-600">팔로잉</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Trending -->
+                    <div class="glass-effect rounded-2xl p-6 shadow-lg">
+                        <h3 class="font-bold text-lg mb-4 flex items-center">
+                            <i class="fas fa-fire text-orange-500 mr-2"></i> 트렌딩
+                        </h3>
+                        <div class="space-y-4">
+                            <div class="cursor-pointer hover:bg-gray-100 p-2 rounded">
+                                <div class="text-xs text-gray-500">음악 · 트렌딩</div>
+                                <div class="font-semibold">#KPOP</div>
+                                <div class="text-xs text-gray-500">12.5K 게시물</div>
+                            </div>
+                            <div class="cursor-pointer hover:bg-gray-100 p-2 rounded">
+                                <div class="text-xs text-gray-500">여행 · 트렌딩</div>
+                                <div class="font-semibold">#제주도여행</div>
+                                <div class="text-xs text-gray-500">8.3K 게시물</div>
+                            </div>
+                            <div class="cursor-pointer hover:bg-gray-100 p-2 rounded">
+                                <div class="text-xs text-gray-500">음식 · 트렌딩</div>
+                                <div class="font-semibold">#맛집추천</div>
+                                <div class="text-xs text-gray-500">15.7K 게시물</div>
+                            </div>
+                            <div class="cursor-pointer hover:bg-gray-100 p-2 rounded">
+                                <div class="text-xs text-gray-500">라이프스타일 · 트렌딩</div>
+                                <div class="font-semibold">#데일리룩</div>
+                                <div class="text-xs text-gray-500">25.1K 게시물</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center - Feed -->
+                <div class="lg:col-span-2">
+                    <!-- Stories -->
+                    <div class="glass-effect rounded-2xl p-4 mb-6 shadow-lg">
+                        <div class="flex space-x-4 overflow-x-auto scrollbar-hide">
+                            <div class="flex-shrink-0 text-center cursor-pointer" onclick="alert('스토리 추가 기능')">
+                                <div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-full p-1 mb-2">
+                                    <div class="bg-white rounded-full p-0.5">
+                                        <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-plus text-purple-600 text-2xl"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-xs">내 스토리</div>
+                            </div>
+
+                            <div class="flex-shrink-0 text-center cursor-pointer">
+                                <div class="story-ring rounded-full p-1 mb-2">
+                                    <img src="https://i.pravatar.cc/150?img=1" alt="스토리" class="story-image rounded-full">
+                                </div>
+                                <div class="text-xs">지은</div>
+                            </div>
+
+                            <div class="flex-shrink-0 text-center cursor-pointer">
+                                <div class="story-ring rounded-full p-1 mb-2">
+                                    <img src="https://i.pravatar.cc/150?img=5" alt="스토리" class="story-image rounded-full">
+                                </div>
+                                <div class="text-xs">준호</div>
+                            </div>
+
+                            <div class="flex-shrink-0 text-center cursor-pointer">
+                                <div class="story-ring rounded-full p-1 mb-2">
+                                    <img src="https://i.pravatar.cc/150?img=9" alt="스토리" class="story-image rounded-full">
+                                </div>
+                                <div class="text-xs">수진</div>
+                            </div>
+
+                            <div class="flex-shrink-0 text-center cursor-pointer">
+                                <div class="story-ring rounded-full p-1 mb-2">
+                                    <img src="https://i.pravatar.cc/150?img=12" alt="스토리" class="story-image rounded-full">
+                                </div>
+                                <div class="text-xs">태양</div>
+                            </div>
+
+                            <div class="flex-shrink-0 text-center cursor-pointer">
+                                <div class="story-ring rounded-full p-1 mb-2">
+                                    <img src="https://i.pravatar.cc/150?img=16" alt="스토리" class="story-image rounded-full">
+                                </div>
+                                <div class="text-xs">하늘</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Feed Posts -->
+                    <div id="feedContainer"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <nav class="glass-effect fixed bottom-0 left-0 right-0 shadow-lg">
+            <div class="max-w-6xl mx-auto px-4 py-3 flex justify-around">
+                <button onclick="showHome()" class="nav-item active flex flex-col items-center text-gray-700">
+                    <i class="fas fa-home text-2xl"></i>
+                    <span class="text-xs mt-1">홈</span>
+                </button>
+                <button onclick="showExplore()" class="nav-item flex flex-col items-center text-gray-700">
+                    <i class="fas fa-compass text-2xl"></i>
+                    <span class="text-xs mt-1">탐색</span>
+                </button>
+                <button onclick="showReels()" class="nav-item flex flex-col items-center text-gray-700">
+                    <i class="fas fa-play-circle text-2xl"></i>
+                    <span class="text-xs mt-1">릴스</span>
+                </button>
+                <button onclick="showMessages()" class="nav-item flex flex-col items-center text-gray-700">
+                    <i class="fas fa-comment-dots text-2xl"></i>
+                    <span class="text-xs mt-1">메시지</span>
+                </button>
+                <button onclick="showProfile()" class="nav-item flex flex-col items-center text-gray-700">
+                    <i class="fas fa-user text-2xl"></i>
+                    <span class="text-xs mt-1">프로필</span>
+                </button>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Create Post Modal -->
+    <div id="createPostModal" class="modal">
+        <div class="glass-effect rounded-2xl p-6 max-w-2xl w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">새 게시물 만들기</h2>
+                <button onclick="closeCreatePost()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div class="flex items-center space-x-3">
+                    <img src="https://i.pravatar.cc/150?img=33" alt="프로필" class="profile-pic rounded-full">
+                    <span class="font-semibold">김민수</span>
+                </div>
+                <textarea id="postContent" placeholder="무슨 생각을 하고 계신가요?" class="w-full p-3 border rounded-lg resize-none" rows="4"></textarea>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-pink-500" onclick="document.getElementById('imageInput').click()">
+                    <i class="fas fa-image text-4xl text-gray-400 mb-2"></i>
+                    <p class="text-gray-600">사진 또는 동영상 추가</p>
+                    <input type="file" id="imageInput" class="hidden" accept="image/*,video/*" multiple onchange="handleFileSelect(event)">
+                </div>
+                <div id="imagePreview" class="grid grid-cols-3 gap-2"></div>
+                <div class="flex space-x-2">
+                    <button onclick="insertEmoji('❤️')" class="px-3 py-2 bg-gray-100 rounded-full hover:bg-gray-200">❤️</button>
+                    <button onclick="insertEmoji('😊')" class="px-3 py-2 bg-gray-100 rounded-full hover:bg-gray-200">😊</button>
+                    <button onclick="insertEmoji('🔥')" class="px-3 py-2 bg-gray-100 rounded-full hover:bg-gray-200">🔥</button>
+                    <button onclick="insertEmoji('✨')" class="px-3 py-2 bg-gray-100 rounded-full hover:bg-gray-200">✨</button>
+                    <button onclick="insertEmoji('🎉')" class="px-3 py-2 bg-gray-100 rounded-full hover:bg-gray-200">🎉</button>
+                </div>
+                <button onclick="createPost()" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-full font-semibold hover:shadow-lg">
+                    게시하기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Post Detail Modal -->
+    <div id="postDetailModal" class="modal">
+        <div class="glass-effect rounded-2xl max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div id="postDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- Notifications Modal -->
+    <div id="notificationsModal" class="modal">
+        <div class="glass-effect rounded-2xl p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">알림</h2>
+                <button onclick="closeNotifications()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <div id="notificationsList" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- Search Modal -->
+    <div id="searchModal" class="modal">
+        <div class="glass-effect rounded-2xl p-6 max-w-lg w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">검색</h2>
+                <button onclick="closeSearch()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <input type="text" id="searchInput" placeholder="사용자 또는 해시태그 검색..." class="w-full p-3 border rounded-lg mb-4" oninput="handleSearch()">
+            <div id="searchResults" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <script>
+        // Sample posts data
+        const samplePosts = [
+            {
+                id: 1,
+                username: '이지은',
+                userHandle: '@jieun_lee',
+                userAvatar: 'https://i.pravatar.cc/150?img=1',
+                content: '오늘 제주도 여행 왔어요! 날씨가 정말 좋네요 ☀️ #제주도여행 #여행스타그램 #일상',
+                images: ['https://picsum.photos/800/600?random=1'],
+                likes: 234,
+                comments: 45,
+                shares: 12,
+                timestamp: '2시간 전',
+                isLiked: false,
+                isFollowing: true
+            },
+            {
+                id: 2,
+                username: '박준호',
+                userHandle: '@junho_park',
+                userAvatar: 'https://i.pravatar.cc/150?img=5',
+                content: '새로 오픈한 맛집 다녀왔습니다 🍕 진짜 강추! @minsu_kim 너도 가봐 #맛집추천 #먹스타그램 #피자',
+                images: ['https://picsum.photos/800/600?random=2', 'https://picsum.photos/800/600?random=3'],
+                likes: 456,
+                comments: 78,
+                shares: 23,
+                timestamp: '5시간 전',
+                isLiked: true,
+                isFollowing: true
+            },
+            {
+                id: 3,
+                username: '김수진',
+                userHandle: '@sujin_kim',
+                userAvatar: 'https://i.pravatar.cc/150?img=9',
+                content: 'BTS 신곡 나왔다! 🎵 벌써 100번은 들은 듯 ㅋㅋㅋ #KPOP #BTS #음악',
+                images: [],
+                likes: 890,
+                comments: 234,
+                shares: 156,
+                timestamp: '1일 전',
+                isLiked: true,
+                isFollowing: false
+            },
+            {
+                id: 4,
+                username: '최태양',
+                userHandle: '@taeyang_choi',
+                userAvatar: 'https://i.pravatar.cc/150?img=12',
+                content: '오늘의 #데일리룩 ✨ 가을 느낌 물씬 나는 코디!',
+                images: ['https://picsum.photos/800/1000?random=4'],
+                likes: 567,
+                comments: 89,
+                shares: 34,
+                timestamp: '12시간 전',
+                isLiked: false,
+                isFollowing: true
+            },
+            {
+                id: 5,
+                username: '정하늘',
+                userHandle: '@haneul_jung',
+                userAvatar: 'https://i.pravatar.cc/150?img=16',
+                content: '집에서 홈카페 ☕️ 라떼아트 연습중! #홈카페 #커피 #라떼아트',
+                images: ['https://picsum.photos/800/800?random=5'],
+                likes: 345,
+                comments: 56,
+                shares: 18,
+                timestamp: '8시간 전',
+                isLiked: true,
+                isFollowing: true
+            },
+            {
+                id: 6,
+                username: '강민지',
+                userHandle: '@minji_kang',
+                userAvatar: 'https://i.pravatar.cc/150?img=20',
+                content: '헬스장 PT 첫날! 💪 다들 화이팅! #운동 #헬스 #다이어트',
+                images: ['https://picsum.photos/800/600?random=6'],
+                likes: 456,
+                comments: 67,
+                shares: 22,
+                timestamp: '3시간 전',
+                isLiked: false,
+                isFollowing: false
+            }
+        ];
+
+        // Sample notifications
+        const sampleNotifications = [
+            {
+                id: 1,
+                type: 'like',
+                user: '이지은',
+                avatar: 'https://i.pravatar.cc/150?img=1',
+                message: '님이 회원님의 게시물을 좋아합니다.',
+                time: '5분 전',
+                read: false
+            },
+            {
+                id: 2,
+                type: 'comment',
+                user: '박준호',
+                avatar: 'https://i.pravatar.cc/150?img=5',
+                message: '님이 댓글을 남겼습니다: "완전 멋져요!"',
+                time: '1시간 전',
+                read: false
+            },
+            {
+                id: 3,
+                type: 'follow',
+                user: '김수진',
+                avatar: 'https://i.pravatar.cc/150?img=9',
+                message: '님이 회원님을 팔로우하기 시작했습니다.',
+                time: '2시간 전',
+                read: true
+            },
+            {
+                id: 4,
+                type: 'mention',
+                user: '최태양',
+                avatar: 'https://i.pravatar.cc/150?img=12',
+                message: '님이 게시물에서 회원님을 언급했습니다.',
+                time: '5시간 전',
+                read: true
+            }
+        ];
+
+        // Initialize
+        let posts = [];
+        let currentView = 'home';
+        let uploadedImages = [];
+
+        function initApp() {
+            loadPosts();
+            renderFeed();
+        }
+
+        function loadPosts() {
+            const savedPosts = localStorage.getItem('socialPosts');
+            if (savedPosts) {
+                posts = JSON.parse(savedPosts);
+            } else {
+                posts = [...samplePosts];
+                savePosts();
+            }
+        }
+
+        function savePosts() {
+            localStorage.setItem('socialPosts', JSON.stringify(posts));
+        }
+
+        function renderFeed() {
+            const container = document.getElementById('feedContainer');
+            container.innerHTML = '';
+
+            posts.forEach(post => {
+                const postElement = createPostElement(post);
+                container.appendChild(postElement);
+            });
+        }
+
+        function createPostElement(post) {
+            const div = document.createElement('div');
+            div.className = 'glass-effect rounded-2xl p-6 mb-6 shadow-lg fade-in';
+
+            const imagesHtml = post.images.length > 0 ? `
+                <div class="my-4 ${post.images.length > 1 ? 'grid grid-cols-2 gap-2' : ''}">
+                    ${post.images.map(img => `
+                        <img src="${img}" alt="게시물 이미지" class="w-full rounded-lg post-image cursor-pointer" onclick="showPostDetail(${post.id})">
+                    `).join('')}
+                </div>
+            ` : '';
+
+            const contentWithHashtags = post.content.replace(/#(\S+)/g, '<span class="text-blue-600 cursor-pointer hover:underline">#$1</span>')
+                                                       .replace(/@(\S+)/g, '<span class="text-pink-600 cursor-pointer hover:underline">@$1</span>');
+
+            div.innerHTML = `
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <img src="${post.userAvatar}" alt="${post.username}" class="profile-pic rounded-full cursor-pointer" onclick="showUserProfile('${post.userHandle}')">
+                        <div>
+                            <div class="font-semibold cursor-pointer hover:underline" onclick="showUserProfile('${post.userHandle}')">${post.username}</div>
+                            <div class="text-gray-500 text-sm">${post.userHandle} · ${post.timestamp}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        ${!post.isFollowing ? `<button onclick="followUser(${post.id})" class="text-sm bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full hover:shadow-lg">팔로우</button>` : ''}
+                        <button class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <p class="text-gray-800 whitespace-pre-wrap">${contentWithHashtags}</p>
+                </div>
+
+                ${imagesHtml}
+
+                <div class="flex items-center justify-between py-3 border-t border-b border-gray-200">
+                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 text-gray-700 hover:text-pink-600">
+                        <i class="fa${post.isLiked ? 's' : 'r'} fa-heart text-xl ${post.isLiked ? 'text-pink-600' : ''}" id="like-${post.id}"></i>
+                        <span id="likeCount-${post.id}">${post.likes}</span>
+                    </button>
+                    <button onclick="showPostDetail(${post.id})" class="flex items-center space-x-2 text-gray-700 hover:text-blue-600">
+                        <i class="far fa-comment text-xl"></i>
+                        <span>${post.comments}</span>
+                    </button>
+                    <button onclick="sharePost(${post.id})" class="flex items-center space-x-2 text-gray-700 hover:text-green-600">
+                        <i class="far fa-paper-plane text-xl"></i>
+                        <span>${post.shares}</span>
+                    </button>
+                    <button onclick="savePost(${post.id})" class="text-gray-700 hover:text-yellow-600">
+                        <i class="far fa-bookmark text-xl"></i>
+                    </button>
+                </div>
+            `;
+
+            return div;
+        }
+
+        function toggleLike(postId) {
+            const post = posts.find(p => p.id === postId);
+            if (!post) return;
+
+            post.isLiked = !post.isLiked;
+            post.likes += post.isLiked ? 1 : -1;
+
+            const likeIcon = document.getElementById(`like-${postId}`);
+            const likeCount = document.getElementById(`likeCount-${postId}`);
+
+            if (post.isLiked) {
+                likeIcon.className = 'fas fa-heart text-xl text-pink-600 like-animation';
+            } else {
+                likeIcon.className = 'far fa-heart text-xl';
+            }
+
+            likeCount.textContent = post.likes;
+            savePosts();
+        }
+
+        function showCreatePost() {
+            document.getElementById('createPostModal').classList.add('active');
+            uploadedImages = [];
+            document.getElementById('postContent').value = '';
+            document.getElementById('imagePreview').innerHTML = '';
+        }
+
+        function closeCreatePost() {
+            document.getElementById('createPostModal').classList.remove('active');
+        }
+
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            uploadedImages = uploadedImages.concat(files);
+
+            const preview = document.getElementById('imagePreview');
+            preview.innerHTML = '';
+
+            uploadedImages.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const div = document.createElement('div');
+                    div.className = 'relative';
+                    div.innerHTML = `
+                        <img src="${e.target.result}" class="w-full h-32 object-cover rounded-lg">
+                        <button onclick="removeImage(${index})" class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center">
+                            <i class="fas fa-times text-xs"></i>
+                        </button>
+                    `;
+                    preview.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function removeImage(index) {
+            uploadedImages.splice(index, 1);
+            const event = { target: { files: uploadedImages } };
+            handleFileSelect(event);
+        }
+
+        function insertEmoji(emoji) {
+            const textarea = document.getElementById('postContent');
+            textarea.value += emoji;
+            textarea.focus();
+        }
+
+        function createPost() {
+            const content = document.getElementById('postContent').value.trim();
+            if (!content && uploadedImages.length === 0) {
+                alert('내용을 입력하거나 이미지를 추가해주세요.');
+                return;
+            }
+
+            const images = uploadedImages.map((file, index) => {
+                return `https://picsum.photos/800/600?random=${Date.now() + index}`;
+            });
+
+            const newPost = {
+                id: Date.now(),
+                username: '김민수',
+                userHandle: '@minsu_kim',
+                userAvatar: 'https://i.pravatar.cc/150?img=33',
+                content: content,
+                images: images,
+                likes: 0,
+                comments: 0,
+                shares: 0,
+                timestamp: '방금 전',
+                isLiked: false,
+                isFollowing: false
+            };
+
+            posts.unshift(newPost);
+            savePosts();
+            renderFeed();
+            closeCreatePost();
+        }
+
+        function showPostDetail(postId) {
+            const post = posts.find(p => p.id === postId);
+            if (!post) return;
+
+            const modal = document.getElementById('postDetailModal');
+            const content = document.getElementById('postDetailContent');
+
+            const sampleComments = [
+                { user: '이지은', avatar: 'https://i.pravatar.cc/150?img=1', text: '정말 멋지네요! 👍', time: '1시간 전' },
+                { user: '박준호', avatar: 'https://i.pravatar.cc/150?img=5', text: '저도 가보고 싶어요!', time: '30분 전' },
+                { user: '김수진', avatar: 'https://i.pravatar.cc/150?img=9', text: '완전 좋아요 ❤️', time: '15분 전' }
+            ];
+
+            content.innerHTML = `
+                <div class="p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <img src="${post.userAvatar}" alt="${post.username}" class="profile-pic rounded-full">
+                            <div>
+                                <div class="font-semibold">${post.username}</div>
+                                <div class="text-gray-500 text-sm">${post.userHandle} · ${post.timestamp}</div>
+                            </div>
+                        </div>
+                        <button onclick="closePostDetail()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="mb-4">
+                        <p class="text-gray-800 whitespace-pre-wrap">${post.content}</p>
+                    </div>
+
+                    ${post.images.length > 0 ? `
+                        <div class="my-4">
+                            ${post.images.map(img => `<img src="${img}" alt="게시물 이미지" class="w-full rounded-lg mb-2">`).join('')}
+                        </div>
+                    ` : ''}
+
+                    <div class="flex items-center space-x-6 py-3 border-t border-b border-gray-200 mb-4">
+                        <span class="text-gray-700"><i class="fas fa-heart text-pink-600 mr-1"></i> ${post.likes} 좋아요</span>
+                        <span class="text-gray-700"><i class="far fa-comment text-blue-600 mr-1"></i> ${post.comments} 댓글</span>
+                        <span class="text-gray-700"><i class="far fa-paper-plane text-green-600 mr-1"></i> ${post.shares} 공유</span>
+                    </div>
+
+                    <div class="mb-4">
+                        <h3 class="font-bold mb-3">댓글</h3>
+                        <div class="space-y-3 mb-4 max-h-96 overflow-y-auto">
+                            ${sampleComments.map(comment => `
+                                <div class="flex items-start space-x-3">
+                                    <img src="${comment.avatar}" alt="${comment.user}" class="w-10 h-10 rounded-full">
+                                    <div class="flex-1 bg-gray-100 rounded-lg p-3">
+                                        <div class="font-semibold text-sm">${comment.user}</div>
+                                        <div class="text-gray-800">${comment.text}</div>
+                                        <div class="text-gray-500 text-xs mt-1">${comment.time}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <div class="flex items-center space-x-3">
+                            <img src="https://i.pravatar.cc/150?img=33" alt="내 프로필" class="profile-pic rounded-full">
+                            <input type="text" placeholder="댓글을 입력하세요..." class="flex-1 p-3 border rounded-full" onkeypress="if(event.key==='Enter') addComment()">
+                            <button onclick="addComment()" class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full hover:shadow-lg">
+                                게시
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            modal.classList.add('active');
+        }
+
+        function closePostDetail() {
+            document.getElementById('postDetailModal').classList.remove('active');
+        }
+
+        function addComment() {
+            alert('댓글이 추가되었습니다!');
+        }
+
+        function sharePost(postId) {
+            alert('게시물이 공유되었습니다!');
+        }
+
+        function savePost(postId) {
+            alert('게시물이 저장되었습니다!');
+        }
+
+        function followUser(postId) {
+            const post = posts.find(p => p.id === postId);
+            if (post) {
+                post.isFollowing = true;
+                savePosts();
+                renderFeed();
+            }
+        }
+
+        function showNotifications() {
+            const modal = document.getElementById('notificationsModal');
+            const list = document.getElementById('notificationsList');
+
+            list.innerHTML = sampleNotifications.map(notif => `
+                <div class="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-100 cursor-pointer ${!notif.read ? 'bg-pink-50' : ''}">
+                    <img src="${notif.avatar}" alt="${notif.user}" class="w-12 h-12 rounded-full">
+                    <div class="flex-1">
+                        <p class="text-sm"><span class="font-semibold">${notif.user}</span> ${notif.message}</p>
+                        <p class="text-xs text-gray-500 mt-1">${notif.time}</p>
+                    </div>
+                    ${notif.type === 'follow' ? '<button class="text-sm bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full">팔로우</button>' : ''}
+                </div>
+            `).join('');
+
+            modal.classList.add('active');
+            document.getElementById('notifDot').style.display = 'none';
+        }
+
+        function closeNotifications() {
+            document.getElementById('notificationsModal').classList.remove('active');
+        }
+
+        function showSearch() {
+            document.getElementById('searchModal').classList.add('active');
+            document.getElementById('searchInput').focus();
+        }
+
+        function closeSearch() {
+            document.getElementById('searchModal').classList.remove('active');
+        }
+
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const results = document.getElementById('searchResults');
+
+            if (query.length < 2) {
+                results.innerHTML = '<p class="text-gray-500 text-center">검색어를 입력하세요</p>';
+                return;
+            }
+
+            const sampleResults = [
+                { type: 'user', name: '이지은', handle: '@jieun_lee', avatar: 'https://i.pravatar.cc/150?img=1' },
+                { type: 'user', name: '박준호', handle: '@junho_park', avatar: 'https://i.pravatar.cc/150?img=5' },
+                { type: 'hashtag', name: '#제주도여행', count: '8.3K 게시물' },
+                { type: 'hashtag', name: '#맛집추천', count: '15.7K 게시물' }
+            ].filter(item =>
+                item.name.toLowerCase().includes(query) ||
+                (item.handle && item.handle.toLowerCase().includes(query))
+            );
+
+            results.innerHTML = sampleResults.map(result => `
+                <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 cursor-pointer">
+                    ${result.type === 'user' ? `
+                        <div class="flex items-center space-x-3">
+                            <img src="${result.avatar}" alt="${result.name}" class="w-12 h-12 rounded-full">
+                            <div>
+                                <div class="font-semibold">${result.name}</div>
+                                <div class="text-sm text-gray-500">${result.handle}</div>
+                            </div>
+                        </div>
+                        <button class="text-sm bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full">팔로우</button>
+                    ` : `
+                        <div>
+                            <div class="font-semibold">${result.name}</div>
+                            <div class="text-sm text-gray-500">${result.count}</div>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-400"></i>
+                    `}
+                </div>
+            `).join('');
+        }
+
+        function showHome() {
+            currentView = 'home';
+            updateNavigation();
+            renderFeed();
+            document.querySelector('.max-w-6xl').innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="hidden lg:block">
+                        <div class="glass-effect rounded-2xl p-6 mb-6 shadow-lg sticky top-24">
+                            <div class="text-center">
+                                <div class="story-ring rounded-full inline-block mb-3">
+                                    <img src="https://i.pravatar.cc/150?img=33" alt="프로필" class="rounded-full w-20 h-20">
+                                </div>
+                                <h3 class="font-bold text-lg">김민수</h3>
+                                <p class="text-gray-600 text-sm">@minsu_kim</p>
+                                <p class="text-gray-700 mt-2 text-sm">여행과 음식을 사랑하는 사람 ✈️🍕</p>
+                                <div class="flex justify-around mt-4 text-sm">
+                                    <div>
+                                        <div class="font-bold text-lg">256</div>
+                                        <div class="text-gray-600">게시물</div>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-lg">1.2K</div>
+                                        <div class="text-gray-600">팔로워</div>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-lg">345</div>
+                                        <div class="text-gray-600">팔로잉</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="glass-effect rounded-2xl p-6 shadow-lg">
+                            <h3 class="font-bold text-lg mb-4 flex items-center">
+                                <i class="fas fa-fire text-orange-500 mr-2"></i> 트렌딩
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="cursor-pointer hover:bg-gray-100 p-2 rounded">
+                                    <div class="text-xs text-gray-500">음악 · 트렌딩</div>
+                                    <div class="font-semibold">#KPOP</div>
+                                    <div class="text-xs text-gray-500">12.5K 게시물</div>
+                                </div>
+                                <div class="cursor-pointer hover:bg-gray-100 p-2 rounded">
+                                    <div class="text-xs text-gray-500">여행 · 트렌딩</div>
+                                    <div class="font-semibold">#제주도여행</div>
+                                    <div class="text-xs text-gray-500">8.3K 게시물</div>
+                                </div>
+                                <div class="cursor-pointer hover:bg-gray-100 p-2 rounded">
+                                    <div class="text-xs text-gray-500">음식 · 트렌딩</div>
+                                    <div class="font-semibold">#맛집추천</div>
+                                    <div class="text-xs text-gray-500">15.7K 게시물</div>
+                                </div>
+                                <div class="cursor-pointer hover:bg-gray-100 p-2 rounded">
+                                    <div class="text-xs text-gray-500">라이프스타일 · 트렌딩</div>
+                                    <div class="font-semibold">#데일리룩</div>
+                                    <div class="text-xs text-gray-500">25.1K 게시물</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-2">
+                        <div class="glass-effect rounded-2xl p-4 mb-6 shadow-lg">
+                            <div class="flex space-x-4 overflow-x-auto scrollbar-hide">
+                                <div class="flex-shrink-0 text-center cursor-pointer" onclick="alert('스토리 추가 기능')">
+                                    <div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-full p-1 mb-2">
+                                        <div class="bg-white rounded-full p-0.5">
+                                            <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-plus text-purple-600 text-2xl"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs">내 스토리</div>
+                                </div>
+
+                                <div class="flex-shrink-0 text-center cursor-pointer">
+                                    <div class="story-ring rounded-full p-1 mb-2">
+                                        <img src="https://i.pravatar.cc/150?img=1" alt="스토리" class="story-image rounded-full">
+                                    </div>
+                                    <div class="text-xs">지은</div>
+                                </div>
+
+                                <div class="flex-shrink-0 text-center cursor-pointer">
+                                    <div class="story-ring rounded-full p-1 mb-2">
+                                        <img src="https://i.pravatar.cc/150?img=5" alt="스토리" class="story-image rounded-full">
+                                    </div>
+                                    <div class="text-xs">준호</div>
+                                </div>
+
+                                <div class="flex-shrink-0 text-center cursor-pointer">
+                                    <div class="story-ring rounded-full p-1 mb-2">
+                                        <img src="https://i.pravatar.cc/150?img=9" alt="스토리" class="story-image rounded-full">
+                                    </div>
+                                    <div class="text-xs">수진</div>
+                                </div>
+
+                                <div class="flex-shrink-0 text-center cursor-pointer">
+                                    <div class="story-ring rounded-full p-1 mb-2">
+                                        <img src="https://i.pravatar.cc/150?img=12" alt="스토리" class="story-image rounded-full">
+                                    </div>
+                                    <div class="text-xs">태양</div>
+                                </div>
+
+                                <div class="flex-shrink-0 text-center cursor-pointer">
+                                    <div class="story-ring rounded-full p-1 mb-2">
+                                        <img src="https://i.pravatar.cc/150?img=16" alt="스토리" class="story-image rounded-full">
+                                    </div>
+                                    <div class="text-xs">하늘</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="feedContainer"></div>
+                    </div>
+                </div>
+            `;
+            renderFeed();
+        }
+
+        function showExplore() {
+            currentView = 'explore';
+            updateNavigation();
+
+            const exploreImages = Array.from({length: 24}, (_, i) => `https://picsum.photos/400/400?random=${i + 100}`);
+
+            document.querySelector('.max-w-6xl').innerHTML = `
+                <div class="glass-effect rounded-2xl p-6 shadow-lg">
+                    <h2 class="text-2xl font-bold mb-6">탐색</h2>
+                    <div class="explore-grid">
+                        ${exploreImages.map(img => `
+                            <div class="explore-item cursor-pointer hover-scale">
+                                <img src="${img}" alt="탐색 이미지">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function showReels() {
+            currentView = 'reels';
+            updateNavigation();
+
+            document.querySelector('.max-w-6xl').innerHTML = `
+                <div class="glass-effect rounded-2xl p-6 shadow-lg">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center">
+                        <i class="fas fa-play-circle mr-3 text-pink-600"></i> 릴스
+                    </h2>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        ${Array.from({length: 12}, (_, i) => `
+                            <div class="relative cursor-pointer hover-scale group">
+                                <img src="https://picsum.photos/400/600?random=${i + 200}" alt="릴스" class="w-full rounded-lg">
+                                <div class="absolute inset-0 bg-black bg-opacity-30 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <i class="fas fa-play text-white text-4xl"></i>
+                                </div>
+                                <div class="absolute bottom-3 left-3 text-white">
+                                    <i class="fas fa-play text-sm mr-1"></i>
+                                    <span class="text-sm">${Math.floor(Math.random() * 500 + 100)}K</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function showMessages() {
+            currentView = 'messages';
+            updateNavigation();
+
+            const conversations = [
+                { user: '이지은', avatar: 'https://i.pravatar.cc/150?img=1', message: '오늘 저녁 먹었어?', time: '5분 전', unread: 2 },
+                { user: '박준호', avatar: 'https://i.pravatar.cc/150?img=5', message: '사진 진짜 멋지다!', time: '1시간 전', unread: 0 },
+                { user: '김수진', avatar: 'https://i.pravatar.cc/150?img=9', message: '고마워 ㅎㅎ', time: '2시간 전', unread: 0 },
+                { user: '최태양', avatar: 'https://i.pravatar.cc/150?img=12', message: '주말에 만날래?', time: '1일 전', unread: 1 }
+            ];
+
+            document.querySelector('.max-w-6xl').innerHTML = `
+                <div class="glass-effect rounded-2xl shadow-lg overflow-hidden">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-2xl font-bold">메시지</h2>
+                    </div>
+                    <div class="divide-y divide-gray-200">
+                        ${conversations.map(conv => `
+                            <div class="p-4 hover:bg-gray-50 cursor-pointer flex items-center space-x-4">
+                                <div class="relative">
+                                    <img src="${conv.avatar}" alt="${conv.user}" class="w-14 h-14 rounded-full">
+                                    ${conv.unread > 0 ? `<div class="absolute -top-1 -right-1 bg-pink-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">${conv.unread}</div>` : ''}
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex justify-between items-start">
+                                        <div class="font-semibold">${conv.user}</div>
+                                        <div class="text-xs text-gray-500">${conv.time}</div>
+                                    </div>
+                                    <div class="text-sm text-gray-600 ${conv.unread > 0 ? 'font-semibold' : ''}">${conv.message}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function showProfile() {
+            currentView = 'profile';
+            updateNavigation();
+
+            const myPosts = Array.from({length: 18}, (_, i) => `https://picsum.photos/400/400?random=${i + 300}`);
+
+            document.querySelector('.max-w-6xl').innerHTML = `
+                <div class="glass-effect rounded-2xl shadow-lg overflow-hidden">
+                    <div class="p-8">
+                        <div class="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-8">
+                            <div class="story-ring rounded-full p-1">
+                                <img src="https://i.pravatar.cc/150?img=33" alt="프로필" class="rounded-full w-32 h-32">
+                            </div>
+                            <div class="flex-1 text-center md:text-left">
+                                <div class="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-4 mb-4">
+                                    <h2 class="text-2xl font-bold">김민수</h2>
+                                    <button class="bg-gray-200 px-6 py-2 rounded-lg hover:bg-gray-300">프로필 편집</button>
+                                    <button class="bg-gray-200 p-2 rounded-lg hover:bg-gray-300">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                </div>
+                                <div class="flex justify-center md:justify-start space-x-8 mb-4">
+                                    <div><span class="font-bold">256</span> 게시물</div>
+                                    <div><span class="font-bold">1.2K</span> 팔로워</div>
+                                    <div><span class="font-bold">345</span> 팔로잉</div>
+                                </div>
+                                <div>
+                                    <div class="font-semibold">김민수</div>
+                                    <div class="text-gray-700">여행과 음식을 사랑하는 사람 ✈️🍕</div>
+                                    <div class="text-gray-700">📍 서울, 대한민국</div>
+                                    <div class="text-blue-600">www.minsukim.com</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-200">
+                        <div class="flex justify-center space-x-12 py-3">
+                            <button class="flex items-center space-x-2 text-gray-900 border-t-2 border-gray-900 pt-3 -mt-px">
+                                <i class="fas fa-th"></i>
+                                <span>게시물</span>
+                            </button>
+                            <button class="flex items-center space-x-2 text-gray-500">
+                                <i class="fas fa-bookmark"></i>
+                                <span>저장됨</span>
+                            </button>
+                            <button class="flex items-center space-x-2 text-gray-500">
+                                <i class="fas fa-user-tag"></i>
+                                <span>태그됨</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="explore-grid">
+                        ${myPosts.map(img => `
+                            <div class="explore-item cursor-pointer hover-scale">
+                                <img src="${img}" alt="내 게시물">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function showUserProfile(handle) {
+            alert(`${handle} 프로필 페이지로 이동합니다!`);
+        }
+
+        function updateNavigation() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            const navMap = {
+                'home': 0,
+                'explore': 1,
+                'reels': 2,
+                'messages': 3,
+                'profile': 4
+            };
+
+            if (navMap[currentView] !== undefined) {
+                document.querySelectorAll('.nav-item')[navMap[currentView]].classList.add('active');
+            }
+        }
+
+        // Initialize app
+        window.onload = initApp;
+    </script>
+</body>
+</html>

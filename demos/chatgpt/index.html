@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Clone - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
+    <style>
+        body {
+            background: #343541;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        }
+        .chat-message { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .sidebar {
+            background: #202123;
+            transition: transform 0.3s ease;
+        }
+        .chat-container { background: #343541; }
+        .message-user { background: #343541; }
+        .message-assistant { background: #444654; }
+        .input-area { background: #40414f; border: 1px solid #565869; }
+        .input-area:focus-within { border-color: #10a37f; }
+        .btn-primary { background: #10a37f; }
+        .btn-primary:hover { background: #0d8b6d; }
+        .sidebar-item:hover { background: #2a2b32; }
+        .prompt-card:hover { border-color: #10a37f; transform: scale(1.02); }
+        .prompt-card { transition: all 0.2s; }
+        pre { background: #000; border-radius: 8px; padding: 16px; overflow-x: auto; }
+        code { font-family: 'Courier New', monospace; }
+        .typing-indicator { display: flex; gap: 4px; padding: 12px; }
+        .typing-dot { width: 8px; height: 8px; background: #10a37f; border-radius: 50%; animation: typing 1.4s infinite; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+        .scroll-shadow { box-shadow: 0 -10px 20px rgba(0,0,0,0.3); }
+    </style>
+</head>
+<body class="h-screen overflow-hidden">
+    <div class="flex h-full">
+        <!-- Sidebar -->
+        <div id="sidebar" class="sidebar w-64 flex-shrink-0 flex flex-col">
+            <!-- New Chat Button -->
+            <div class="p-4">
+                <button onclick="newChat()" class="w-full px-4 py-3 bg-transparent border border-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-plus"></i>
+                    <span>새 대화</span>
+                </button>
+            </div>
+
+            <!-- Chat History -->
+            <div class="flex-1 overflow-y-auto px-2">
+                <div class="text-xs text-gray-400 px-3 mb-2">최근 대화</div>
+                <div id="chatHistory"></div>
+            </div>
+
+            <!-- User Profile -->
+            <div class="p-4 border-t border-gray-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
+                        U
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm text-white">사용자</div>
+                        <div class="text-xs text-gray-400">Free Plan</div>
+                    </div>
+                    <button onclick="window.location.href='../'" class="text-gray-400 hover:text-white">
+                        <i class="fas fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="flex-1 flex flex-col">
+            <!-- Header -->
+            <div class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <button id="sidebarToggle" class="lg:hidden text-gray-400 hover:text-white">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="text-white font-bold text-lg">ChatGPT Clone</h1>
+                    <span class="px-2 py-1 bg-green-600 text-white text-xs rounded">GPT-4</span>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="toggleDarkMode()" class="px-3 py-2 text-gray-400 hover:text-white">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button onclick="clearChat()" class="px-3 py-2 text-gray-400 hover:text-white">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages Area -->
+            <div id="messagesContainer" class="flex-1 overflow-y-auto">
+                <!-- Welcome Screen -->
+                <div id="welcomeScreen" class="h-full flex items-center justify-center">
+                    <div class="max-w-3xl mx-auto px-4 text-center">
+                        <h2 class="text-4xl font-bold text-white mb-6">ChatGPT Clone</h2>
+                        <p class="text-gray-400 mb-8">무엇을 도와드릴까요?</p>
+
+                        <!-- Prompt Suggestions -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="prompt-card bg-gray-700 p-4 rounded-lg cursor-pointer border-2 border-transparent" onclick="usePrompt('Python으로 웹 스크래퍼 만드는 방법 알려줘')">
+                                <i class="fas fa-code text-green-400 mb-2"></i>
+                                <div class="text-white text-sm font-medium">코딩 도움</div>
+                                <div class="text-gray-400 text-xs mt-1">Python으로 웹 스크래퍼 만들기</div>
+                            </div>
+                            <div class="prompt-card bg-gray-700 p-4 rounded-lg cursor-pointer border-2 border-transparent" onclick="usePrompt('오늘 점심 메뉴 추천해줘')">
+                                <i class="fas fa-utensils text-orange-400 mb-2"></i>
+                                <div class="text-white text-sm font-medium">일상 도움</div>
+                                <div class="text-gray-400 text-xs mt-1">점심 메뉴 추천받기</div>
+                            </div>
+                            <div class="prompt-card bg-gray-700 p-4 rounded-lg cursor-pointer border-2 border-transparent" onclick="usePrompt('영어 이메일 작성 도와줘')">
+                                <i class="fas fa-envelope text-blue-400 mb-2"></i>
+                                <div class="text-white text-sm font-medium">글쓰기</div>
+                                <div class="text-gray-400 text-xs mt-1">영어 이메일 작성</div>
+                            </div>
+                            <div class="prompt-card bg-gray-700 p-4 rounded-lg cursor-pointer border-2 border-transparent" onclick="usePrompt('재미있는 사실 하나 알려줘')">
+                                <i class="fas fa-lightbulb text-yellow-400 mb-2"></i>
+                                <div class="text-white text-sm font-medium">지식</div>
+                                <div class="text-gray-400 text-xs mt-1">재미있는 사실 배우기</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div id="messages" class="hidden max-w-3xl mx-auto px-4 py-6"></div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="scroll-shadow">
+                <div class="max-w-3xl mx-auto px-4 py-6">
+                    <div class="input-area rounded-xl flex items-end gap-3 p-3">
+                        <textarea
+                            id="messageInput"
+                            rows="1"
+                            placeholder="메시지를 입력하세요..."
+                            class="flex-1 bg-transparent text-white placeholder-gray-500 resize-none outline-none max-h-48"
+                            onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendMessage();}"
+                        ></textarea>
+                        <button onclick="sendMessage()" class="btn-primary w-10 h-10 rounded-lg flex items-center justify-center text-white transition-colors">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    <div class="text-xs text-gray-500 text-center mt-2">
+                        ChatGPT는 실수를 할 수 있습니다. 중요한 정보는 확인해주세요.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let conversations = JSON.parse(localStorage.getItem('chatgpt_conversations') || '[]');
+        let currentConversationId = null;
+        let currentMessages = [];
+
+        // AI Response Templates
+        const aiResponses = {
+            greeting: [
+                "안녕하세요! 무엇을 도와드릴까요?",
+                "반갑습니다! 궁금하신 것이 있으신가요?",
+                "안녕하세요! 오늘은 어떤 것을 도와드릴까요?"
+            ],
+            coding: [
+                "좋은 질문입니다! 코딩 관련 질문이시군요.\n\n```python\ndef example():\n    print('Hello, World!')\n```\n\n이런 방식으로 작성하시면 됩니다.",
+                "프로그래밍 도움이 필요하시군요. 구체적으로 어떤 부분이 궁금하신가요?",
+                "코드 예제를 보여드리겠습니다.\n\n```javascript\nfunction greet(name) {\n    return `Hello, ${name}!`;\n}\n```"
+            ],
+            food: [
+                "오늘 점심은 다음 중에서 선택해보세요:\n\n1. 🍜 라면 - 간단하고 맛있는 선택\n2. 🍕 피자 - 친구들과 함께\n3. 🍱 도시락 - 건강한 선택\n4. 🍔 햄버거 - 든든한 한 끼",
+                "맛있는 음식 추천드릴게요! 한식, 중식, 일식 중 어떤 것을 선호하시나요?",
+                "오늘의 추천 메뉴는 김치찌개입니다! 🍲 맵고 얼큰한 국물이 일품이죠."
+            ],
+            writing: [
+                "글쓰기를 도와드리겠습니다. 어떤 종류의 글을 작성하고 싶으신가요?",
+                "영어 이메일 작성 예시를 보여드릴게요:\n\nDear [Name],\n\nI hope this email finds you well...\n\nBest regards,\n[Your Name]",
+                "글의 구조는 서론, 본론, 결론으로 구성하는 것이 좋습니다."
+            ],
+            knowledge: [
+                "재미있는 사실: 벌새는 유일하게 뒤로 날 수 있는 새입니다! 🐦",
+                "알고 계셨나요? 지구에서 가장 깊은 바다는 마리아나 해구로 약 11,000m입니다.",
+                "흥미로운 사실: 문어는 심장이 3개나 있답니다! 🐙"
+            ],
+            default: [
+                "흥미로운 질문이네요! 더 자세히 설명해 주시겠어요?",
+                "그것에 대해 생각해보니 여러 관점이 있을 수 있겠네요.",
+                "좋은 주제입니다. 제가 도움을 드릴 수 있는 부분이 있나요?",
+                "그 질문에 답변드리자면, 우선 기본적인 개념부터 설명드리겠습니다.",
+                "네, 이해했습니다. 단계별로 설명드리겠습니다.\n\n1. 첫 번째 단계\n2. 두 번째 단계\n3. 세 번째 단계"
+            ]
+        };
+
+        function generateResponse(userMessage) {
+            const msg = userMessage.toLowerCase();
+
+            if (msg.includes('안녕') || msg.includes('hello') || msg.includes('hi')) {
+                return aiResponses.greeting[Math.floor(Math.random() * aiResponses.greeting.length)];
+            } else if (msg.includes('코드') || msg.includes('프로그래밍') || msg.includes('python') || msg.includes('javascript')) {
+                return aiResponses.coding[Math.floor(Math.random() * aiResponses.coding.length)];
+            } else if (msg.includes('음식') || msg.includes('메뉴') || msg.includes('먹') || msg.includes('점심') || msg.includes('저녁')) {
+                return aiResponses.food[Math.floor(Math.random() * aiResponses.food.length)];
+            } else if (msg.includes('글') || msg.includes('이메일') || msg.includes('작성')) {
+                return aiResponses.writing[Math.floor(Math.random() * aiResponses.writing.length)];
+            } else if (msg.includes('사실') || msg.includes('알려') || msg.includes('배우')) {
+                return aiResponses.knowledge[Math.floor(Math.random() * aiResponses.knowledge.length)];
+            } else {
+                return aiResponses.default[Math.floor(Math.random() * aiResponses.default.length)];
+            }
+        }
+
+        function newChat() {
+            currentConversationId = Date.now();
+            currentMessages = [];
+            document.getElementById('messages').innerHTML = '';
+            document.getElementById('messages').classList.add('hidden');
+            document.getElementById('welcomeScreen').classList.remove('hidden');
+            document.getElementById('messageInput').value = '';
+        }
+
+        function usePrompt(text) {
+            document.getElementById('messageInput').value = text;
+            sendMessage();
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            // Hide welcome screen
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('messages').classList.remove('hidden');
+
+            // Create conversation if new
+            if (!currentConversationId) {
+                currentConversationId = Date.now();
+                const title = message.substring(0, 30) + (message.length > 30 ? '...' : '');
+                conversations.unshift({
+                    id: currentConversationId,
+                    title: title,
+                    messages: [],
+                    timestamp: new Date().toISOString()
+                });
+                saveConversations();
+                renderChatHistory();
+            }
+
+            // Add user message
+            addMessage('user', message);
+            input.value = '';
+            autoResizeTextarea();
+
+            // Show typing indicator
+            showTypingIndicator();
+
+            // Simulate AI response
+            setTimeout(() => {
+                hideTypingIndicator();
+                const response = generateResponse(message);
+                addMessage('assistant', response);
+                saveCurrentConversation();
+            }, 1000 + Math.random() * 2000);
+        }
+
+        function addMessage(role, content) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message message-${role} px-6 py-6 flex gap-4`;
+
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'flex-shrink-0';
+            if (role === 'user') {
+                iconDiv.innerHTML = '<div class="w-8 h-8 bg-green-600 rounded-sm flex items-center justify-center text-white"><i class="fas fa-user"></i></div>';
+            } else {
+                iconDiv.innerHTML = '<div class="w-8 h-8 bg-purple-600 rounded-sm flex items-center justify-center text-white"><i class="fas fa-robot"></i></div>';
+            }
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'flex-1 space-y-2';
+
+            if (role === 'assistant') {
+                // Render markdown for assistant messages
+                const html = marked.parse(content);
+                contentDiv.innerHTML = `<div class="text-gray-100 prose prose-invert max-w-none">${html}</div>`;
+
+                // Highlight code blocks
+                contentDiv.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                });
+
+                // Add copy buttons to code blocks
+                contentDiv.querySelectorAll('pre').forEach((pre) => {
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'absolute top-2 right-2 px-2 py-1 bg-gray-700 hover:bg-gray-600 text-xs text-white rounded';
+                    copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                    copyBtn.onclick = () => {
+                        const code = pre.querySelector('code').textContent;
+                        navigator.clipboard.writeText(code);
+                        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                        setTimeout(() => copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy', 2000);
+                    };
+                    pre.style.position = 'relative';
+                    pre.appendChild(copyBtn);
+                });
+            } else {
+                contentDiv.innerHTML = `<div class="text-gray-100">${escapeHtml(content)}</div>`;
+            }
+
+            messageDiv.appendChild(iconDiv);
+            messageDiv.appendChild(contentDiv);
+            messagesDiv.appendChild(messageDiv);
+
+            // Scroll to bottom
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            // Save to current messages
+            currentMessages.push({ role, content });
+        }
+
+        function showTypingIndicator() {
+            const messagesDiv = document.getElementById('messages');
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typingIndicator';
+            typingDiv.className = 'chat-message message-assistant px-6 py-6 flex gap-4';
+            typingDiv.innerHTML = `
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-purple-600 rounded-sm flex items-center justify-center text-white">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                </div>
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+            messagesDiv.appendChild(typingDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) indicator.remove();
+        }
+
+        function saveCurrentConversation() {
+            const conv = conversations.find(c => c.id === currentConversationId);
+            if (conv) {
+                conv.messages = currentMessages;
+                saveConversations();
+            }
+        }
+
+        function saveConversations() {
+            localStorage.setItem('chatgpt_conversations', JSON.stringify(conversations));
+        }
+
+        function renderChatHistory() {
+            const historyDiv = document.getElementById('chatHistory');
+            historyDiv.innerHTML = conversations.map(conv => `
+                <div class="sidebar-item px-3 py-2 rounded-lg mb-1 cursor-pointer text-gray-300 text-sm hover:bg-gray-700 transition-colors" onclick="loadConversation(${conv.id})">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-message text-xs"></i>
+                        <span class="flex-1 truncate">${conv.title}</span>
+                    </div>
+                </div>
+            `).join('') || '<div class="text-gray-500 text-sm px-3">대화 기록이 없습니다</div>';
+        }
+
+        function loadConversation(id) {
+            const conv = conversations.find(c => c.id === id);
+            if (!conv) return;
+
+            currentConversationId = id;
+            currentMessages = conv.messages || [];
+
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('messages').classList.remove('hidden');
+
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = '';
+
+            currentMessages.forEach(msg => {
+                addMessage(msg.role, msg.content);
+            });
+        }
+
+        function clearChat() {
+            if (confirm('현재 대화를 삭제하시겠습니까?')) {
+                newChat();
+            }
+        }
+
+        function toggleDarkMode() {
+            alert('다크모드는 이미 적용되어 있습니다!');
+        }
+
+        function autoResizeTextarea() {
+            const textarea = document.getElementById('messageInput');
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Auto-resize textarea on input
+        document.getElementById('messageInput').addEventListener('input', autoResizeTextarea);
+
+        // Sidebar toggle for mobile
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        });
+
+        // Initialize
+        renderChatHistory();
+    </script>
+</body>
+</html>
