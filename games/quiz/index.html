@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>한국 퀴즈 게임</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .option-btn {
+            transition: all 0.3s ease;
+        }
+        .option-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .correct {
+            background: #10b981 !important;
+            color: white !important;
+        }
+        .wrong {
+            background: #ef4444 !important;
+            color: white !important;
+        }
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        .shake {
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        .celebrate {
+            animation: celebrate 0.6s ease-out;
+        }
+        @keyframes celebrate {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1) rotate(5deg); }
+            100% { transform: scale(1); }
+        }
+        .timer-bar {
+            transition: width 0.1s linear;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="container mx-auto max-w-4xl">
+        <!-- Start Screen -->
+        <div id="startScreen" class="glass rounded-2xl shadow-2xl p-8 fade-in">
+            <div class="text-center">
+                <i class="fas fa-brain text-6xl text-purple-600 mb-4"></i>
+                <h1 class="text-4xl font-bold text-gray-800 mb-2">한국 퀴즈 게임</h1>
+                <p class="text-gray-600 mb-8">당신의 지식을 테스트하세요!</p>
+
+                <div class="mb-8">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">카테고리 선택</h2>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <button onclick="selectCategory('all')" class="category-btn glass rounded-xl p-4 hover:bg-purple-100 transition">
+                            <i class="fas fa-globe text-3xl text-purple-600 mb-2"></i>
+                            <p class="font-semibold">전체</p>
+                        </button>
+                        <button onclick="selectCategory('상식')" class="category-btn glass rounded-xl p-4 hover:bg-blue-100 transition">
+                            <i class="fas fa-lightbulb text-3xl text-blue-600 mb-2"></i>
+                            <p class="font-semibold">상식</p>
+                        </button>
+                        <button onclick="selectCategory('역사')" class="category-btn glass rounded-xl p-4 hover:bg-yellow-100 transition">
+                            <i class="fas fa-landmark text-3xl text-yellow-600 mb-2"></i>
+                            <p class="font-semibold">역사</p>
+                        </button>
+                        <button onclick="selectCategory('과학')" class="category-btn glass rounded-xl p-4 hover:bg-green-100 transition">
+                            <i class="fas fa-flask text-3xl text-green-600 mb-2"></i>
+                            <p class="font-semibold">과학</p>
+                        </button>
+                        <button onclick="selectCategory('연예')" class="category-btn glass rounded-xl p-4 hover:bg-pink-100 transition">
+                            <i class="fas fa-star text-3xl text-pink-600 mb-2"></i>
+                            <p class="font-semibold">연예</p>
+                        </button>
+                        <button onclick="selectCategory('스포츠')" class="category-btn glass rounded-xl p-4 hover:bg-red-100 transition">
+                            <i class="fas fa-football-ball text-3xl text-red-600 mb-2"></i>
+                            <p class="font-semibold">스포츠</p>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-purple-50 rounded-xl p-6 mb-6">
+                    <h3 class="font-semibold text-gray-700 mb-3">게임 규칙</h3>
+                    <ul class="text-sm text-gray-600 text-left space-y-2">
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>각 질문당 10초의 시간이 주어집니다</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>정답을 맞추면 점수와 연속 정답 스트릭이 증가합니다</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>라이프라인을 활용하세요 (50:50, 스킵)</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>최고 점수를 달성해보세요!</li>
+                    </ul>
+                </div>
+
+                <button onclick="startGame()" class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-xl transition transform hover:scale-105">
+                    <i class="fas fa-play mr-2"></i>게임 시작
+                </button>
+
+                <div class="mt-8">
+                    <button onclick="showLeaderboard()" class="text-purple-600 hover:text-purple-800 font-semibold">
+                        <i class="fas fa-trophy mr-2"></i>최고 기록 보기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="gameScreen" class="hidden">
+            <!-- Header Stats -->
+            <div class="glass rounded-2xl shadow-2xl p-6 mb-4">
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <i class="fas fa-star text-yellow-500 text-2xl mb-1"></i>
+                        <p class="text-sm text-gray-600">점수</p>
+                        <p id="score" class="text-2xl font-bold text-gray-800">0</p>
+                    </div>
+                    <div>
+                        <i class="fas fa-fire text-orange-500 text-2xl mb-1"></i>
+                        <p class="text-sm text-gray-600">연속 정답</p>
+                        <p id="streak" class="text-2xl font-bold text-gray-800">0</p>
+                    </div>
+                    <div>
+                        <i class="fas fa-clock text-blue-500 text-2xl mb-1"></i>
+                        <p class="text-sm text-gray-600">남은 시간</p>
+                        <p id="timer" class="text-2xl font-bold text-gray-800">10</p>
+                    </div>
+                </div>
+
+                <!-- Timer Bar -->
+                <div class="mt-4 bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div id="timerBar" class="timer-bar bg-gradient-to-r from-green-400 to-blue-500 h-full" style="width: 100%"></div>
+                </div>
+
+                <!-- Progress -->
+                <div class="mt-4 flex items-center justify-between text-sm text-gray-600">
+                    <span>문제 <span id="questionNum">1</span> / <span id="totalQuestions">10</span></span>
+                    <div class="flex space-x-2">
+                        <button id="fiftyFifty" onclick="useFiftyFifty()" class="bg-yellow-500 text-white px-3 py-1 rounded-lg text-xs hover:bg-yellow-600 transition">
+                            <i class="fas fa-divide mr-1"></i>50:50
+                        </button>
+                        <button id="skip" onclick="skipQuestion()" class="bg-blue-500 text-white px-3 py-1 rounded-lg text-xs hover:bg-blue-600 transition">
+                            <i class="fas fa-forward mr-1"></i>스킵
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question Card -->
+            <div class="glass rounded-2xl shadow-2xl p-8 fade-in">
+                <div class="mb-6">
+                    <span id="categoryBadge" class="inline-block bg-purple-100 text-purple-800 px-4 py-1 rounded-full text-sm font-semibold mb-4"></span>
+                    <span id="difficultyBadge" class="inline-block bg-blue-100 text-blue-800 px-4 py-1 rounded-full text-sm font-semibold mb-4 ml-2"></span>
+                </div>
+
+                <h2 id="question" class="text-2xl font-bold text-gray-800 mb-8"></h2>
+
+                <div id="options" class="space-y-4">
+                    <!-- Options will be inserted here -->
+                </div>
+
+                <div id="feedback" class="hidden mt-6 p-4 rounded-xl">
+                    <!-- Feedback will be shown here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="resultScreen" class="hidden glass rounded-2xl shadow-2xl p-8 text-center fade-in">
+            <i class="fas fa-trophy text-6xl text-yellow-500 mb-4"></i>
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">게임 종료!</h2>
+
+            <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 mb-6">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <p class="text-gray-600 text-sm">최종 점수</p>
+                        <p id="finalScore" class="text-4xl font-bold text-purple-600">0</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600 text-sm">최고 연속 정답</p>
+                        <p id="maxStreak" class="text-4xl font-bold text-orange-500">0</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-gray-600 text-sm">정답 수</p>
+                        <p id="correctAnswers" class="text-2xl font-bold text-green-600">0</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600 text-sm">정답률</p>
+                        <p id="accuracy" class="text-2xl font-bold text-blue-600">0%</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="newHighScore" class="hidden bg-yellow-50 border-2 border-yellow-400 rounded-xl p-4 mb-6">
+                <i class="fas fa-crown text-yellow-500 text-2xl mb-2"></i>
+                <p class="text-yellow-800 font-bold">새로운 최고 기록!</p>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="shareResults()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl transition">
+                    <i class="fas fa-share-alt mr-2"></i>결과 공유하기
+                </button>
+                <button onclick="restartGame()" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl transition">
+                    <i class="fas fa-redo mr-2"></i>다시 하기
+                </button>
+                <button onclick="showLeaderboard()" class="w-full bg-gray-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-gray-700 transition">
+                    <i class="fas fa-trophy mr-2"></i>최고 기록 보기
+                </button>
+            </div>
+        </div>
+
+        <!-- Leaderboard Screen -->
+        <div id="leaderboardScreen" class="hidden glass rounded-2xl shadow-2xl p-8 fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-gray-800">
+                    <i class="fas fa-trophy text-yellow-500 mr-2"></i>최고 기록
+                </h2>
+                <button onclick="hideLeaderboard()" class="text-gray-600 hover:text-gray-800">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+
+            <div id="leaderboardList" class="space-y-3">
+                <!-- Leaderboard entries will be inserted here -->
+            </div>
+
+            <button onclick="clearLeaderboard()" class="w-full mt-6 bg-red-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-600 transition">
+                <i class="fas fa-trash mr-2"></i>기록 초기화
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Quiz Data
+        const quizData = [
+            // 상식
+            { category: '상식', difficulty: '쉬움', question: '대한민국의 수도는?', options: ['서울', '부산', '인천', '대전'], correct: 0 },
+            { category: '상식', difficulty: '쉬움', question: '한글을 만든 조선의 왕은?', options: ['세종대왕', '태조', '광해군', '영조'], correct: 0 },
+            { category: '상식', difficulty: '보통', question: '김치의 주재료는?', options: ['무', '배추', '오이', '당근'], correct: 1 },
+            { category: '상식', difficulty: '보통', question: '한국의 국화는?', options: ['장미', '무궁화', '진달래', '벚꽃'], correct: 1 },
+            { category: '상식', difficulty: '어려움', question: '대한민국 국회의원의 임기는?', options: ['3년', '4년', '5년', '6년'], correct: 1 },
+            { category: '상식', difficulty: '어려움', question: '한국의 법정 성인 나이는?', options: ['18세', '19세', '20세', '21세'], correct: 1 },
+
+            // 역사
+            { category: '역사', difficulty: '쉬움', question: '한국 전쟁이 일어난 연도는?', options: ['1945년', '1948년', '1950년', '1953년'], correct: 2 },
+            { category: '역사', difficulty: '쉬움', question: '조선시대 최고의 교육기관은?', options: ['성균관', '향교', '서원', '서당'], correct: 0 },
+            { category: '역사', difficulty: '보통', question: '고려를 세운 왕은?', options: ['왕건', '김유신', '이성계', '광개토대왕'], correct: 0 },
+            { category: '역사', difficulty: '보통', question: '삼국시대의 세 나라가 아닌 것은?', options: ['고구려', '백제', '신라', '고려'], correct: 3 },
+            { category: '역사', difficulty: '어려움', question: '임진왜란이 일어난 연도는?', options: ['1492년', '1592년', '1692년', '1792년'], correct: 1 },
+            { category: '역사', difficulty: '어려움', question: '훈민정음이 창제된 연도는?', options: ['1443년', '1446년', '1450년', '1453년'], correct: 0 },
+
+            // 과학
+            { category: '과학', difficulty: '쉬움', question: '물의 화학식은?', options: ['H2O', 'CO2', 'O2', 'H2O2'], correct: 0 },
+            { category: '과학', difficulty: '쉬움', question: '지구에서 가장 가까운 별은?', options: ['북극성', '시리우스', '태양', '안드로메다'], correct: 2 },
+            { category: '과학', difficulty: '보통', question: '빛의 속도는 약 얼마인가?', options: ['초속 30만km', '초속 30km', '초속 300km', '초속 3000km'], correct: 0 },
+            { category: '과학', difficulty: '보통', question: '산소의 화학 기호는?', options: ['O', 'O2', 'Os', 'Ox'], correct: 0 },
+            { category: '과학', difficulty: '어려움', question: 'DNA의 이중나선 구조를 발견한 과학자는?', options: ['아인슈타인', '뉴턴', '왓슨과 크릭', '다윈'], correct: 2 },
+            { category: '과학', difficulty: '어려움', question: '광합성을 하는 세포 소기관은?', options: ['미토콘드리아', '엽록체', '리보솜', '골지체'], correct: 1 },
+
+            // 연예
+            { category: '연예', difficulty: '쉬움', question: 'BTS의 리더는?', options: ['RM', '진', '슈가', '제이홉'], correct: 0 },
+            { category: '연예', difficulty: '쉬움', question: '\'강남스타일\'로 유명한 가수는?', options: ['싸이', '비', '빅뱅', '동방신기'], correct: 0 },
+            { category: '연예', difficulty: '보통', question: 'BLACKPINK의 멤버가 아닌 사람은?', options: ['제니', '리사', '지수', '아이유'], correct: 3 },
+            { category: '연예', difficulty: '보통', question: '\'기생충\'으로 아카데미상을 수상한 감독은?', options: ['박찬욱', '봉준호', '이창동', '김기덕'], correct: 1 },
+            { category: '연예', difficulty: '어려움', question: '\'오징어 게임\'의 주연 배우는?', options: ['이정재', '정우성', '송강호', '최민식'], correct: 0 },
+            { category: '연예', difficulty: '어려움', question: '\'기생충\'이 아카데미 작품상을 받은 연도는?', options: ['2018년', '2019년', '2020년', '2021년'], correct: 2 },
+
+            // 스포츠
+            { category: '스포츠', difficulty: '쉬움', question: '2002년 월드컵에서 한국의 최종 성적은?', options: ['우승', '준우승', '3위', '4위'], correct: 3 },
+            { category: '스포츠', difficulty: '쉬움', question: '한국 프로야구팀이 아닌 것은?', options: ['두산 베어스', '롯데 자이언츠', '삼성 라이온즈', '현대 유니콘스'], correct: 3 },
+            { category: '스포츠', difficulty: '보통', question: '김연아가 금메달을 딴 올림픽 개최지는?', options: ['소치', '밴쿠버', '평창', '베이징'], correct: 1 },
+            { category: '스포츠', difficulty: '보통', question: '손흥민이 소속된 프리미어리그 팀은?', options: ['맨체스터 유나이티드', '첼시', '토트넘', '아스날'], correct: 2 },
+            { category: '스포츠', difficulty: '어려움', question: '박지성이 뛰었던 팀이 아닌 것은?', options: ['맨체스터 유나이티드', 'PSV', 'QPR', '리버풀'], correct: 3 },
+            { category: '스포츠', difficulty: '어려움', question: '2018 평창 동계올림픽 여자 컬링팀의 애칭은?', options: ['언니들', '팀킴', '컬링퀸', '스톤걸스'], correct: 1 },
+
+            // 추가 문제들
+            { category: '상식', difficulty: '보통', question: '한국의 화폐 단위는?', options: ['원', '엔', '위안', '달러'], correct: 0 },
+            { category: '역사', difficulty: '쉬움', question: '8.15 광복절의 의미는?', options: ['전쟁 종료', '일제로부터 독립', '정부 수립', '헌법 제정'], correct: 1 },
+            { category: '과학', difficulty: '쉬움', question: '사람의 정상 체온은 약 몇 도인가?', options: ['35도', '36.5도', '37.5도', '38도'], correct: 1 },
+        ];
+
+        // Game State
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let streak = 0;
+        let maxStreak = 0;
+        let correctCount = 0;
+        let timeLeft = 10;
+        let timerInterval = null;
+        let selectedCategory = 'all';
+        let usedFiftyFifty = false;
+        let usedSkip = false;
+
+        // Initialize
+        function init() {
+            loadLeaderboard();
+        }
+
+        // Category Selection
+        function selectCategory(category) {
+            selectedCategory = category;
+            const buttons = document.querySelectorAll('.category-btn');
+            buttons.forEach(btn => btn.classList.remove('bg-purple-200'));
+            event.target.closest('.category-btn').classList.add('bg-purple-200');
+        }
+
+        // Start Game
+        function startGame() {
+            // Filter questions by category
+            let filtered = selectedCategory === 'all'
+                ? [...quizData]
+                : quizData.filter(q => q.category === selectedCategory);
+
+            // Shuffle and select 10 questions
+            currentQuestions = shuffleArray(filtered).slice(0, Math.min(10, filtered.length));
+
+            currentQuestionIndex = 0;
+            score = 0;
+            streak = 0;
+            maxStreak = 0;
+            correctCount = 0;
+            usedFiftyFifty = false;
+            usedSkip = false;
+
+            document.getElementById('totalQuestions').textContent = currentQuestions.length;
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+
+            loadQuestion();
+        }
+
+        // Load Question
+        function loadQuestion() {
+            if (currentQuestionIndex >= currentQuestions.length) {
+                endGame();
+                return;
+            }
+
+            const q = currentQuestions[currentQuestionIndex];
+
+            document.getElementById('questionNum').textContent = currentQuestionIndex + 1;
+            document.getElementById('categoryBadge').textContent = q.category;
+            document.getElementById('difficultyBadge').textContent = q.difficulty;
+            document.getElementById('question').textContent = q.question;
+            document.getElementById('feedback').classList.add('hidden');
+
+            // Reset lifeline buttons if not used
+            if (!usedFiftyFifty) {
+                document.getElementById('fiftyFifty').disabled = false;
+                document.getElementById('fiftyFifty').classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+            if (!usedSkip) {
+                document.getElementById('skip').disabled = false;
+                document.getElementById('skip').classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
+            // Load options
+            const optionsDiv = document.getElementById('options');
+            optionsDiv.innerHTML = '';
+
+            q.options.forEach((option, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn w-full text-left p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition font-semibold text-gray-700';
+                btn.innerHTML = `<span class="text-purple-600 mr-3">${index + 1}.</span>${option}`;
+                btn.onclick = () => selectAnswer(index);
+                btn.dataset.index = index;
+                optionsDiv.appendChild(btn);
+            });
+
+            // Start timer
+            timeLeft = 10;
+            updateTimer();
+            clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        // Update Timer
+        function updateTimer() {
+            document.getElementById('timer').textContent = timeLeft;
+            const percentage = (timeLeft / 10) * 100;
+            document.getElementById('timerBar').style.width = percentage + '%';
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                showCorrectAnswer();
+                streak = 0;
+                setTimeout(() => {
+                    currentQuestionIndex++;
+                    loadQuestion();
+                }, 2000);
+            } else {
+                timeLeft--;
+            }
+        }
+
+        // Select Answer
+        function selectAnswer(index) {
+            clearInterval(timerInterval);
+
+            const q = currentQuestions[currentQuestionIndex];
+            const buttons = document.querySelectorAll('.option-btn');
+
+            buttons.forEach(btn => btn.disabled = true);
+
+            const isCorrect = index === q.correct;
+
+            if (isCorrect) {
+                buttons[index].classList.add('correct', 'celebrate');
+
+                // Calculate score based on difficulty and time
+                let points = 10;
+                if (q.difficulty === '보통') points = 15;
+                if (q.difficulty === '어려움') points = 20;
+                points += timeLeft; // Bonus for quick answer
+
+                score += points;
+                correctCount++;
+                streak++;
+                maxStreak = Math.max(maxStreak, streak);
+
+                document.getElementById('score').textContent = score;
+                document.getElementById('score').parentElement.classList.add('celebrate');
+                document.getElementById('streak').textContent = streak;
+
+                showFeedback('정답입니다! 🎉', 'bg-green-100 text-green-800');
+            } else {
+                buttons[index].classList.add('wrong', 'shake');
+                buttons[q.correct].classList.add('correct');
+                streak = 0;
+                document.getElementById('streak').textContent = 0;
+
+                showFeedback('틀렸습니다. 정답은 ' + q.options[q.correct] + ' 입니다.', 'bg-red-100 text-red-800');
+            }
+
+            setTimeout(() => {
+                currentQuestionIndex++;
+                loadQuestion();
+            }, 2500);
+        }
+
+        // Show Feedback
+        function showFeedback(message, className) {
+            const feedback = document.getElementById('feedback');
+            feedback.className = 'mt-6 p-4 rounded-xl ' + className;
+            feedback.textContent = message;
+            feedback.classList.remove('hidden');
+        }
+
+        // Show Correct Answer (timeout)
+        function showCorrectAnswer() {
+            const q = currentQuestions[currentQuestionIndex];
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(btn => btn.disabled = true);
+            buttons[q.correct].classList.add('correct');
+            showFeedback('시간 초과! 정답은 ' + q.options[q.correct] + ' 입니다.', 'bg-orange-100 text-orange-800');
+        }
+
+        // Fifty-Fifty Lifeline
+        function useFiftyFifty() {
+            if (usedFiftyFifty) return;
+
+            usedFiftyFifty = true;
+            const btn = document.getElementById('fiftyFifty');
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            const q = currentQuestions[currentQuestionIndex];
+            const buttons = document.querySelectorAll('.option-btn');
+
+            let wrongIndices = [];
+            buttons.forEach((btn, idx) => {
+                if (idx !== q.correct) wrongIndices.push(idx);
+            });
+
+            // Remove 2 wrong answers
+            shuffleArray(wrongIndices).slice(0, 2).forEach(idx => {
+                buttons[idx].style.opacity = '0.3';
+                buttons[idx].disabled = true;
+            });
+        }
+
+        // Skip Question
+        function skipQuestion() {
+            if (usedSkip) return;
+
+            usedSkip = true;
+            const btn = document.getElementById('skip');
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            clearInterval(timerInterval);
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        // End Game
+        function endGame() {
+            clearInterval(timerInterval);
+
+            const accuracy = currentQuestions.length > 0
+                ? Math.round((correctCount / currentQuestions.length) * 100)
+                : 0;
+
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.remove('hidden');
+
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('maxStreak').textContent = maxStreak;
+            document.getElementById('correctAnswers').textContent = correctCount + ' / ' + currentQuestions.length;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+
+            // Check high score
+            const leaderboard = getLeaderboard();
+            const isHighScore = leaderboard.length === 0 || score > leaderboard[0].score;
+
+            if (isHighScore) {
+                document.getElementById('newHighScore').classList.remove('hidden');
+            }
+
+            // Save to leaderboard
+            saveScore(score, accuracy, selectedCategory);
+        }
+
+        // Restart Game
+        function restartGame() {
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+        }
+
+        // Share Results
+        function shareResults() {
+            const text = `한국 퀴즈 게임 결과!\n점수: ${score}점\n정답: ${correctCount}/${currentQuestions.length}\n연속 정답: ${maxStreak}회\n\n나도 도전해보세요!`;
+
+            if (navigator.share) {
+                navigator.share({
+                    title: '한국 퀴즈 게임',
+                    text: text
+                });
+            } else {
+                navigator.clipboard.writeText(text);
+                alert('결과가 클립보드에 복사되었습니다!');
+            }
+        }
+
+        // Leaderboard Functions
+        function getLeaderboard() {
+            const data = localStorage.getItem('quizLeaderboard');
+            return data ? JSON.parse(data) : [];
+        }
+
+        function saveScore(score, accuracy, category) {
+            const leaderboard = getLeaderboard();
+            const entry = {
+                score: score,
+                accuracy: accuracy,
+                category: category,
+                date: new Date().toLocaleString('ko-KR')
+            };
+
+            leaderboard.push(entry);
+            leaderboard.sort((a, b) => b.score - a.score);
+            leaderboard.splice(10); // Keep top 10
+
+            localStorage.setItem('quizLeaderboard', JSON.stringify(leaderboard));
+        }
+
+        function loadLeaderboard() {
+            const leaderboard = getLeaderboard();
+            const list = document.getElementById('leaderboardList');
+
+            if (leaderboard.length === 0) {
+                list.innerHTML = '<p class="text-gray-500 text-center py-8">아직 기록이 없습니다.</p>';
+                return;
+            }
+
+            list.innerHTML = leaderboard.map((entry, index) => {
+                let medal = '';
+                if (index === 0) medal = '<i class="fas fa-crown text-yellow-500 mr-2"></i>';
+                else if (index === 1) medal = '<i class="fas fa-medal text-gray-400 mr-2"></i>';
+                else if (index === 2) medal = '<i class="fas fa-medal text-orange-600 mr-2"></i>';
+
+                return `
+                    <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="text-2xl font-bold text-gray-400 mr-4">${index + 1}</span>
+                            ${medal}
+                            <div>
+                                <p class="font-bold text-gray-800">${entry.score}점</p>
+                                <p class="text-sm text-gray-600">${entry.category} · 정답률 ${entry.accuracy}%</p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500">${entry.date}</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function showLeaderboard() {
+            loadLeaderboard();
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('leaderboardScreen').classList.remove('hidden');
+        }
+
+        function hideLeaderboard() {
+            document.getElementById('leaderboardScreen').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+        }
+
+        function clearLeaderboard() {
+            if (confirm('정말로 모든 기록을 삭제하시겠습니까?')) {
+                localStorage.removeItem('quizLeaderboard');
+                loadLeaderboard();
+            }
+        }
+
+        // Utility Functions
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>

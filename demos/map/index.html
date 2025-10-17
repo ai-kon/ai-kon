@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        #map { height: 600px; border-radius: 12px; }
+        .poi-btn { transition: all 0.2s; }
+        .poi-btn:hover { transform: scale(1.05); }
+        .poi-btn.active { background: #8b5cf6; color: white; }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <div class="bg-white rounded-lg shadow-2xl p-6">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800"><i class="fas fa-map-marked-alt text-purple-600 mr-3"></i>지도</h1>
+                    <p class="text-gray-600">네이버지도/카카오맵 스타일</p>
+                </div>
+                <button onclick="window.location.href='../'" class="px-4 py-2 bg-purple-600 text-white rounded-lg">뒤로가기</button>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="mb-4">
+                <div class="flex gap-2">
+                    <input type="text" id="searchInput" placeholder="장소, 주소 검색" class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none">
+                    <button onclick="searchLocation()" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <button onclick="getCurrentLocation()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                        <i class="fas fa-crosshairs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- POI Categories -->
+            <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
+                <button onclick="filterPOI('all')" class="poi-btn active px-4 py-2 bg-gray-100 rounded-lg whitespace-nowrap">전체</button>
+                <button onclick="filterPOI('food')" class="poi-btn px-4 py-2 bg-gray-100 rounded-lg whitespace-nowrap">🍽️ 음식점</button>
+                <button onclick="filterPOI('cafe')" class="poi-btn px-4 py-2 bg-gray-100 rounded-lg whitespace-nowrap">☕ 카페</button>
+                <button onclick="filterPOI('hospital')" class="poi-btn px-4 py-2 bg-gray-100 rounded-lg whitespace-nowrap">🏥 병원</button>
+                <button onclick="filterPOI('park')" class="poi-btn px-4 py-2 bg-gray-100 rounded-lg whitespace-nowrap">🌳 공원</button>
+                <button onclick="filterPOI('mart')" class="poi-btn px-4 py-2 bg-gray-100 rounded-lg whitespace-nowrap">🛒 마트</button>
+                <button onclick="filterPOI('gas')" class="poi-btn px-4 py-2 bg-gray-100 rounded-lg whitespace-nowrap">⛽ 주유소</button>
+            </div>
+
+            <!-- Map -->
+            <div id="map" class="mb-4 shadow-lg"></div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-4 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg text-center">
+                    <div class="text-sm text-blue-600">마커</div>
+                    <div class="text-2xl font-bold" id="markerCount">0</div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg text-center">
+                    <div class="text-sm text-green-600">검색</div>
+                    <div class="text-2xl font-bold" id="searchCount">0</div>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg text-center">
+                    <div class="text-sm text-purple-600">즐겨찾기</div>
+                    <div class="text-2xl font-bold" id="favoriteCount">0</div>
+                </div>
+                <div class="bg-orange-50 p-4 rounded-lg text-center">
+                    <div class="text-sm text-orange-600">경로</div>
+                    <div class="text-2xl font-bold" id="routeCount">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize map centered on Seoul
+        const map = L.map('map').setView([37.5665, 126.9780], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Sample POI data (Points of Interest)
+        const pois = [
+            {name: '강남역', type: 'food', lat: 37.4979, lng: 127.0276, desc: '맛집 거리'},
+            {name: '홍대입구역', type: 'cafe', lat: 37.5572, lng: 126.9236, desc: '카페 거리'},
+            {name: '서울대병원', type: 'hospital', lat: 37.5799, lng: 126.9990, desc: '종합병원'},
+            {name: '남산공원', type: 'park', lat: 37.5512, lng: 126.9882, desc: '서울타워'},
+            {name: '이마트 용산점', type: 'mart', lat: 37.5303, lng: 126.9648, desc: '대형마트'},
+            {name: 'GS칼텍스', type: 'gas', lat: 37.5700, lng: 126.9850, desc: '주유소'},
+            {name: '스타벅스 강남점', type: 'cafe', lat: 37.4990, lng: 127.0300, desc: '커피전문점'},
+            {name: '삼성병원', type: 'hospital', lat: 37.4880, lng: 127.0857, desc: '종합병원'},
+            {name: '한강공원', type: 'park', lat: 37.5219, lng: 126.9317, desc: '한강 공원'},
+            {name: '맥도날드 신촌점', type: 'food', lat: 37.5550, lng: 126.9367, desc: '패스트푸드'},
+        ];
+
+        let markers = [];
+        let currentFilter = 'all';
+        let searchCount = 0;
+        let favorites = JSON.parse(localStorage.getItem('map_favorites') || '[]');
+
+        // Icon colors by type
+        const iconColors = {
+            food: '#ef4444',
+            cafe: '#f59e0b',
+            hospital: '#10b981',
+            park: '#22c55e',
+            mart: '#3b82f6',
+            gas: '#8b5cf6'
+        };
+
+        function createMarker(poi) {
+            const iconHtml = `<div style="background-color: ${iconColors[poi.type]}; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">📍</div>`;
+
+            const icon = L.divIcon({
+                html: iconHtml,
+                className: 'custom-marker',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30],
+                popupAnchor: [0, -30]
+            });
+
+            const marker = L.marker([poi.lat, poi.lng], {icon: icon}).addTo(map);
+            marker.bindPopup(`
+                <div class="text-center">
+                    <h3 class="font-bold text-lg mb-1">${poi.name}</h3>
+                    <p class="text-gray-600 text-sm mb-2">${poi.desc}</p>
+                    <div class="flex gap-2 justify-center">
+                        <button onclick="toggleFavorite('${poi.name}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded">
+                            ${favorites.includes(poi.name) ? '❤️' : '🤍'} 즐겨찾기
+                        </button>
+                        <button onclick="startNavigation(${poi.lat}, ${poi.lng})" class="px-3 py-1 bg-blue-500 text-white text-xs rounded">
+                            🧭 길찾기
+                        </button>
+                    </div>
+                </div>
+            `);
+
+            marker.poiData = poi;
+            return marker;
+        }
+
+        function renderPOIs() {
+            // Clear existing markers
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+
+            // Add filtered markers
+            pois.filter(poi => currentFilter === 'all' || poi.type === currentFilter)
+                .forEach(poi => {
+                    markers.push(createMarker(poi));
+                });
+
+            updateStats();
+        }
+
+        function filterPOI(type) {
+            currentFilter = type;
+
+            // Update button styles
+            document.querySelectorAll('.poi-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            renderPOIs();
+        }
+
+        function searchLocation() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            if (!query) return;
+
+            const found = pois.find(poi => poi.name.toLowerCase().includes(query));
+
+            if (found) {
+                map.setView([found.lat, found.lng], 15);
+                markers.find(m => m.poiData.name === found.name)?.openPopup();
+                searchCount++;
+                updateStats();
+            } else {
+                alert('검색 결과가 없습니다.');
+            }
+        }
+
+        function getCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        map.setView([lat, lng], 15);
+
+                        L.marker([lat, lng], {
+                            icon: L.divIcon({
+                                html: '<div style="background: #3b82f6; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(59,130,246,0.5);"></div>',
+                                className: 'current-location',
+                                iconSize: [20, 20]
+                            })
+                        }).addTo(map).bindPopup('현재 위치').openPopup();
+                    },
+                    () => {
+                        alert('위치를 가져올 수 없습니다.');
+                    }
+                );
+            } else {
+                alert('이 브라우저는 위치 서비스를 지원하지 않습니다.');
+            }
+        }
+
+        window.toggleFavorite = (name) => {
+            const idx = favorites.indexOf(name);
+            if (idx > -1) {
+                favorites.splice(idx, 1);
+            } else {
+                favorites.push(name);
+            }
+            localStorage.setItem('map_favorites', JSON.stringify(favorites));
+            updateStats();
+            renderPOIs(); // Refresh to update popup
+        };
+
+        window.startNavigation = (lat, lng) => {
+            alert(`길찾기를 시작합니다.\n목적지: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+            document.getElementById('routeCount').textContent = parseInt(document.getElementById('routeCount').textContent) + 1;
+        };
+
+        function updateStats() {
+            document.getElementById('markerCount').textContent = markers.length;
+            document.getElementById('searchCount').textContent = searchCount;
+            document.getElementById('favoriteCount').textContent = favorites.length;
+        }
+
+        // Enter key for search
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchLocation();
+        });
+
+        // Initial render
+        renderPOIs();
+    </script>
+</body>
+</html>

@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>애니팡 - Match 3 게임</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .game-tile {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            user-select: none;
+        }
+
+        .game-tile:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .game-tile.selected {
+            background: rgba(255, 215, 0, 0.9);
+            transform: scale(1.15);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        }
+
+        .game-tile.matched {
+            animation: matchPulse 0.5s ease-out;
+        }
+
+        .game-tile.power-up {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            animation: powerUpGlow 1s ease-in-out infinite;
+        }
+
+        @keyframes matchPulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        @keyframes powerUpGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.8); }
+            50% { box-shadow: 0 0 20px rgba(255, 215, 0, 1); }
+        }
+
+        @keyframes fall {
+            from { transform: translateY(-100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .game-tile.falling {
+            animation: fall 0.4s ease-out;
+        }
+
+        .score-popup {
+            position: fixed;
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            animation: scoreFloat 1s ease-out forwards;
+            z-index: 1000;
+        }
+
+        @keyframes scoreFloat {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-80px) scale(1.5); }
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            grid-template-rows: repeat(8, 60px);
+            gap: 8px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn {
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .combo-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: #ff6b6b;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            animation: comboAnim 1s ease-out forwards;
+            z-index: 999;
+        }
+
+        @keyframes comboAnim {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+        }
+
+        .progress-bar {
+            transition: width 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-6xl w-full">
+        <div class="text-center mb-6">
+            <h1 class="text-5xl font-bold text-white mb-2" style="text-shadow: 3px 3px 6px rgba(0,0,0,0.5);">
+                <i class="fas fa-candy-cane"></i> 애니팡 Match-3
+            </h1>
+            <p class="text-xl text-white opacity-90">과일을 매치하세요!</p>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-6 items-start justify-center">
+            <!-- Game Board -->
+            <div class="flex flex-col items-center">
+                <div id="gameBoard" class="game-board"></div>
+            </div>
+
+            <!-- Info Panel -->
+            <div class="info-panel w-full lg:w-80 space-y-4">
+                <!-- Score -->
+                <div class="bg-gradient-to-r from-purple-500 to-pink-500 p-4 rounded-xl text-white">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-lg"><i class="fas fa-star"></i> 점수</span>
+                        <span class="text-sm">레벨 <span id="level">1</span></span>
+                    </div>
+                    <div class="text-4xl font-bold" id="score">0</div>
+                    <div class="mt-2">
+                        <div class="bg-white bg-opacity-30 rounded-full h-3 overflow-hidden">
+                            <div id="levelProgress" class="progress-bar bg-yellow-400 h-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timer -->
+                <div class="bg-gradient-to-r from-blue-500 to-cyan-500 p-4 rounded-xl text-white">
+                    <div class="flex justify-between items-center">
+                        <span class="text-lg"><i class="fas fa-clock"></i> 남은 시간</span>
+                        <span class="text-3xl font-bold" id="timer">60</span>
+                    </div>
+                    <div class="mt-2">
+                        <div class="bg-white bg-opacity-30 rounded-full h-3 overflow-hidden">
+                            <div id="timeProgress" class="progress-bar bg-red-400 h-full" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Combo -->
+                <div class="bg-gradient-to-r from-orange-500 to-red-500 p-4 rounded-xl text-white">
+                    <div class="flex justify-between items-center">
+                        <span class="text-lg"><i class="fas fa-fire"></i> 콤보</span>
+                        <span class="text-3xl font-bold" id="combo">0</span>
+                    </div>
+                    <div class="text-sm opacity-90 mt-1">연속 매치: x<span id="comboMultiplier">1.0</span> 보너스</div>
+                </div>
+
+                <!-- High Score -->
+                <div class="bg-gradient-to-r from-green-500 to-teal-500 p-4 rounded-xl text-white">
+                    <div class="flex justify-between items-center">
+                        <span class="text-lg"><i class="fas fa-trophy"></i> 최고 점수</span>
+                        <span class="text-2xl font-bold" id="highScore">0</span>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="space-y-2">
+                    <button id="startBtn" class="btn w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg">
+                        <i class="fas fa-play"></i> 게임 시작
+                    </button>
+                    <button id="pauseBtn" class="btn w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hidden">
+                        <i class="fas fa-pause"></i> 일시정지
+                    </button>
+                    <button id="resetBtn" class="btn w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg">
+                        <i class="fas fa-redo"></i> 다시 시작
+                    </button>
+                </div>
+
+                <!-- Instructions -->
+                <div class="bg-white bg-opacity-80 p-4 rounded-xl text-sm">
+                    <h3 class="font-bold mb-2 text-purple-700"><i class="fas fa-info-circle"></i> 게임 방법</h3>
+                    <ul class="space-y-1 text-gray-700">
+                        <li><i class="fas fa-hand-pointer text-blue-500"></i> 인접한 과일을 클릭하여 교환</li>
+                        <li><i class="fas fa-check text-green-500"></i> 3개 이상 매치하여 제거</li>
+                        <li><i class="fas fa-fire text-orange-500"></i> 연속 매치로 콤보 보너스</li>
+                        <li><i class="fas fa-bolt text-yellow-500"></i> 4개 이상 매치하면 파워업</li>
+                        <li><i class="fas fa-star text-purple-500"></i> 레벨업으로 더 높은 점수!</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameOverModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full mx-4 text-center shadow-2xl">
+            <div class="text-6xl mb-4">🎮</div>
+            <h2 class="text-4xl font-bold mb-4 text-purple-700">게임 종료!</h2>
+            <div class="mb-6">
+                <div class="text-gray-600 mb-2">최종 점수</div>
+                <div class="text-5xl font-bold text-pink-600" id="finalScore">0</div>
+            </div>
+            <div class="mb-6 space-y-2">
+                <div class="flex justify-between px-4">
+                    <span class="text-gray-600">레벨:</span>
+                    <span class="font-bold" id="finalLevel">1</span>
+                </div>
+                <div class="flex justify-between px-4">
+                    <span class="text-gray-600">최대 콤보:</span>
+                    <span class="font-bold" id="finalCombo">0</span>
+                </div>
+                <div class="flex justify-between px-4">
+                    <span class="text-gray-600">최고 점수:</span>
+                    <span class="font-bold text-green-600" id="modalHighScore">0</span>
+                </div>
+            </div>
+            <button id="playAgainBtn" class="btn w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg">
+                <i class="fas fa-play"></i> 다시 하기
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const FRUITS = ['🍎', '🍊', '🍋', '🍇', '🍓', '🍑'];
+        const GRID_SIZE = 8;
+        const INITIAL_TIME = 60;
+        const POINTS_PER_MATCH = 100;
+        const COMBO_DECAY_TIME = 2000;
+
+        let board = [];
+        let selectedTile = null;
+        let score = 0;
+        let level = 1;
+        let combo = 0;
+        let maxCombo = 0;
+        let timeLeft = INITIAL_TIME;
+        let gameRunning = false;
+        let gamePaused = false;
+        let timerInterval = null;
+        let comboTimeout = null;
+        let powerUpTiles = new Set();
+
+        // Initialize game
+        function init() {
+            loadHighScore();
+            createBoard();
+            updateDisplay();
+        }
+
+        // Create game board
+        function createBoard() {
+            const boardElement = document.getElementById('gameBoard');
+            boardElement.innerHTML = '';
+            board = [];
+            powerUpTiles.clear();
+
+            for (let row = 0; row < GRID_SIZE; row++) {
+                board[row] = [];
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    const fruit = getRandomFruit();
+                    board[row][col] = fruit;
+
+                    const tile = document.createElement('div');
+                    tile.className = 'game-tile';
+                    tile.textContent = fruit;
+                    tile.dataset.row = row;
+                    tile.dataset.col = col;
+                    tile.addEventListener('click', () => handleTileClick(row, col));
+
+                    boardElement.appendChild(tile);
+                }
+            }
+
+            // Ensure no initial matches
+            while (checkAllMatches().length > 0) {
+                clearMatches();
+                fillEmptySpaces();
+            }
+        }
+
+        // Get random fruit
+        function getRandomFruit() {
+            return FRUITS[Math.floor(Math.random() * FRUITS.length)];
+        }
+
+        // Handle tile click
+        function handleTileClick(row, col) {
+            if (!gameRunning || gamePaused) return;
+
+            const tile = getTileElement(row, col);
+
+            if (!selectedTile) {
+                selectedTile = { row, col };
+                tile.classList.add('selected');
+            } else {
+                // Check if tiles are adjacent
+                const rowDiff = Math.abs(selectedTile.row - row);
+                const colDiff = Math.abs(selectedTile.col - col);
+
+                if ((rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1)) {
+                    swapTiles(selectedTile.row, selectedTile.col, row, col);
+                }
+
+                // Deselect
+                document.querySelectorAll('.game-tile.selected').forEach(t => t.classList.remove('selected'));
+                selectedTile = null;
+            }
+        }
+
+        // Swap tiles
+        function swapTiles(row1, col1, row2, col2) {
+            const temp = board[row1][col1];
+            board[row1][col1] = board[row2][col2];
+            board[row2][col2] = temp;
+
+            // Update display
+            updateTile(row1, col1);
+            updateTile(row2, col2);
+
+            // Check for matches
+            setTimeout(() => {
+                const matches = checkAllMatches();
+                if (matches.length > 0) {
+                    processMatches(matches);
+                } else {
+                    // Swap back if no match
+                    board[row1][col1] = board[row2][col2];
+                    board[row2][col2] = temp;
+                    updateTile(row1, col1);
+                    updateTile(row2, col2);
+                }
+            }, 100);
+        }
+
+        // Check all matches
+        function checkAllMatches() {
+            const matches = [];
+
+            // Check horizontal matches
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE - 2; col++) {
+                    const fruit = board[row][col];
+                    let matchLength = 1;
+
+                    while (col + matchLength < GRID_SIZE && board[row][col + matchLength] === fruit) {
+                        matchLength++;
+                    }
+
+                    if (matchLength >= 3) {
+                        for (let i = 0; i < matchLength; i++) {
+                            matches.push({ row, col: col + i, length: matchLength });
+                        }
+                        col += matchLength - 1;
+                    }
+                }
+            }
+
+            // Check vertical matches
+            for (let col = 0; col < GRID_SIZE; col++) {
+                for (let row = 0; row < GRID_SIZE - 2; row++) {
+                    const fruit = board[row][col];
+                    let matchLength = 1;
+
+                    while (row + matchLength < GRID_SIZE && board[row + matchLength][col] === fruit) {
+                        matchLength++;
+                    }
+
+                    if (matchLength >= 3) {
+                        for (let i = 0; i < matchLength; i++) {
+                            matches.push({ row: row + i, col, length: matchLength });
+                        }
+                        row += matchLength - 1;
+                    }
+                }
+            }
+
+            return matches;
+        }
+
+        // Process matches
+        function processMatches(matches) {
+            if (matches.length === 0) return;
+
+            // Increment combo
+            combo++;
+            maxCombo = Math.max(maxCombo, combo);
+
+            // Reset combo timeout
+            clearTimeout(comboTimeout);
+            comboTimeout = setTimeout(() => {
+                combo = 0;
+                updateDisplay();
+            }, COMBO_DECAY_TIME);
+
+            // Calculate score
+            const comboMultiplier = 1 + (combo - 1) * 0.2;
+            const basePoints = matches.length * POINTS_PER_MATCH;
+            const bonusPoints = Math.max(...matches.map(m => m.length)) >= 4 ? 500 : 0;
+            const earnedPoints = Math.floor((basePoints + bonusPoints) * comboMultiplier);
+
+            score += earnedPoints;
+
+            // Show score popup
+            showScorePopup(earnedPoints, matches[0]);
+
+            // Show combo indicator
+            if (combo > 1) {
+                showComboIndicator(combo);
+            }
+
+            // Mark power-ups
+            matches.forEach(match => {
+                if (match.length >= 4) {
+                    powerUpTiles.add(`${match.row}-${match.col}`);
+                }
+            });
+
+            // Clear matches with animation
+            matches.forEach(match => {
+                const tile = getTileElement(match.row, match.col);
+                tile.classList.add('matched');
+            });
+
+            setTimeout(() => {
+                clearMatches();
+                fillEmptySpaces();
+
+                // Check for chain reactions
+                setTimeout(() => {
+                    const newMatches = checkAllMatches();
+                    if (newMatches.length > 0) {
+                        processMatches(newMatches);
+                    }
+                }, 400);
+            }, 500);
+
+            // Check level up
+            checkLevelUp();
+            updateDisplay();
+        }
+
+        // Clear matches
+        function clearMatches() {
+            const matches = checkAllMatches();
+            const cleared = new Set();
+
+            matches.forEach(match => {
+                const key = `${match.row}-${match.col}`;
+                if (!cleared.has(key)) {
+                    board[match.row][match.col] = null;
+                    cleared.add(key);
+                }
+            });
+        }
+
+        // Fill empty spaces
+        function fillEmptySpaces() {
+            // Drop existing tiles
+            for (let col = 0; col < GRID_SIZE; col++) {
+                let emptyRow = GRID_SIZE - 1;
+                for (let row = GRID_SIZE - 1; row >= 0; row--) {
+                    if (board[row][col] !== null) {
+                        if (row !== emptyRow) {
+                            board[emptyRow][col] = board[row][col];
+                            board[row][col] = null;
+                            updateTile(emptyRow, col);
+                        }
+                        emptyRow--;
+                    }
+                }
+            }
+
+            // Fill top with new tiles
+            for (let col = 0; col < GRID_SIZE; col++) {
+                for (let row = 0; row < GRID_SIZE; row++) {
+                    if (board[row][col] === null) {
+                        board[row][col] = getRandomFruit();
+                        updateTile(row, col);
+                        const tile = getTileElement(row, col);
+                        tile.classList.add('falling');
+                        setTimeout(() => tile.classList.remove('falling'), 400);
+                    }
+                }
+            }
+        }
+
+        // Update tile display
+        function updateTile(row, col) {
+            const tile = getTileElement(row, col);
+            if (tile) {
+                tile.textContent = board[row][col];
+                const key = `${row}-${col}`;
+                if (powerUpTiles.has(key)) {
+                    tile.classList.add('power-up');
+                } else {
+                    tile.classList.remove('power-up');
+                }
+            }
+        }
+
+        // Get tile element
+        function getTileElement(row, col) {
+            return document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        }
+
+        // Show score popup
+        function showScorePopup(points, match) {
+            const popup = document.createElement('div');
+            popup.className = 'score-popup';
+            popup.textContent = `+${points}`;
+
+            const tile = getTileElement(match.row, match.col);
+            const rect = tile.getBoundingClientRect();
+            popup.style.left = rect.left + rect.width / 2 + 'px';
+            popup.style.top = rect.top + 'px';
+
+            document.body.appendChild(popup);
+            setTimeout(() => popup.remove(), 1000);
+        }
+
+        // Show combo indicator
+        function showComboIndicator(comboCount) {
+            const indicator = document.createElement('div');
+            indicator.className = 'combo-indicator';
+            indicator.textContent = `${comboCount}x COMBO!`;
+
+            const board = document.getElementById('gameBoard');
+            const rect = board.getBoundingClientRect();
+            indicator.style.left = rect.left + rect.width / 2 + 'px';
+            indicator.style.top = rect.top + rect.height / 2 + 'px';
+
+            document.body.appendChild(indicator);
+            setTimeout(() => indicator.remove(), 1000);
+        }
+
+        // Check level up
+        function checkLevelUp() {
+            const targetScore = level * 5000;
+            if (score >= targetScore) {
+                level++;
+                timeLeft += 10; // Bonus time
+                showComboIndicator(`LEVEL ${level}!`);
+            }
+        }
+
+        // Update display
+        function updateDisplay() {
+            document.getElementById('score').textContent = score.toLocaleString();
+            document.getElementById('level').textContent = level;
+            document.getElementById('combo').textContent = combo;
+            document.getElementById('comboMultiplier').textContent = (1 + (combo - 1) * 0.2).toFixed(1);
+            document.getElementById('timer').textContent = timeLeft;
+
+            // Update progress bars
+            const levelProgress = ((score % 5000) / 5000) * 100;
+            document.getElementById('levelProgress').style.width = levelProgress + '%';
+
+            const timeProgress = (timeLeft / INITIAL_TIME) * 100;
+            document.getElementById('timeProgress').style.width = timeProgress + '%';
+
+            // Update high score
+            const highScore = getHighScore();
+            document.getElementById('highScore').textContent = highScore.toLocaleString();
+        }
+
+        // Start game
+        function startGame() {
+            gameRunning = true;
+            gamePaused = false;
+            score = 0;
+            level = 1;
+            combo = 0;
+            maxCombo = 0;
+            timeLeft = INITIAL_TIME;
+
+            createBoard();
+            updateDisplay();
+
+            document.getElementById('startBtn').classList.add('hidden');
+            document.getElementById('pauseBtn').classList.remove('hidden');
+
+            // Start timer
+            timerInterval = setInterval(() => {
+                if (!gamePaused) {
+                    timeLeft--;
+                    updateDisplay();
+
+                    if (timeLeft <= 0) {
+                        endGame();
+                    }
+                }
+            }, 1000);
+        }
+
+        // Pause game
+        function pauseGame() {
+            gamePaused = !gamePaused;
+            const btn = document.getElementById('pauseBtn');
+            if (gamePaused) {
+                btn.innerHTML = '<i class="fas fa-play"></i> 계속하기';
+            } else {
+                btn.innerHTML = '<i class="fas fa-pause"></i> 일시정지';
+            }
+        }
+
+        // End game
+        function endGame() {
+            gameRunning = false;
+            clearInterval(timerInterval);
+            clearTimeout(comboTimeout);
+
+            // Save high score
+            saveHighScore(score);
+
+            // Show game over modal
+            document.getElementById('finalScore').textContent = score.toLocaleString();
+            document.getElementById('finalLevel').textContent = level;
+            document.getElementById('finalCombo').textContent = maxCombo;
+            document.getElementById('modalHighScore').textContent = getHighScore().toLocaleString();
+            document.getElementById('gameOverModal').classList.remove('hidden');
+
+            document.getElementById('pauseBtn').classList.add('hidden');
+            document.getElementById('startBtn').classList.remove('hidden');
+        }
+
+        // Reset game
+        function resetGame() {
+            if (gameRunning) {
+                clearInterval(timerInterval);
+                clearTimeout(comboTimeout);
+            }
+            gameRunning = false;
+            gamePaused = false;
+            document.getElementById('pauseBtn').classList.add('hidden');
+            document.getElementById('startBtn').classList.remove('hidden');
+
+            score = 0;
+            level = 1;
+            combo = 0;
+            maxCombo = 0;
+            timeLeft = INITIAL_TIME;
+
+            createBoard();
+            updateDisplay();
+        }
+
+        // High score management
+        function getHighScore() {
+            return parseInt(localStorage.getItem('anipangHighScore') || '0');
+        }
+
+        function saveHighScore(newScore) {
+            const currentHighScore = getHighScore();
+            if (newScore > currentHighScore) {
+                localStorage.setItem('anipangHighScore', newScore.toString());
+            }
+        }
+
+        function loadHighScore() {
+            updateDisplay();
+        }
+
+        // Event listeners
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('pauseBtn').addEventListener('click', pauseGame);
+        document.getElementById('resetBtn').addEventListener('click', resetGame);
+        document.getElementById('playAgainBtn').addEventListener('click', () => {
+            document.getElementById('gameOverModal').classList.add('hidden');
+            startGame();
+        });
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>

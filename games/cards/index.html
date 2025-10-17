@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>화투 매칭 게임 - Korean Card Matching</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #ffa726 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .card {
+            width: 100px;
+            height: 140px;
+            perspective: 1000px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .card:hover:not(.matched):not(.flipped) {
+            transform: translateY(-5px);
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped .card-inner,
+        .card.matched .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, #c31432 0%, #240b36 100%);
+            border: 3px solid #ffd700;
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            transform: rotateY(180deg);
+            border: 3px solid #667eea;
+        }
+
+        .card.matched {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .card.wrong {
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            transition: all 0.3s;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(245, 87, 108, 0.4);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            padding: 3rem;
+            max-width: 500px;
+            text-align: center;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .difficulty-btn {
+            transition: all 0.3s;
+        }
+
+        .difficulty-btn.active {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+    <!-- Header -->
+    <div class="max-w-6xl mx-auto mb-8">
+        <div class="stat-card text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-2">
+                <i class="fas fa-cards-blank mr-3"></i>화투 매칭 게임
+            </h1>
+            <p class="text-gray-600 text-lg">카드를 뒤집어 같은 그림을 찾으세요!</p>
+        </div>
+    </div>
+
+    <!-- Game Stats -->
+    <div class="max-w-6xl mx-auto mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="stat-card text-center">
+            <div class="text-gray-600 text-sm mb-1">라운드</div>
+            <div class="text-3xl font-bold text-purple-600">
+                <span id="currentRound">1</span>/<span id="totalRounds">5</span>
+            </div>
+        </div>
+        <div class="stat-card text-center">
+            <div class="text-gray-600 text-sm mb-1">점수</div>
+            <div class="text-3xl font-bold text-green-600" id="score">0</div>
+        </div>
+        <div class="stat-card text-center">
+            <div class="text-gray-600 text-sm mb-1">매칭</div>
+            <div class="text-3xl font-bold text-blue-600">
+                <span id="matched">0</span>/<span id="totalPairs">8</span>
+            </div>
+        </div>
+        <div class="stat-card text-center">
+            <div class="text-gray-600 text-sm mb-1">시간</div>
+            <div class="text-3xl font-bold text-orange-600" id="timer">0:00</div>
+        </div>
+    </div>
+
+    <!-- Difficulty Selection -->
+    <div class="max-w-6xl mx-auto mb-6">
+        <div class="stat-card">
+            <div class="text-center mb-4">
+                <span class="text-gray-700 font-bold">난이도:</span>
+            </div>
+            <div class="flex justify-center gap-4">
+                <button onclick="setDifficulty('easy')" class="difficulty-btn px-6 py-3 rounded-lg bg-green-500 text-white font-bold active" id="btn-easy">
+                    <i class="fas fa-smile mr-2"></i>쉬움 (8쌍)
+                </button>
+                <button onclick="setDifficulty('medium')" class="difficulty-btn px-6 py-3 rounded-lg bg-yellow-500 text-white font-bold" id="btn-medium">
+                    <i class="fas fa-meh mr-2"></i>보통 (12쌍)
+                </button>
+                <button onclick="setDifficulty('hard')" class="difficulty-btn px-6 py-3 rounded-lg bg-red-500 text-white font-bold" id="btn-hard">
+                    <i class="fas fa-dizzy mr-2"></i>어려움 (16쌍)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Board -->
+    <div class="max-w-6xl mx-auto mb-6">
+        <div class="stat-card">
+            <div id="gameBoard" class="grid grid-cols-4 gap-4 justify-items-center">
+                <!-- Cards will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Control Buttons -->
+    <div class="max-w-6xl mx-auto flex justify-center gap-4">
+        <button onclick="resetGame()" class="btn-primary px-8 py-4 rounded-lg text-white font-bold text-lg shadow-lg">
+            <i class="fas fa-redo mr-2"></i>새 게임
+        </button>
+        <button onclick="showStats()" class="btn-secondary px-8 py-4 rounded-lg text-white font-bold text-lg shadow-lg">
+            <i class="fas fa-chart-bar mr-2"></i>통계
+        </button>
+    </div>
+
+    <!-- Win Modal -->
+    <div id="winModal" class="modal">
+        <div class="modal-content">
+            <div class="text-6xl mb-4">🎉</div>
+            <h2 class="text-3xl font-bold text-purple-600 mb-4">라운드 완료!</h2>
+            <p class="text-gray-700 text-xl mb-2">시간: <span id="winTime" class="font-bold text-blue-600"></span></p>
+            <p class="text-gray-700 text-xl mb-6">점수: <span id="winScore" class="font-bold text-green-600"></span></p>
+            <div class="flex gap-4 justify-center">
+                <button onclick="nextRound()" class="btn-primary px-8 py-3 rounded-lg text-white font-bold">
+                    <i class="fas fa-forward mr-2"></i>다음 라운드
+                </button>
+                <button onclick="closeModal()" class="btn-secondary px-8 py-3 rounded-lg text-white font-bold">
+                    <i class="fas fa-times mr-2"></i>닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Complete Modal -->
+    <div id="completeModal" class="modal">
+        <div class="modal-content">
+            <div class="text-6xl mb-4">🏆</div>
+            <h2 class="text-3xl font-bold text-purple-600 mb-4">게임 완료!</h2>
+            <p class="text-gray-700 text-xl mb-2">총 점수: <span id="finalScore" class="font-bold text-green-600"></span></p>
+            <p class="text-gray-700 text-xl mb-2">평균 시간: <span id="avgTime" class="font-bold text-blue-600"></span></p>
+            <p class="text-gray-700 text-xl mb-6" id="resultMessage"></p>
+            <div class="flex gap-4 justify-center">
+                <button onclick="resetGame()" class="btn-primary px-8 py-3 rounded-lg text-white font-bold">
+                    <i class="fas fa-play mr-2"></i>새 게임
+                </button>
+                <button onclick="closeModal()" class="btn-secondary px-8 py-3 rounded-lg text-white font-bold">
+                    <i class="fas fa-times mr-2"></i>닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="statsModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-3xl font-bold text-purple-600 mb-6">
+                <i class="fas fa-chart-line mr-2"></i>통계
+            </h2>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-gradient-to-br from-purple-100 to-pink-100 p-4 rounded-lg">
+                    <div class="text-gray-600 text-sm">총 게임</div>
+                    <div class="text-3xl font-bold text-purple-600" id="totalGames">0</div>
+                </div>
+                <div class="bg-gradient-to-br from-green-100 to-blue-100 p-4 rounded-lg">
+                    <div class="text-gray-600 text-sm">최고 점수</div>
+                    <div class="text-3xl font-bold text-green-600" id="bestScore">0</div>
+                </div>
+                <div class="bg-gradient-to-br from-yellow-100 to-orange-100 p-4 rounded-lg">
+                    <div class="text-gray-600 text-sm">최단 시간</div>
+                    <div class="text-3xl font-bold text-orange-600" id="bestTime">-</div>
+                </div>
+                <div class="bg-gradient-to-br from-red-100 to-pink-100 p-4 rounded-lg">
+                    <div class="text-gray-600 text-sm">평균 점수</div>
+                    <div class="text-3xl font-bold text-red-600" id="avgScore">0</div>
+                </div>
+            </div>
+            <button onclick="clearStats()" class="bg-gray-500 text-white px-6 py-2 rounded-lg mb-4 hover:bg-gray-600">
+                <i class="fas fa-trash mr-2"></i>통계 초기화
+            </button>
+            <button onclick="closeModal()" class="btn-primary px-8 py-3 rounded-lg text-white font-bold w-full">
+                <i class="fas fa-times mr-2"></i>닫기
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let gameState = {
+            cards: [],
+            flippedCards: [],
+            matchedPairs: 0,
+            score: 0,
+            currentRound: 1,
+            totalRounds: 5,
+            timer: 0,
+            timerInterval: null,
+            difficulty: 'easy',
+            roundTimes: [],
+            canFlip: true
+        };
+
+        // Card emojis (Korean theme)
+        const cardEmojis = [
+            '🌸', '🌺', '🌼', '🌻', '🌷', '🌹',
+            '🍒', '🍓', '🍊', '🍋', '🍌', '🍉',
+            '🐉', '🐯', '🦅', '🐢', '🦋', '🐠',
+            '🎴', '🎎', '🎋', '🏮', '⛩️', '🎯',
+            '💎', '💰', '🎁', '🎊', '✨', '🌟',
+            '🔥', '💧', '🌙', '☀️', '⚡', '🌈'
+        ];
+
+        const difficultySettings = {
+            easy: { pairs: 8, cols: 4 },
+            medium: { pairs: 12, cols: 6 },
+            hard: { pairs: 16, cols: 8 }
+        };
+
+        // Initialize game
+        function initGame() {
+            gameState.flippedCards = [];
+            gameState.matchedPairs = 0;
+            gameState.timer = 0;
+            gameState.canFlip = true;
+
+            const setting = difficultySettings[gameState.difficulty];
+            document.getElementById('totalPairs').textContent = setting.pairs;
+            document.getElementById('matched').textContent = '0';
+
+            // Generate cards
+            const selectedEmojis = cardEmojis.slice(0, setting.pairs);
+            gameState.cards = [...selectedEmojis, ...selectedEmojis]
+                .sort(() => Math.random() - 0.5)
+                .map((emoji, index) => ({
+                    id: index,
+                    emoji: emoji,
+                    flipped: false,
+                    matched: false
+                }));
+
+            renderBoard();
+            startTimer();
+            updateDisplay();
+        }
+
+        // Render game board
+        function renderBoard() {
+            const board = document.getElementById('gameBoard');
+            const setting = difficultySettings[gameState.difficulty];
+            board.className = `grid grid-cols-${setting.cols} gap-4 justify-items-center`;
+            board.innerHTML = '';
+
+            gameState.cards.forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'card';
+                cardElement.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-front">
+                            <i class="fas fa-question text-yellow-300"></i>
+                        </div>
+                        <div class="card-back">
+                            ${card.emoji}
+                        </div>
+                    </div>
+                `;
+                cardElement.onclick = () => flipCard(card.id);
+                board.appendChild(cardElement);
+            });
+        }
+
+        // Flip card
+        function flipCard(cardId) {
+            if (!gameState.canFlip) return;
+
+            const card = gameState.cards[cardId];
+            if (card.flipped || card.matched) return;
+            if (gameState.flippedCards.length >= 2) return;
+
+            card.flipped = true;
+            gameState.flippedCards.push(card);
+
+            const cardElements = document.querySelectorAll('.card');
+            cardElements[cardId].classList.add('flipped');
+
+            if (gameState.flippedCards.length === 2) {
+                gameState.canFlip = false;
+                setTimeout(checkMatch, 800);
+            }
+        }
+
+        // Check if cards match
+        function checkMatch() {
+            const [card1, card2] = gameState.flippedCards;
+            const cardElements = document.querySelectorAll('.card');
+
+            if (card1.emoji === card2.emoji) {
+                // Match!
+                card1.matched = true;
+                card2.matched = true;
+                cardElements[card1.id].classList.add('matched');
+                cardElements[card2.id].classList.add('matched');
+                gameState.matchedPairs++;
+                gameState.score += 100;
+
+                // Bonus for speed
+                if (gameState.timer < 30) gameState.score += 50;
+
+                updateDisplay();
+
+                if (gameState.matchedPairs === difficultySettings[gameState.difficulty].pairs) {
+                    setTimeout(roundComplete, 500);
+                }
+            } else {
+                // No match
+                cardElements[card1.id].classList.add('wrong');
+                cardElements[card2.id].classList.add('wrong');
+                gameState.score = Math.max(0, gameState.score - 10);
+
+                setTimeout(() => {
+                    card1.flipped = false;
+                    card2.flipped = false;
+                    cardElements[card1.id].classList.remove('flipped', 'wrong');
+                    cardElements[card2.id].classList.remove('flipped', 'wrong');
+                }, 500);
+            }
+
+            gameState.flippedCards = [];
+            gameState.canFlip = true;
+        }
+
+        // Round complete
+        function roundComplete() {
+            stopTimer();
+            gameState.roundTimes.push(gameState.timer);
+
+            document.getElementById('winTime').textContent = formatTime(gameState.timer);
+            document.getElementById('winScore').textContent = gameState.score;
+            document.getElementById('winModal').classList.add('active');
+        }
+
+        // Next round
+        function nextRound() {
+            closeModal();
+            gameState.currentRound++;
+
+            if (gameState.currentRound > gameState.totalRounds) {
+                gameComplete();
+            } else {
+                updateDisplay();
+                initGame();
+            }
+        }
+
+        // Game complete
+        function gameComplete() {
+            const avgTime = gameState.roundTimes.reduce((a, b) => a + b, 0) / gameState.roundTimes.length;
+
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('avgTime').textContent = formatTime(Math.round(avgTime));
+
+            let message = '';
+            if (gameState.score >= 2000) {
+                message = '완벽합니다! 고수시네요! 🏆';
+            } else if (gameState.score >= 1500) {
+                message = '훌륭해요! 실력이 좋으시네요! 🎖️';
+            } else if (gameState.score >= 1000) {
+                message = '잘하셨어요! 계속 연습하세요! 🎯';
+            } else {
+                message = '좋아요! 다음엔 더 잘할 수 있어요! 💪';
+            }
+            document.getElementById('resultMessage').textContent = message;
+
+            // Save stats
+            saveStats();
+
+            document.getElementById('completeModal').classList.add('active');
+        }
+
+        // Timer functions
+        function startTimer() {
+            stopTimer();
+            gameState.timerInterval = setInterval(() => {
+                gameState.timer++;
+                document.getElementById('timer').textContent = formatTime(gameState.timer);
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (gameState.timerInterval) {
+                clearInterval(gameState.timerInterval);
+                gameState.timerInterval = null;
+            }
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Update display
+        function updateDisplay() {
+            document.getElementById('currentRound').textContent = gameState.currentRound;
+            document.getElementById('totalRounds').textContent = gameState.totalRounds;
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('matched').textContent = gameState.matchedPairs;
+        }
+
+        // Set difficulty
+        function setDifficulty(level) {
+            gameState.difficulty = level;
+
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`btn-${level}`).classList.add('active');
+
+            resetGame();
+        }
+
+        // Reset game
+        function resetGame() {
+            stopTimer();
+            gameState.currentRound = 1;
+            gameState.score = 0;
+            gameState.roundTimes = [];
+            closeModal();
+            initGame();
+        }
+
+        // Stats functions
+        function saveStats() {
+            let stats = JSON.parse(localStorage.getItem('cardGameStats') || '{"games": [], "bestScore": 0, "bestTime": null}');
+
+            stats.games.push({
+                score: gameState.score,
+                avgTime: Math.round(gameState.roundTimes.reduce((a, b) => a + b, 0) / gameState.roundTimes.length),
+                difficulty: gameState.difficulty,
+                date: new Date().toISOString()
+            });
+
+            if (gameState.score > stats.bestScore) {
+                stats.bestScore = gameState.score;
+            }
+
+            const avgTime = Math.round(gameState.roundTimes.reduce((a, b) => a + b, 0) / gameState.roundTimes.length);
+            if (!stats.bestTime || avgTime < stats.bestTime) {
+                stats.bestTime = avgTime;
+            }
+
+            localStorage.setItem('cardGameStats', JSON.stringify(stats));
+        }
+
+        function showStats() {
+            let stats = JSON.parse(localStorage.getItem('cardGameStats') || '{"games": [], "bestScore": 0, "bestTime": null}');
+
+            document.getElementById('totalGames').textContent = stats.games.length;
+            document.getElementById('bestScore').textContent = stats.bestScore;
+            document.getElementById('bestTime').textContent = stats.bestTime ? formatTime(stats.bestTime) : '-';
+
+            const avgScore = stats.games.length > 0
+                ? Math.round(stats.games.reduce((sum, game) => sum + game.score, 0) / stats.games.length)
+                : 0;
+            document.getElementById('avgScore').textContent = avgScore;
+
+            document.getElementById('statsModal').classList.add('active');
+        }
+
+        function clearStats() {
+            if (confirm('정말로 모든 통계를 삭제하시겠습니까?')) {
+                localStorage.removeItem('cardGameStats');
+                showStats();
+            }
+        }
+
+        // Close modal
+        function closeModal() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.classList.remove('active');
+            });
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            initGame();
+        };
+    </script>
+</body>
+</html>

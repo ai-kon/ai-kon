@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>모두의마블 - 보드게임</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .space {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border: 2px solid #333;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            text-align: center;
+            padding: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .space-color {
+            width: 100%;
+            height: 20px;
+            margin-bottom: 4px;
+        }
+        .player-token {
+            position: absolute;
+            font-size: 20px;
+            z-index: 10;
+            transition: all 0.5s ease;
+        }
+        .dice {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .dice:hover {
+            transform: scale(1.05);
+        }
+        .dice.rolling {
+            animation: roll 0.5s ease;
+        }
+        @keyframes roll {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(90deg); }
+            50% { transform: rotate(180deg); }
+            75% { transform: rotate(270deg); }
+        }
+        .property-card {
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .player-info {
+            background: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 400px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-4">
+            <h1 class="text-4xl font-bold text-white mb-2">모두의마블</h1>
+            <button id="newGameBtn" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-bold">
+                <i class="fas fa-plus"></i> 새 게임
+            </button>
+            <button id="saveGameBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-bold ml-2">
+                <i class="fas fa-save"></i> 저장
+            </button>
+            <button id="loadGameBtn" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-bold ml-2">
+                <i class="fas fa-upload"></i> 불러오기
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <!-- Players Panel -->
+            <div class="lg:col-span-1">
+                <div class="bg-white bg-opacity-90 rounded-lg p-4 shadow-lg">
+                    <h2 class="text-xl font-bold mb-3 text-center">플레이어</h2>
+                    <div id="playersPanel"></div>
+
+                    <div class="mt-4 text-center">
+                        <button id="rollDiceBtn" class="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-bold text-lg">
+                            <i class="fas fa-dice"></i> 주사위 굴리기
+                        </button>
+                        <div class="mt-3 flex justify-center gap-2">
+                            <div id="dice1" class="dice">1</div>
+                            <div id="dice2" class="dice">1</div>
+                        </div>
+                        <div id="diceResult" class="mt-2 text-lg font-bold"></div>
+                    </div>
+
+                    <div id="currentSpaceInfo" class="mt-4 p-3 bg-gray-100 rounded-lg"></div>
+                </div>
+            </div>
+
+            <!-- Game Board -->
+            <div class="lg:col-span-3">
+                <div class="bg-white bg-opacity-90 rounded-lg p-8 shadow-lg">
+                    <div id="gameBoard" class="relative" style="width: 600px; height: 600px; margin: 0 auto;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Property Purchase Modal -->
+    <div id="purchaseModal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-2xl font-bold mb-4">부동산 구매</h3>
+            <div id="purchaseInfo" class="mb-4"></div>
+            <div class="flex gap-2">
+                <button id="buyBtn" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-bold">
+                    <i class="fas fa-check"></i> 구매
+                </button>
+                <button id="declineBtn" class="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold">
+                    <i class="fas fa-times"></i> 거절
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toll Payment Modal -->
+    <div id="tollModal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-2xl font-bold mb-4">통행료 지불</h3>
+            <div id="tollInfo" class="mb-4"></div>
+            <button id="payTollBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold">
+                <i class="fas fa-money-bill"></i> 지불
+            </button>
+        </div>
+    </div>
+
+    <!-- Chance Card Modal -->
+    <div id="chanceModal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-2xl font-bold mb-4 text-center">
+                <i class="fas fa-gift text-yellow-500"></i> 찬스!
+            </h3>
+            <div id="chanceInfo" class="mb-4 text-center text-lg"></div>
+            <button id="closeChanceBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold">
+                확인
+            </button>
+        </div>
+    </div>
+
+    <!-- New Game Setup Modal -->
+    <div id="setupModal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-2xl font-bold mb-4">게임 설정</h3>
+            <label class="block mb-2 font-bold">플레이어 수:</label>
+            <select id="playerCount" class="w-full p-2 border-2 border-gray-300 rounded mb-4">
+                <option value="2">2명</option>
+                <option value="3">3명</option>
+                <option value="4">4명</option>
+            </select>
+            <button id="startGameBtn" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-bold">
+                <i class="fas fa-play"></i> 게임 시작
+            </button>
+        </div>
+    </div>
+
+    <!-- Winner Modal -->
+    <div id="winnerModal" class="modal">
+        <div class="modal-content text-center">
+            <h3 class="text-3xl font-bold mb-4">
+                <i class="fas fa-trophy text-yellow-500"></i> 게임 종료!
+            </h3>
+            <div id="winnerInfo" class="mb-4 text-xl"></div>
+            <button id="newGameFromWinBtn" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-bold">
+                <i class="fas fa-redo"></i> 새 게임 시작
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        const gameState = {
+            players: [],
+            currentPlayerIndex: 0,
+            spaces: [],
+            gameActive: false
+        };
+
+        // Player tokens
+        const playerTokens = ['🚗', '🚢', '✈️', '🚂'];
+        const playerColors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f7b731'];
+
+        // Space definitions
+        const spaceDefinitions = [
+            { name: '출발', type: 'start', color: '#4ade80' },
+            { name: '서울', type: 'property', price: 50000, toll: 5000, color: '#60a5fa' },
+            { name: '부산', type: 'property', price: 80000, toll: 8000, color: '#60a5fa' },
+            { name: '찬스', type: 'chance', color: '#fbbf24' },
+            { name: '대구', type: 'property', price: 70000, toll: 7000, color: '#34d399' },
+            { name: '인천', type: 'property', price: 60000, toll: 6000, color: '#34d399' },
+            { name: '무인도', type: 'island', color: '#94a3b8' },
+            { name: '광주', type: 'property', price: 90000, toll: 9000, color: '#f472b6' },
+            { name: '대전', type: 'property', price: 85000, toll: 8500, color: '#f472b6' },
+            { name: '찬스', type: 'chance', color: '#fbbf24' },
+            { name: '울산', type: 'property', price: 75000, toll: 7500, color: '#a78bfa' },
+            { name: '제주', type: 'property', price: 100000, toll: 10000, color: '#a78bfa' }
+        ];
+
+        // Chance cards
+        const chanceCards = [
+            { text: '복권 당첨! 50000원 획득', money: 50000 },
+            { text: '세금 납부! 30000원 차감', money: -30000 },
+            { text: '월급날! 100000원 획득', money: 100000 },
+            { text: '과속 벌금! 20000원 차감', money: -20000 },
+            { text: '보너스! 70000원 획득', money: 70000 },
+            { text: '수리비! 40000원 차감', money: -40000 }
+        ];
+
+        // Initialize game board
+        function initBoard() {
+            const board = document.getElementById('gameBoard');
+            board.innerHTML = '';
+
+            gameState.spaces = spaceDefinitions.map((def, index) => ({
+                ...def,
+                owner: null,
+                position: index
+            }));
+
+            const boardSize = 600;
+            const spaceSize = 100;
+            const spacesPerSide = 3;
+
+            gameState.spaces.forEach((space, index) => {
+                const spaceEl = document.createElement('div');
+                spaceEl.className = 'space';
+                spaceEl.id = `space-${index}`;
+
+                // Calculate position
+                let x, y;
+                if (index < spacesPerSide) {
+                    // Bottom row
+                    x = index * (spaceSize + 50);
+                    y = boardSize - spaceSize;
+                } else if (index < spacesPerSide * 2) {
+                    // Right column
+                    x = boardSize - spaceSize;
+                    y = boardSize - (index - spacesPerSide + 1) * (spaceSize + 50);
+                } else if (index < spacesPerSide * 3) {
+                    // Top row
+                    x = boardSize - (index - spacesPerSide * 2 + 1) * (spaceSize + 50);
+                    y = 0;
+                } else {
+                    // Left column
+                    x = 0;
+                    y = (index - spacesPerSide * 3 + 1) * (spaceSize + 50);
+                }
+
+                spaceEl.style.left = x + 'px';
+                spaceEl.style.top = y + 'px';
+
+                const colorBar = document.createElement('div');
+                colorBar.className = 'space-color';
+                colorBar.style.background = space.color;
+                spaceEl.appendChild(colorBar);
+
+                const nameEl = document.createElement('div');
+                nameEl.className = 'font-bold';
+                nameEl.textContent = space.name;
+                spaceEl.appendChild(nameEl);
+
+                if (space.type === 'property') {
+                    const priceEl = document.createElement('div');
+                    priceEl.className = 'text-xs text-gray-600';
+                    priceEl.textContent = `${(space.price / 1000)}K`;
+                    spaceEl.appendChild(priceEl);
+                }
+
+                board.appendChild(spaceEl);
+            });
+        }
+
+        // Initialize players
+        function initPlayers(count) {
+            gameState.players = [];
+            for (let i = 0; i < count; i++) {
+                gameState.players.push({
+                    id: i,
+                    name: `플레이어 ${i + 1}`,
+                    token: playerTokens[i],
+                    color: playerColors[i],
+                    money: 500000,
+                    position: 0,
+                    properties: [],
+                    inIsland: 0,
+                    bankrupt: false
+                });
+            }
+            gameState.currentPlayerIndex = 0;
+            gameState.gameActive = true;
+            updatePlayersPanel();
+            renderPlayers();
+        }
+
+        // Update players panel
+        function updatePlayersPanel() {
+            const panel = document.getElementById('playersPanel');
+            panel.innerHTML = '';
+
+            gameState.players.forEach((player, index) => {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'player-info';
+                if (index === gameState.currentPlayerIndex && !player.bankrupt) {
+                    playerDiv.style.borderColor = player.color;
+                    playerDiv.style.borderWidth = '3px';
+                }
+                if (player.bankrupt) {
+                    playerDiv.style.opacity = '0.5';
+                }
+
+                playerDiv.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-2xl">${player.token}</div>
+                        <div class="font-bold">${player.name}</div>
+                    </div>
+                    <div class="text-sm">
+                        <div class="mb-1"><i class="fas fa-won-sign"></i> ${player.money.toLocaleString()}원</div>
+                        <div><i class="fas fa-building"></i> 부동산 ${player.properties.length}개</div>
+                        ${player.inIsland > 0 ? `<div class="text-red-500"><i class="fas fa-lock"></i> 무인도 ${player.inIsland}턴</div>` : ''}
+                        ${player.bankrupt ? '<div class="text-red-500 font-bold">파산</div>' : ''}
+                    </div>
+                `;
+
+                panel.appendChild(playerDiv);
+            });
+        }
+
+        // Render player tokens on board
+        function renderPlayers() {
+            // Remove existing tokens
+            document.querySelectorAll('.player-token').forEach(el => el.remove());
+
+            gameState.players.forEach((player, index) => {
+                if (player.bankrupt) return;
+
+                const spaceEl = document.getElementById(`space-${player.position}`);
+                const rect = spaceEl.getBoundingClientRect();
+                const boardRect = document.getElementById('gameBoard').getBoundingClientRect();
+
+                const token = document.createElement('div');
+                token.className = 'player-token';
+                token.textContent = player.token;
+                token.style.left = (rect.left - boardRect.left + 40 + (index * 25)) + 'px';
+                token.style.top = (rect.top - boardRect.top + 60) + 'px';
+
+                document.getElementById('gameBoard').appendChild(token);
+            });
+        }
+
+        // Calculate space position
+        function getSpacePosition(index) {
+            const spaceEl = document.getElementById(`space-${index}`);
+            return {
+                x: parseInt(spaceEl.style.left),
+                y: parseInt(spaceEl.style.top)
+            };
+        }
+
+        // Roll dice
+        function rollDice() {
+            if (!gameState.gameActive) {
+                alert('먼저 새 게임을 시작하세요!');
+                return;
+            }
+
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            if (currentPlayer.bankrupt) {
+                nextTurn();
+                return;
+            }
+
+            if (currentPlayer.inIsland > 0) {
+                currentPlayer.inIsland--;
+                updatePlayersPanel();
+                if (currentPlayer.inIsland === 0) {
+                    alert(`${currentPlayer.name}님이 무인도에서 탈출했습니다!`);
+                } else {
+                    alert(`${currentPlayer.name}님은 무인도에 갇혀있습니다. (${currentPlayer.inIsland}턴 남음)`);
+                }
+                nextTurn();
+                return;
+            }
+
+            const dice1 = Math.floor(Math.random() * 6) + 1;
+            const dice2 = Math.floor(Math.random() * 6) + 1;
+            const total = dice1 + dice2;
+
+            document.getElementById('dice1').classList.add('rolling');
+            document.getElementById('dice2').classList.add('rolling');
+
+            setTimeout(() => {
+                document.getElementById('dice1').textContent = dice1;
+                document.getElementById('dice2').textContent = dice2;
+                document.getElementById('diceResult').textContent = `합계: ${total}`;
+                document.getElementById('dice1').classList.remove('rolling');
+                document.getElementById('dice2').classList.remove('rolling');
+
+                movePlayer(currentPlayer, total);
+            }, 500);
+        }
+
+        // Move player
+        function movePlayer(player, steps) {
+            player.position = (player.position + steps) % gameState.spaces.length;
+
+            // Pass start bonus
+            if (player.position < steps && steps < gameState.spaces.length) {
+                player.money += 200000;
+                alert(`${player.name}님이 출발지를 지나갑니다! 200000원 획득!`);
+            }
+
+            renderPlayers();
+            updatePlayersPanel();
+
+            setTimeout(() => {
+                handleSpace(player, gameState.spaces[player.position]);
+            }, 600);
+        }
+
+        // Handle landing on a space
+        function handleSpace(player, space) {
+            updateCurrentSpaceInfo(space);
+
+            switch (space.type) {
+                case 'start':
+                    alert(`${player.name}님이 출발 지점에 도착했습니다!`);
+                    nextTurn();
+                    break;
+                case 'property':
+                    handleProperty(player, space);
+                    break;
+                case 'chance':
+                    handleChance(player);
+                    break;
+                case 'island':
+                    player.inIsland = 2;
+                    alert(`${player.name}님이 무인도에 갇혔습니다! 2턴 대기`);
+                    updatePlayersPanel();
+                    nextTurn();
+                    break;
+            }
+        }
+
+        // Update current space info
+        function updateCurrentSpaceInfo(space) {
+            const info = document.getElementById('currentSpaceInfo');
+            let html = `<div class="font-bold mb-2">${space.name}</div>`;
+
+            if (space.type === 'property') {
+                html += `<div class="text-sm">구매가: ${space.price.toLocaleString()}원</div>`;
+                html += `<div class="text-sm">통행료: ${space.toll.toLocaleString()}원</div>`;
+                if (space.owner !== null) {
+                    const owner = gameState.players[space.owner];
+                    html += `<div class="text-sm mt-2">소유자: ${owner.token} ${owner.name}</div>`;
+                }
+            }
+
+            info.innerHTML = html;
+        }
+
+        // Handle property
+        function handleProperty(player, space) {
+            if (space.owner === null) {
+                // Available for purchase
+                showPurchaseModal(player, space);
+            } else if (space.owner !== player.id) {
+                // Pay toll
+                const owner = gameState.players[space.owner];
+                showTollModal(player, space, owner);
+            } else {
+                // Own property
+                alert(`${player.name}님의 소유지입니다!`);
+                nextTurn();
+            }
+        }
+
+        // Show purchase modal
+        function showPurchaseModal(player, space) {
+            const modal = document.getElementById('purchaseModal');
+            const info = document.getElementById('purchaseInfo');
+
+            info.innerHTML = `
+                <div class="property-card">
+                    <h4 class="font-bold text-lg mb-2">${space.name}</h4>
+                    <div class="mb-2">구매가: ${space.price.toLocaleString()}원</div>
+                    <div class="mb-2">통행료: ${space.toll.toLocaleString()}원</div>
+                    <div class="text-sm text-gray-600">현재 보유금: ${player.money.toLocaleString()}원</div>
+                </div>
+            `;
+
+            modal.classList.add('active');
+
+            document.getElementById('buyBtn').onclick = () => {
+                if (player.money >= space.price) {
+                    player.money -= space.price;
+                    space.owner = player.id;
+                    player.properties.push(space.position);
+                    updatePlayersPanel();
+                    alert(`${player.name}님이 ${space.name}을(를) 구매했습니다!`);
+                    modal.classList.remove('active');
+                    nextTurn();
+                } else {
+                    alert('돈이 부족합니다!');
+                }
+            };
+
+            document.getElementById('declineBtn').onclick = () => {
+                modal.classList.remove('active');
+                nextTurn();
+            };
+        }
+
+        // Show toll modal
+        function showTollModal(player, space, owner) {
+            const modal = document.getElementById('tollModal');
+            const info = document.getElementById('tollInfo');
+
+            info.innerHTML = `
+                <div class="property-card">
+                    <h4 class="font-bold text-lg mb-2">${space.name}</h4>
+                    <div class="mb-2">소유자: ${owner.token} ${owner.name}</div>
+                    <div class="mb-2 text-red-600 font-bold">통행료: ${space.toll.toLocaleString()}원</div>
+                    <div class="text-sm text-gray-600">현재 보유금: ${player.money.toLocaleString()}원</div>
+                </div>
+            `;
+
+            modal.classList.add('active');
+
+            document.getElementById('payTollBtn').onclick = () => {
+                if (player.money >= space.toll) {
+                    player.money -= space.toll;
+                    owner.money += space.toll;
+                    updatePlayersPanel();
+                    alert(`${player.name}님이 ${owner.name}님에게 ${space.toll.toLocaleString()}원을 지불했습니다!`);
+                } else {
+                    handleBankruptcy(player, owner);
+                }
+                modal.classList.remove('active');
+                nextTurn();
+            };
+        }
+
+        // Handle chance
+        function handleChance(player) {
+            const card = chanceCards[Math.floor(Math.random() * chanceCards.length)];
+            const modal = document.getElementById('chanceModal');
+            const info = document.getElementById('chanceInfo');
+
+            info.innerHTML = `
+                <div class="text-xl mb-3">${card.text}</div>
+                <div class="text-2xl font-bold ${card.money > 0 ? 'text-green-600' : 'text-red-600'}">
+                    ${card.money > 0 ? '+' : ''}${card.money.toLocaleString()}원
+                </div>
+            `;
+
+            player.money += card.money;
+            updatePlayersPanel();
+
+            modal.classList.add('active');
+
+            document.getElementById('closeChanceBtn').onclick = () => {
+                modal.classList.remove('active');
+                if (player.money < 0) {
+                    handleBankruptcy(player, null);
+                }
+                nextTurn();
+            };
+        }
+
+        // Handle bankruptcy
+        function handleBankruptcy(player, creditor) {
+            player.bankrupt = true;
+            alert(`${player.name}님이 파산했습니다!`);
+
+            // Transfer properties
+            player.properties.forEach(propIndex => {
+                const space = gameState.spaces[propIndex];
+                if (creditor) {
+                    space.owner = creditor.id;
+                    creditor.properties.push(propIndex);
+                } else {
+                    space.owner = null;
+                }
+            });
+            player.properties = [];
+
+            updatePlayersPanel();
+            checkWinner();
+        }
+
+        // Check for winner
+        function checkWinner() {
+            const activePlayers = gameState.players.filter(p => !p.bankrupt);
+            if (activePlayers.length === 1) {
+                const winner = activePlayers[0];
+                showWinnerModal(winner);
+            }
+        }
+
+        // Show winner modal
+        function showWinnerModal(winner) {
+            const modal = document.getElementById('winnerModal');
+            const info = document.getElementById('winnerInfo');
+
+            info.innerHTML = `
+                <div class="text-4xl mb-4">${winner.token}</div>
+                <div class="font-bold text-2xl mb-2">${winner.name} 승리!</div>
+                <div class="text-lg">최종 자산: ${winner.money.toLocaleString()}원</div>
+                <div class="text-lg">보유 부동산: ${winner.properties.length}개</div>
+            `;
+
+            modal.classList.add('active');
+            gameState.gameActive = false;
+        }
+
+        // Next turn
+        function nextTurn() {
+            do {
+                gameState.currentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+            } while (gameState.players[gameState.currentPlayerIndex].bankrupt &&
+                     gameState.players.filter(p => !p.bankrupt).length > 1);
+
+            updatePlayersPanel();
+        }
+
+        // Save game
+        function saveGame() {
+            if (!gameState.gameActive) {
+                alert('진행 중인 게임이 없습니다!');
+                return;
+            }
+            localStorage.setItem('marbleGame', JSON.stringify(gameState));
+            alert('게임이 저장되었습니다!');
+        }
+
+        // Load game
+        function loadGame() {
+            const saved = localStorage.getItem('marbleGame');
+            if (!saved) {
+                alert('저장된 게임이 없습니다!');
+                return;
+            }
+
+            const loaded = JSON.parse(saved);
+            Object.assign(gameState, loaded);
+            updatePlayersPanel();
+            renderPlayers();
+            alert('게임을 불러왔습니다!');
+        }
+
+        // Show setup modal
+        function showSetupModal() {
+            document.getElementById('setupModal').classList.add('active');
+        }
+
+        // Start new game
+        function startNewGame() {
+            const count = parseInt(document.getElementById('playerCount').value);
+            document.getElementById('setupModal').classList.remove('active');
+            initBoard();
+            initPlayers(count);
+            document.getElementById('diceResult').textContent = '';
+        }
+
+        // Event listeners
+        document.getElementById('rollDiceBtn').addEventListener('click', rollDice);
+        document.getElementById('newGameBtn').addEventListener('click', showSetupModal);
+        document.getElementById('saveGameBtn').addEventListener('click', saveGame);
+        document.getElementById('loadGameBtn').addEventListener('click', loadGame);
+        document.getElementById('startGameBtn').addEventListener('click', startNewGame);
+        document.getElementById('newGameFromWinBtn').addEventListener('click', () => {
+            document.getElementById('winnerModal').classList.remove('active');
+            showSetupModal();
+        });
+
+        // Initialize board on load
+        initBoard();
+    </script>
+</body>
+</html>

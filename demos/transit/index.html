@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>서울 버스 - 실시간 대중교통 정보</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            min-height: 100vh;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .bus-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        .bus-blue { background: #3b82f6; color: white; }
+        .bus-green { background: #10b981; color: white; }
+        .bus-red { background: #ef4444; color: white; }
+        .bus-yellow { background: #f59e0b; color: white; }
+
+        .subway-line {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .line-1 { background: #0052A4; }
+        .line-2 { background: #00A84D; }
+        .line-3 { background: #EF7C1C; }
+        .line-4 { background: #00A5DE; }
+        .line-5 { background: #996CAC; }
+        .line-6 { background: #CD7C2F; }
+        .line-7 { background: #747F00; }
+        .line-8 { background: #E6186C; }
+        .line-9 { background: #BDB092; }
+
+        .arrival-time {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .tab-active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .favorite-star {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .favorite-star:hover {
+            transform: scale(1.2);
+        }
+
+        .route-step {
+            position: relative;
+            padding-left: 40px;
+        }
+
+        .route-step::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 30px;
+            bottom: -10px;
+            width: 2px;
+            background: #e5e7eb;
+        }
+
+        .route-step:last-child::before {
+            display: none;
+        }
+
+        .stat-card {
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-md mx-auto">
+        <!-- Header -->
+        <div class="glass rounded-2xl shadow-2xl p-6 mb-4">
+            <div class="flex items-center justify-between mb-2">
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    <i class="fas fa-bus mr-2"></i>서울 버스
+                </h1>
+                <div class="text-sm text-gray-600">
+                    <i class="fas fa-clock mr-1"></i>
+                    <span id="currentTime"></span>
+                </div>
+            </div>
+            <p class="text-gray-600 text-sm">실시간 대중교통 정보</p>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="glass rounded-2xl shadow-lg p-4 mb-4">
+            <div class="relative">
+                <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="정류장, 노선번호 검색..."
+                    class="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none transition"
+                >
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="glass rounded-2xl shadow-lg p-2 mb-4 flex gap-2">
+            <button onclick="switchTab('bus')" id="tabBus" class="tab-active flex-1 py-3 rounded-xl font-semibold transition">
+                <i class="fas fa-bus mr-2"></i>버스
+            </button>
+            <button onclick="switchTab('subway')" id="tabSubway" class="flex-1 py-3 rounded-xl font-semibold transition hover:bg-gray-100">
+                <i class="fas fa-subway mr-2"></i>지하철
+            </button>
+            <button onclick="switchTab('route')" id="tabRoute" class="flex-1 py-3 rounded-xl font-semibold transition hover:bg-gray-100">
+                <i class="fas fa-route mr-2"></i>경로
+            </button>
+            <button onclick="switchTab('favorites')" id="tabFavorites" class="flex-1 py-3 rounded-xl font-semibold transition hover:bg-gray-100">
+                <i class="fas fa-star mr-2"></i>즐겨찾기
+            </button>
+        </div>
+
+        <!-- Bus Tab Content -->
+        <div id="busContent" class="content-tab">
+            <!-- Stats Dashboard -->
+            <div class="glass rounded-2xl shadow-lg p-4 mb-4">
+                <h3 class="font-bold text-lg mb-3 flex items-center">
+                    <i class="fas fa-chart-line mr-2 text-purple-600"></i>이용 통계
+                </h3>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-3 text-white text-center">
+                        <div class="text-2xl font-bold" id="statSearches">0</div>
+                        <div class="text-xs opacity-90">검색</div>
+                    </div>
+                    <div class="stat-card bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-3 text-white text-center">
+                        <div class="text-2xl font-bold" id="statFavorites">0</div>
+                        <div class="text-xs opacity-90">즐겨찾기</div>
+                    </div>
+                    <div class="stat-card bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-3 text-white text-center">
+                        <div class="text-2xl font-bold" id="statViews">0</div>
+                        <div class="text-xs opacity-90">조회</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nearby Stops -->
+            <div class="glass rounded-2xl shadow-lg p-4 mb-4">
+                <h3 class="font-bold text-lg mb-3 flex items-center">
+                    <i class="fas fa-location-dot mr-2 text-red-600"></i>내 주변 정류장
+                </h3>
+                <div id="nearbyStops"></div>
+            </div>
+
+            <!-- Real-time Bus Arrivals -->
+            <div class="glass rounded-2xl shadow-lg p-4">
+                <h3 class="font-bold text-lg mb-3 flex items-center">
+                    <i class="fas fa-bus-simple mr-2 text-blue-600"></i>실시간 도착 정보
+                </h3>
+                <div id="busArrivals"></div>
+            </div>
+        </div>
+
+        <!-- Subway Tab Content -->
+        <div id="subwayContent" class="content-tab hidden">
+            <div class="glass rounded-2xl shadow-lg p-4 mb-4">
+                <h3 class="font-bold text-lg mb-3 flex items-center">
+                    <i class="fas fa-train mr-2 text-green-600"></i>지하철 노선도
+                </h3>
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <button onclick="selectSubwayLine(1)" class="subway-line line-1">1</button>
+                    <button onclick="selectSubwayLine(2)" class="subway-line line-2">2</button>
+                    <button onclick="selectSubwayLine(3)" class="subway-line line-3">3</button>
+                    <button onclick="selectSubwayLine(4)" class="subway-line line-4">4</button>
+                    <button onclick="selectSubwayLine(5)" class="subway-line line-5">5</button>
+                    <button onclick="selectSubwayLine(6)" class="subway-line line-6">6</button>
+                    <button onclick="selectSubwayLine(7)" class="subway-line line-7">7</button>
+                    <button onclick="selectSubwayLine(8)" class="subway-line line-8">8</button>
+                    <button onclick="selectSubwayLine(9)" class="subway-line line-9">9</button>
+                </div>
+            </div>
+
+            <div class="glass rounded-2xl shadow-lg p-4">
+                <h3 class="font-bold text-lg mb-3">실시간 열차 정보</h3>
+                <div id="subwayArrivals"></div>
+            </div>
+        </div>
+
+        <!-- Route Tab Content -->
+        <div id="routeContent" class="content-tab hidden">
+            <div class="glass rounded-2xl shadow-lg p-4 mb-4">
+                <h3 class="font-bold text-lg mb-3 flex items-center">
+                    <i class="fas fa-map-marked-alt mr-2 text-orange-600"></i>경로 검색
+                </h3>
+                <div class="space-y-3">
+                    <div class="relative">
+                        <i class="fas fa-circle absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 text-xs"></i>
+                        <input
+                            type="text"
+                            id="routeStart"
+                            placeholder="출발지"
+                            class="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition"
+                        >
+                    </div>
+                    <div class="relative">
+                        <i class="fas fa-location-dot absolute left-4 top-1/2 transform -translate-y-1/2 text-red-500"></i>
+                        <input
+                            type="text"
+                            id="routeEnd"
+                            placeholder="도착지"
+                            class="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-red-500 focus:outline-none transition"
+                        >
+                    </div>
+                    <button onclick="searchRoute()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition">
+                        <i class="fas fa-search mr-2"></i>경로 찾기
+                    </button>
+                </div>
+            </div>
+
+            <div id="routeResults" class="glass rounded-2xl shadow-lg p-4">
+                <h3 class="font-bold text-lg mb-3">추천 경로</h3>
+                <div id="routeList"></div>
+            </div>
+        </div>
+
+        <!-- Favorites Tab Content -->
+        <div id="favoritesContent" class="content-tab hidden">
+            <div class="glass rounded-2xl shadow-lg p-4">
+                <h3 class="font-bold text-lg mb-3 flex items-center justify-between">
+                    <span><i class="fas fa-star mr-2 text-yellow-500"></i>즐겨찾기</span>
+                    <button onclick="clearFavorites()" class="text-sm text-red-500 hover:text-red-700">
+                        <i class="fas fa-trash mr-1"></i>전체 삭제
+                    </button>
+                </h3>
+                <div id="favoritesList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample Data
+        const busStops = [
+            { id: 1, name: '강남역', distance: 120, buses: ['146', '240', '401', '470'] },
+            { id: 2, name: '역삼역', distance: 250, buses: ['146', '401', '470'] },
+            { id: 3, name: '선릉역', distance: 380, buses: ['146', '240', '401'] },
+            { id: 4, name: '삼성역', distance: 450, buses: ['240', '401', '470'] },
+            { id: 5, name: '종로3가', distance: 580, buses: ['146', '240'] }
+        ];
+
+        const busData = {
+            '146': { type: 'blue', name: '간선', route: '강남역 ↔ 종로3가', arrivals: [
+                { time: 2, seats: 10, busNum: '4201', stops: 3 },
+                { time: 8, seats: 25, busNum: '4202', stops: 5 }
+            ]},
+            '240': { type: 'green', name: '지선', route: '강남역 ↔ 대치역', arrivals: [
+                { time: 1, seats: 5, busNum: '3105', stops: 2 },
+                { time: 5, seats: 15, busNum: '3106', stops: 4 }
+            ]},
+            '401': { type: 'red', name: '광역', route: '강남역 ↔ 남양주', arrivals: [
+                { time: 4, seats: 20, busNum: '8301', stops: 6 },
+                { time: 12, seats: 30, busNum: '8302', stops: 8 }
+            ]},
+            '470': { type: 'yellow', name: '순환', route: '강남 순환', arrivals: [
+                { time: 3, seats: 12, busNum: '5401', stops: 4 },
+                { time: 9, seats: 18, busNum: '5402', stops: 6 }
+            ]}
+        };
+
+        const subwayLines = {
+            1: { color: '#0052A4', stations: ['서울역', '시청', '종각', '종로3가', '종로5가', '동대문', '신설동'] },
+            2: { color: '#00A84D', stations: ['시청', '을지로입구', '을지로3가', '을지로4가', '동대문역사문화공원', '신당', '상왕십리', '왕십리', '한양대', '뚝섬', '성수', '건대입구', '강변', '잠실나루', '잠실', '잠실새내', '종합운동장', '삼성', '선릉', '역삼', '강남', '교대', '서초', '방배', '사당'] },
+            3: { color: '#EF7C1C', stations: ['대화', '주엽', '정발산', '마두', '백석', '대곡', '화정', '원당', '원흥', '삼송', '지축', '구파발', '연신내', '불광', '녹번', '홍제', '무악재', '독립문', '경복궁', '안국', '종로3가', '을지로3가', '충무로', '동대입구', '약수', '금호', '옥수', '압구정', '신사', '잠원', '고속터미널', '교대', '남부터미널', '양재', '매봉', '도곡', '대치', '학여울', '대청', '일원', '수서', '가락시장', '경찰병원', '오금'] },
+            4: { color: '#00A5DE', stations: ['진접', '오남', '별내별가람', '당고개', '상계', '노원', '창동', '쌍문', '수유', '미아', '미아사거리', '길음', '성신여대입구', '한성대입구', '혜화', '동대문', '동대문역사문화공원', '충무로', '명동', '회현', '서울역', '숙대입구', '삼각지', '신용산', '이촌', '동작', '총신대입구', '사당', '남태령'] },
+            5: { color: '#996CAC', stations: ['방화', '개화산', '김포공항', '송정', '마곡', '발산', '우장산', '화곡', '까치산', '신정', '목동', '오목교', '양평', '영등포구청', '영등포시장', '신길', '여의도', '여의나루', '마포', '공덕', '애오개', '충정로', '서대문', '광화문', '종로3가', '을지로4가', '동대문역사문화공원', '청구', '신금호', '행당', '왕십리', '마장', '답십리', '장한평', '군자', '아차산', '광나루', '천호', '강동', '길동', '굽은다리', '명일', '고덕', '상일동', '둔촌동', '올림픽공원', '방이', '오금', '개롱', '거여', '마천'] },
+            6: { color: '#CD7C2F', stations: ['응암', '역촌', '불광', '독바위', '연신내', '구산', '새절', '증산', '디지털미디어시티', '월드컵경기장', '마포구청', '망원', '합정', '상수', '광흥창', '대흥', '공덕', '효창공원앞', '삼각지', '녹사평', '이태원', '한강진', '버티고개', '약수', '청구', '신당', '동묘앞', '창신', '보문', '안암', '고려대', '월곡', '상월곡', '돌곶이', '석계', '태릉입구', '화랑대', '봉화산'] },
+            7: { color: '#747F00', stations: ['장암', '도봉산', '수락산', '마들', '노원', '중계', '하계', '공릉', '태릉입구', '먹골', '중화', '상봉', '면목', '사가정', '용마산', '중곡', '군자', '어린이대공원', '건대입구', '뚝섬유원지', '청담', '강남구청', '학동', '논현', '반포', '고속터미널', '내방', '총신대입구', '남성', '숭실대입구', '상도', '장승배기', '신대방삼거리', '보라매', '신풍', '대림', '남구로', '가산디지털단지', '철산', '광명사거리', '천왕', '온수', '까치울', '부천종합운동장', '춘의', '신중동', '부천시청', '상동', '삼산체육관', '굴포천', '부평구청'] },
+            8: { color: '#E6186C', stations: ['암사', '천호', '강동구청', '몽촌토성', '잠실', '석촌', '송파', '가락시장', '문정', '장지', '복정', '산성', '남한산성입구', '단대오거리', '신흥', '수진', '모란'] },
+            9: { color: '#BDB092', stations: ['개화', '김포공항', '공항시장', '신방화', '마곡나루', '양천향교', '가양', '증미', '등촌', '염창', '신목동', '선유도', '당산', '국회의사당', '여의도', '샛강', '노량진', '노들', '흑석', '동작', '구반포', '신반포', '고속터미널', '사평', '신논현', '언주', '선정릉', '삼성중앙', '봉은사', '종합운동장', '삼전', '석촌고분', '석촌', '송파나루', '한성백제', '올림픽공원', '둔촌오륜', '중앙보훈병원'] }
+        };
+
+        const sampleRoutes = [
+            {
+                name: '최단 시간 경로',
+                time: 28,
+                transfers: 1,
+                cost: 1400,
+                steps: [
+                    { type: 'bus', number: '146', from: '강남역', to: '종로3가', time: 15 },
+                    { type: 'subway', line: 3, from: '종로3가', to: '을지로3가', time: 3 },
+                    { type: 'walk', from: '을지로3가', to: '목적지', time: 10 }
+                ]
+            },
+            {
+                name: '최소 환승 경로',
+                time: 35,
+                transfers: 0,
+                cost: 1250,
+                steps: [
+                    { type: 'bus', number: '401', from: '강남역', to: '목적지', time: 35 }
+                ]
+            },
+            {
+                name: '최저 요금 경로',
+                time: 32,
+                transfers: 1,
+                cost: 1200,
+                steps: [
+                    { type: 'subway', line: 2, from: '강남역', to: '을지로입구', time: 20 },
+                    { type: 'walk', from: '을지로입구', to: '목적지', time: 12 }
+                ]
+            }
+        ];
+
+        // State Management
+        let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+        let stats = JSON.parse(localStorage.getItem('stats')) || { searches: 0, favorites: 0, views: 0 };
+
+        // Initialize
+        function init() {
+            updateTime();
+            setInterval(updateTime, 1000);
+            setInterval(updateArrivals, 5000);
+            renderNearbyStops();
+            renderBusArrivals();
+            renderSubwayArrivals();
+            updateStats();
+            setupSearch();
+        }
+
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('currentTime').textContent = timeStr;
+        }
+
+        function switchTab(tab) {
+            // Hide all content
+            document.querySelectorAll('.content-tab').forEach(el => el.classList.add('hidden'));
+
+            // Remove active class from all tabs
+            document.querySelectorAll('[id^="tab"]').forEach(el => {
+                el.classList.remove('tab-active');
+                el.classList.add('hover:bg-gray-100');
+            });
+
+            // Show selected content and activate tab
+            document.getElementById(`${tab}Content`).classList.remove('hidden');
+            const activeTab = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+            activeTab.classList.add('tab-active');
+            activeTab.classList.remove('hover:bg-gray-100');
+
+            stats.views++;
+            saveStats();
+            updateStats();
+        }
+
+        function renderNearbyStops() {
+            const container = document.getElementById('nearbyStops');
+            container.innerHTML = busStops.map(stop => `
+                <div class="p-3 border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition cursor-pointer" onclick="viewStopDetail(${stop.id})">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            <i class="fas fa-map-marker-alt text-red-500 mr-2"></i>
+                            <span class="font-semibold">${stop.name}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-gray-500">${stop.distance}m</span>
+                            <i class="fas fa-star favorite-star ${isFavorite(stop.id) ? 'text-yellow-500' : 'text-gray-300'}"
+                               onclick="event.stopPropagation(); toggleFavorite(${stop.id}, '${stop.name}', 'stop')"></i>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        ${stop.buses.map(bus => {
+                            const busInfo = busData[bus];
+                            return `<span class="bus-badge bus-${busInfo.type}">${bus}</span>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderBusArrivals() {
+            const container = document.getElementById('busArrivals');
+            const html = Object.entries(busData).map(([busNum, data]) => `
+                <div class="mb-4 last:mb-0">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="bus-badge bus-${data.type}">${busNum}</span>
+                            <span class="text-sm text-gray-600">${data.name}</span>
+                        </div>
+                        <i class="fas fa-star favorite-star ${isFavorite(busNum) ? 'text-yellow-500' : 'text-gray-300'}"
+                           onclick="toggleFavorite('${busNum}', '${busNum}번 버스', 'bus')"></i>
+                    </div>
+                    <div class="text-xs text-gray-500 mb-2">
+                        <i class="fas fa-route mr-1"></i>${data.route}
+                    </div>
+                    ${data.arrivals.map((arrival, idx) => `
+                        <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg mb-2 last:mb-0">
+                            <div class="flex items-center gap-3">
+                                <div class="arrival-time text-lg font-bold text-blue-600">
+                                    ${arrival.time}분
+                                </div>
+                                <div class="text-sm text-gray-600">
+                                    <div>${arrival.stops}정거장 전</div>
+                                    <div class="text-xs">${arrival.busNum}번 차량</div>
+                                </div>
+                            </div>
+                            <div class="text-sm">
+                                <span class="px-2 py-1 rounded ${arrival.seats < 10 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">
+                                    <i class="fas fa-chair mr-1"></i>${arrival.seats}석
+                                </span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+            container.innerHTML = html;
+        }
+
+        function renderSubwayArrivals() {
+            const container = document.getElementById('subwayArrivals');
+            const sampleArrivals = [
+                { line: 2, station: '강남역', direction: '외선순환', time: '2분 후 도착', nextTime: '5분' },
+                { line: 2, station: '강남역', direction: '내선순환', time: '3분 후 도착', nextTime: '7분' },
+                { line: 3, station: '신사역', direction: '대화 방면', time: '1분 후 도착', nextTime: '6분' },
+                { line: 7, station: '강남구청역', direction: '장암 방면', time: '4분 후 도착', nextTime: '9분' }
+            ];
+
+            container.innerHTML = sampleArrivals.map(arrival => `
+                <div class="p-3 border-b border-gray-200 last:border-b-0">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="subway-line line-${arrival.line}">${arrival.line}</span>
+                            <div>
+                                <div class="font-semibold">${arrival.station}</div>
+                                <div class="text-xs text-gray-500">${arrival.direction}</div>
+                            </div>
+                        </div>
+                        <i class="fas fa-star favorite-star ${isFavorite(`subway-${arrival.line}-${arrival.station}`) ? 'text-yellow-500' : 'text-gray-300'}"
+                           onclick="toggleFavorite('subway-${arrival.line}-${arrival.station}', '${arrival.line}호선 ${arrival.station}', 'subway')"></i>
+                    </div>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="arrival-time text-blue-600 font-semibold">
+                            <i class="fas fa-train mr-1"></i>${arrival.time}
+                        </span>
+                        <span class="text-gray-500">다음 열차: ${arrival.nextTime}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectSubwayLine(lineNum) {
+            const line = subwayLines[lineNum];
+            alert(`${lineNum}호선 선택\n주요 역: ${line.stations.slice(0, 5).join(' → ')}...`);
+        }
+
+        function searchRoute() {
+            const start = document.getElementById('routeStart').value;
+            const end = document.getElementById('routeEnd').value;
+
+            if (!start || !end) {
+                alert('출발지와 도착지를 모두 입력해주세요.');
+                return;
+            }
+
+            stats.searches++;
+            saveStats();
+            updateStats();
+
+            const container = document.getElementById('routeList');
+            container.innerHTML = sampleRoutes.map((route, idx) => `
+                <div class="mb-4 last:mb-0 p-4 border-2 ${idx === 0 ? 'border-blue-500 bg-blue-50' : 'border-gray-200'} rounded-xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="font-bold text-lg">${route.name}</div>
+                        ${idx === 0 ? '<span class="text-xs bg-blue-500 text-white px-2 py-1 rounded">추천</span>' : ''}
+                    </div>
+                    <div class="flex items-center gap-4 mb-3 text-sm text-gray-600">
+                        <span><i class="fas fa-clock mr-1"></i>${route.time}분</span>
+                        <span><i class="fas fa-exchange-alt mr-1"></i>환승 ${route.transfers}회</span>
+                        <span><i class="fas fa-won-sign mr-1"></i>${route.cost}원</span>
+                    </div>
+                    <div class="space-y-3">
+                        ${route.steps.map((step, stepIdx) => `
+                            <div class="route-step">
+                                <div class="flex items-start gap-3">
+                                    <div class="flex-shrink-0">
+                                        ${step.type === 'bus' ? `<span class="bus-badge bus-blue">${step.number}</span>` :
+                                          step.type === 'subway' ? `<span class="subway-line line-${step.line}">${step.line}</span>` :
+                                          '<i class="fas fa-walking text-gray-600 text-xl"></i>'}
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="font-semibold">${step.from}</div>
+                                        <div class="text-sm text-gray-500">
+                                            <i class="fas fa-arrow-down mr-1"></i>${step.time}분
+                                        </div>
+                                        <div class="font-semibold mt-1">${step.to}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleFavorite(id, name, type) {
+            const favId = String(id);
+            const existingIndex = favorites.findIndex(f => f.id === favId);
+
+            if (existingIndex > -1) {
+                favorites.splice(existingIndex, 1);
+                stats.favorites = Math.max(0, stats.favorites - 1);
+            } else {
+                favorites.push({ id: favId, name, type, addedAt: new Date().toISOString() });
+                stats.favorites++;
+            }
+
+            saveFavorites();
+            saveStats();
+            updateStats();
+            renderFavorites();
+
+            // Refresh current view to update stars
+            if (type === 'stop') renderNearbyStops();
+            if (type === 'bus') renderBusArrivals();
+            if (type === 'subway') renderSubwayArrivals();
+        }
+
+        function isFavorite(id) {
+            return favorites.some(f => f.id === String(id));
+        }
+
+        function renderFavorites() {
+            const container = document.getElementById('favoritesList');
+
+            if (favorites.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-gray-400">
+                        <i class="fas fa-star text-5xl mb-3"></i>
+                        <p>즐겨찾기가 없습니다</p>
+                        <p class="text-sm mt-2">자주 이용하는 정류장이나 노선을 즐겨찾기에 추가하세요</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = favorites.map(fav => `
+                <div class="p-3 border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <i class="fas ${fav.type === 'bus' ? 'fa-bus' : fav.type === 'subway' ? 'fa-subway' : 'fa-map-marker-alt'} text-${fav.type === 'bus' ? 'blue' : fav.type === 'subway' ? 'green' : 'red'}-500"></i>
+                            <div>
+                                <div class="font-semibold">${fav.name}</div>
+                                <div class="text-xs text-gray-500">${new Date(fav.addedAt).toLocaleDateString('ko-KR')}</div>
+                            </div>
+                        </div>
+                        <button onclick="toggleFavorite('${fav.id}', '${fav.name}', '${fav.type}')" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function clearFavorites() {
+            if (confirm('모든 즐겨찾기를 삭제하시겠습니까?')) {
+                favorites = [];
+                stats.favorites = 0;
+                saveFavorites();
+                saveStats();
+                updateStats();
+                renderFavorites();
+            }
+        }
+
+        function viewStopDetail(stopId) {
+            const stop = busStops.find(s => s.id === stopId);
+            if (stop) {
+                alert(`${stop.name} 정류장\n거리: ${stop.distance}m\n운행 버스: ${stop.buses.join(', ')}`);
+            }
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                if (query.length > 0) {
+                    stats.searches++;
+                    saveStats();
+                    updateStats();
+                }
+                // Search logic would go here
+            });
+        }
+
+        function updateArrivals() {
+            // Simulate real-time updates by randomly adjusting arrival times
+            Object.values(busData).forEach(data => {
+                data.arrivals.forEach(arrival => {
+                    if (Math.random() > 0.7) {
+                        arrival.time = Math.max(1, arrival.time - 1);
+                    }
+                });
+            });
+            renderBusArrivals();
+        }
+
+        function saveFavorites() {
+            localStorage.setItem('favorites', JSON.stringify(favorites));
+        }
+
+        function saveStats() {
+            localStorage.setItem('stats', JSON.stringify(stats));
+        }
+
+        function updateStats() {
+            document.getElementById('statSearches').textContent = stats.searches;
+            document.getElementById('statFavorites').textContent = stats.favorites;
+            document.getElementById('statViews').textContent = stats.views;
+        }
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>

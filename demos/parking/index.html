@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>파킹프렌즈 - 주차장 찾기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+        }
+        .parking-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .parking-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        }
+        .tab-active {
+            background: white;
+            color: #667eea;
+        }
+        .badge {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .filter-chip {
+            transition: all 0.2s;
+        }
+        .filter-chip:hover {
+            transform: scale(1.05);
+        }
+        .filter-chip.active {
+            background: #667eea;
+            color: white;
+        }
+    </style>
+</head>
+<body class="font-sans">
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-2xl">
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-purple-600 to-pink-500 text-white p-6 rounded-b-3xl shadow-lg">
+            <div class="flex items-center justify-between mb-4">
+                <h1 class="text-2xl font-bold">파킹프렌즈</h1>
+                <button onclick="showSettings()" class="text-white">
+                    <i class="fas fa-cog text-xl"></i>
+                </button>
+            </div>
+            <div class="relative">
+                <input type="text" id="searchInput" placeholder="목적지를 검색하세요..."
+                       class="w-full px-4 py-3 pr-12 rounded-full text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                       oninput="filterParking()">
+                <i class="fas fa-search absolute right-4 top-4 text-gray-400"></i>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <div class="flex bg-gray-100 p-2 m-4 rounded-full">
+            <button onclick="switchTab('search')" id="tabSearch" class="flex-1 py-2 px-4 rounded-full tab-active font-semibold">
+                <i class="fas fa-search mr-1"></i> 검색
+            </button>
+            <button onclick="switchTab('favorites')" id="tabFavorites" class="flex-1 py-2 px-4 rounded-full font-semibold text-gray-600">
+                <i class="fas fa-heart mr-1"></i> 즐겨찾기
+            </button>
+            <button onclick="switchTab('history')" id="tabHistory" class="flex-1 py-2 px-4 rounded-full font-semibold text-gray-600">
+                <i class="fas fa-history mr-1"></i> 이용내역
+            </button>
+        </div>
+
+        <!-- Filters -->
+        <div id="filtersSection" class="px-4 mb-4">
+            <div class="flex gap-2 overflow-x-auto pb-2">
+                <button onclick="toggleFilter('all')" class="filter-chip active px-4 py-2 rounded-full bg-gray-200 text-sm whitespace-nowrap">
+                    전체
+                </button>
+                <button onclick="toggleFilter('indoor')" class="filter-chip px-4 py-2 rounded-full bg-gray-200 text-sm whitespace-nowrap">
+                    실내주차장
+                </button>
+                <button onclick="toggleFilter('outdoor')" class="filter-chip px-4 py-2 rounded-full bg-gray-200 text-sm whitespace-nowrap">
+                    실외주차장
+                </button>
+                <button onclick="toggleFilter('ev')" class="filter-chip px-4 py-2 rounded-full bg-gray-200 text-sm whitespace-nowrap">
+                    전기차충전
+                </button>
+                <button onclick="toggleFilter('cheap')" class="filter-chip px-4 py-2 rounded-full bg-gray-200 text-sm whitespace-nowrap">
+                    저렴한순
+                </button>
+                <button onclick="toggleFilter('near')" class="filter-chip px-4 py-2 rounded-full bg-gray-200 text-sm whitespace-nowrap">
+                    가까운순
+                </button>
+            </div>
+        </div>
+
+        <!-- Search Content -->
+        <div id="searchContent" class="px-4 pb-24">
+            <div id="parkingList"></div>
+        </div>
+
+        <!-- Favorites Content -->
+        <div id="favoritesContent" class="px-4 pb-24 hidden">
+            <div id="favoritesList"></div>
+        </div>
+
+        <!-- History Content -->
+        <div id="historyContent" class="px-4 pb-24 hidden">
+            <div id="historyList"></div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 flex justify-around py-3 shadow-lg">
+            <button onclick="switchTab('search')" class="flex flex-col items-center text-purple-600">
+                <i class="fas fa-home text-xl mb-1"></i>
+                <span class="text-xs">홈</span>
+            </button>
+            <button onclick="switchTab('favorites')" class="flex flex-col items-center text-gray-400">
+                <i class="fas fa-heart text-xl mb-1"></i>
+                <span class="text-xs">즐겨찾기</span>
+            </button>
+            <button onclick="openMap()" class="flex flex-col items-center text-gray-400">
+                <i class="fas fa-map-marked-alt text-xl mb-1"></i>
+                <span class="text-xs">지도</span>
+            </button>
+            <button onclick="switchTab('history')" class="flex flex-col items-center text-gray-400">
+                <i class="fas fa-history text-xl mb-1"></i>
+                <span class="text-xs">이용내역</span>
+            </button>
+        </nav>
+
+        <!-- Reservation Modal -->
+        <div id="reservationModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
+            <div class="bg-white w-full max-w-md rounded-t-3xl p-6 animate-slide-up">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">예약하기</h2>
+                    <button onclick="closeReservationModal()" class="text-gray-400">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div id="reservationContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample parking lot data
+        const parkingLots = [
+            {
+                id: 1,
+                name: "강남역 지하주차장",
+                location: "서울 강남구 강남대로 지하 396",
+                distance: 0.3,
+                available: 45,
+                total: 120,
+                hourlyRate: 3000,
+                dailyRate: 30000,
+                type: "indoor",
+                hasEV: true,
+                evSpots: 8,
+                lat: 37.498095,
+                lng: 127.027610
+            },
+            {
+                id: 2,
+                name: "코엑스몰 주차장",
+                location: "서울 강남구 영동대로 513",
+                distance: 1.2,
+                available: 120,
+                total: 500,
+                hourlyRate: 4000,
+                dailyRate: 40000,
+                type: "indoor",
+                hasEV: true,
+                evSpots: 20,
+                lat: 37.512647,
+                lng: 127.059278
+            },
+            {
+                id: 3,
+                name: "신논현역 공영주차장",
+                location: "서울 강남구 강남대로 536",
+                distance: 0.5,
+                available: 12,
+                total: 80,
+                hourlyRate: 2000,
+                dailyRate: 20000,
+                type: "outdoor",
+                hasEV: false,
+                evSpots: 0,
+                lat: 37.504692,
+                lng: 127.025492
+            },
+            {
+                id: 4,
+                name: "역삼역 타워파킹",
+                location: "서울 강남구 테헤란로 지하 152",
+                distance: 0.8,
+                available: 8,
+                total: 60,
+                hourlyRate: 3500,
+                dailyRate: 35000,
+                type: "indoor",
+                hasEV: true,
+                evSpots: 5,
+                lat: 37.500582,
+                lng: 127.036319
+            },
+            {
+                id: 5,
+                name: "선릉역 노상주차장",
+                location: "서울 강남구 선릉로 일대",
+                distance: 1.5,
+                available: 25,
+                total: 50,
+                hourlyRate: 1500,
+                dailyRate: 15000,
+                type: "outdoor",
+                hasEV: false,
+                evSpots: 0,
+                lat: 37.504741,
+                lng: 127.049076
+            },
+            {
+                id: 6,
+                name: "삼성역 아셈타워 주차장",
+                location: "서울 강남구 봉은사로 521",
+                distance: 2.1,
+                available: 65,
+                total: 200,
+                hourlyRate: 4500,
+                dailyRate: 45000,
+                type: "indoor",
+                hasEV: true,
+                evSpots: 15,
+                lat: 37.508842,
+                lng: 127.063583
+            },
+            {
+                id: 7,
+                name: "청담역 공영주차장",
+                location: "서울 강남구 도산대로 일대",
+                distance: 2.8,
+                available: 3,
+                total: 40,
+                hourlyRate: 2500,
+                dailyRate: 25000,
+                type: "outdoor",
+                hasEV: true,
+                evSpots: 2,
+                lat: 37.519444,
+                lng: 127.053611
+            },
+            {
+                id: 8,
+                name: "압구정 갤러리아백화점",
+                location: "서울 강남구 압구정로 343",
+                distance: 3.2,
+                available: 88,
+                total: 300,
+                hourlyRate: 5000,
+                dailyRate: 50000,
+                type: "indoor",
+                hasEV: true,
+                evSpots: 25,
+                lat: 37.527407,
+                lng: 127.040706
+            },
+            {
+                id: 9,
+                name: "서울역 공영주차장",
+                location: "서울 용산구 한강대로 405",
+                distance: 5.5,
+                available: 32,
+                total: 150,
+                hourlyRate: 2000,
+                dailyRate: 18000,
+                type: "indoor",
+                hasEV: true,
+                evSpots: 10,
+                lat: 37.554462,
+                lng: 126.970665
+            },
+            {
+                id: 10,
+                name: "이태원역 노상주차장",
+                location: "서울 용산구 이태원로 일대",
+                distance: 4.2,
+                available: 5,
+                total: 35,
+                hourlyRate: 2500,
+                dailyRate: 22000,
+                type: "outdoor",
+                hasEV: false,
+                evSpots: 0,
+                lat: 37.534521,
+                lng: 126.994524
+            }
+        ];
+
+        let currentFilter = 'all';
+        let favorites = JSON.parse(localStorage.getItem('parkingFavorites') || '[]');
+        let history = JSON.parse(localStorage.getItem('parkingHistory') || '[]');
+
+        function renderParkingList(lots) {
+            const container = document.getElementById('parkingList');
+            if (lots.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-gray-400">
+                        <i class="fas fa-parking text-6xl mb-4"></i>
+                        <p>검색 결과가 없습니다</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = lots.map(lot => `
+                <div class="parking-card bg-white rounded-2xl p-4 mb-4 shadow-md">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1">
+                            <h3 class="font-bold text-lg mb-1">${lot.name}</h3>
+                            <p class="text-sm text-gray-500 flex items-center">
+                                <i class="fas fa-map-marker-alt mr-1"></i>
+                                ${lot.location}
+                            </p>
+                        </div>
+                        <button onclick="toggleFavorite(${lot.id})" class="text-2xl ${favorites.includes(lot.id) ? 'text-red-500' : 'text-gray-300'}">
+                            <i class="fas fa-heart"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex gap-2 mb-3">
+                        <span class="px-2 py-1 bg-purple-100 text-purple-600 rounded-full text-xs">
+                            <i class="fas fa-walking mr-1"></i>${lot.distance}km
+                        </span>
+                        <span class="px-2 py-1 bg-blue-100 text-blue-600 rounded-full text-xs">
+                            ${lot.type === 'indoor' ? '실내' : '실외'}
+                        </span>
+                        ${lot.hasEV ? `
+                            <span class="px-2 py-1 bg-green-100 text-green-600 rounded-full text-xs">
+                                <i class="fas fa-charging-station mr-1"></i>전기차 ${lot.evSpots}대
+                            </span>
+                        ` : ''}
+                    </div>
+
+                    <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-3 mb-3">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm text-gray-600">실시간 주차 가능</span>
+                            <span class="font-bold text-lg ${lot.available < 10 ? 'text-red-500' : 'text-green-500'}">
+                                ${lot.available}/${lot.total}
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full"
+                                 style="width: ${(lot.available / lot.total) * 100}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="text-center flex-1">
+                            <p class="text-xs text-gray-500 mb-1">시간당</p>
+                            <p class="font-bold text-purple-600">${lot.hourlyRate.toLocaleString()}원</p>
+                        </div>
+                        <div class="w-px h-8 bg-gray-200"></div>
+                        <div class="text-center flex-1">
+                            <p class="text-xs text-gray-500 mb-1">일일권</p>
+                            <p class="font-bold text-pink-600">${lot.dailyRate.toLocaleString()}원</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button onclick="openReservation(${lot.id})"
+                                class="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition">
+                            <i class="fas fa-calendar-check mr-2"></i>예약하기
+                        </button>
+                        <button onclick="openNavigation(${lot.id})"
+                                class="px-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition">
+                            <i class="fas fa-directions"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderFavorites() {
+            const container = document.getElementById('favoritesList');
+            const favLots = parkingLots.filter(lot => favorites.includes(lot.id));
+
+            if (favLots.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-gray-400">
+                        <i class="fas fa-heart text-6xl mb-4"></i>
+                        <p>즐겨찾기한 주차장이 없습니다</p>
+                    </div>
+                `;
+                return;
+            }
+
+            renderParkingListInContainer(favLots, container);
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('historyList');
+
+            if (history.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-gray-400">
+                        <i class="fas fa-history text-6xl mb-4"></i>
+                        <p>이용 내역이 없습니다</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = history.map((record, index) => {
+                const lot = parkingLots.find(l => l.id === record.lotId);
+                if (!lot) return '';
+
+                return `
+                    <div class="bg-white rounded-2xl p-4 mb-4 shadow-md">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold">${lot.name}</h3>
+                            <span class="text-xs text-gray-500">${record.date}</span>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-3">${record.duration}</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-lg font-bold text-purple-600">${record.cost.toLocaleString()}원</span>
+                            <button onclick="reserveAgain(${lot.id})"
+                                    class="px-4 py-2 bg-purple-100 text-purple-600 rounded-lg text-sm font-semibold hover:bg-purple-200 transition">
+                                다시 예약
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderParkingListInContainer(lots, container) {
+            container.innerHTML = lots.map(lot => `
+                <div class="parking-card bg-white rounded-2xl p-4 mb-4 shadow-md">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1">
+                            <h3 class="font-bold text-lg mb-1">${lot.name}</h3>
+                            <p class="text-sm text-gray-500 flex items-center">
+                                <i class="fas fa-map-marker-alt mr-1"></i>
+                                ${lot.location}
+                            </p>
+                        </div>
+                        <button onclick="toggleFavorite(${lot.id})" class="text-2xl ${favorites.includes(lot.id) ? 'text-red-500' : 'text-gray-300'}">
+                            <i class="fas fa-heart"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex gap-2 mb-3">
+                        <span class="px-2 py-1 bg-purple-100 text-purple-600 rounded-full text-xs">
+                            <i class="fas fa-walking mr-1"></i>${lot.distance}km
+                        </span>
+                        <span class="px-2 py-1 bg-blue-100 text-blue-600 rounded-full text-xs">
+                            ${lot.type === 'indoor' ? '실내' : '실외'}
+                        </span>
+                        ${lot.hasEV ? `
+                            <span class="px-2 py-1 bg-green-100 text-green-600 rounded-full text-xs">
+                                <i class="fas fa-charging-station mr-1"></i>전기차 ${lot.evSpots}대
+                            </span>
+                        ` : ''}
+                    </div>
+
+                    <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-3 mb-3">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm text-gray-600">실시간 주차 가능</span>
+                            <span class="font-bold text-lg ${lot.available < 10 ? 'text-red-500' : 'text-green-500'}">
+                                ${lot.available}/${lot.total}
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full"
+                                 style="width: ${(lot.available / lot.total) * 100}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="text-center flex-1">
+                            <p class="text-xs text-gray-500 mb-1">시간당</p>
+                            <p class="font-bold text-purple-600">${lot.hourlyRate.toLocaleString()}원</p>
+                        </div>
+                        <div class="w-px h-8 bg-gray-200"></div>
+                        <div class="text-center flex-1">
+                            <p class="text-xs text-gray-500 mb-1">일일권</p>
+                            <p class="font-bold text-pink-600">${lot.dailyRate.toLocaleString()}원</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button onclick="openReservation(${lot.id})"
+                                class="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition">
+                            <i class="fas fa-calendar-check mr-2"></i>예약하기
+                        </button>
+                        <button onclick="openNavigation(${lot.id})"
+                                class="px-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition">
+                            <i class="fas fa-directions"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function switchTab(tab) {
+            // Hide all content
+            document.getElementById('searchContent').classList.add('hidden');
+            document.getElementById('favoritesContent').classList.add('hidden');
+            document.getElementById('historyContent').classList.add('hidden');
+
+            // Reset all tab buttons
+            document.getElementById('tabSearch').classList.remove('tab-active');
+            document.getElementById('tabSearch').classList.add('text-gray-600');
+            document.getElementById('tabFavorites').classList.remove('tab-active');
+            document.getElementById('tabFavorites').classList.add('text-gray-600');
+            document.getElementById('tabHistory').classList.remove('tab-active');
+            document.getElementById('tabHistory').classList.add('text-gray-600');
+
+            // Show selected content and activate tab
+            if (tab === 'search') {
+                document.getElementById('searchContent').classList.remove('hidden');
+                document.getElementById('tabSearch').classList.add('tab-active');
+                document.getElementById('tabSearch').classList.remove('text-gray-600');
+                document.getElementById('filtersSection').classList.remove('hidden');
+            } else if (tab === 'favorites') {
+                document.getElementById('favoritesContent').classList.remove('hidden');
+                document.getElementById('tabFavorites').classList.add('tab-active');
+                document.getElementById('tabFavorites').classList.remove('text-gray-600');
+                document.getElementById('filtersSection').classList.add('hidden');
+                renderFavorites();
+            } else if (tab === 'history') {
+                document.getElementById('historyContent').classList.remove('hidden');
+                document.getElementById('tabHistory').classList.add('tab-active');
+                document.getElementById('tabHistory').classList.remove('text-gray-600');
+                document.getElementById('filtersSection').classList.add('hidden');
+                renderHistory();
+            }
+        }
+
+        function toggleFilter(filter) {
+            const chips = document.querySelectorAll('.filter-chip');
+            chips.forEach(chip => chip.classList.remove('active'));
+            event.target.classList.add('active');
+            currentFilter = filter;
+            filterParking();
+        }
+
+        function filterParking() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            let filtered = parkingLots.filter(lot =>
+                lot.name.toLowerCase().includes(searchTerm) ||
+                lot.location.toLowerCase().includes(searchTerm)
+            );
+
+            if (currentFilter === 'indoor') {
+                filtered = filtered.filter(lot => lot.type === 'indoor');
+            } else if (currentFilter === 'outdoor') {
+                filtered = filtered.filter(lot => lot.type === 'outdoor');
+            } else if (currentFilter === 'ev') {
+                filtered = filtered.filter(lot => lot.hasEV);
+            } else if (currentFilter === 'cheap') {
+                filtered.sort((a, b) => a.hourlyRate - b.hourlyRate);
+            } else if (currentFilter === 'near') {
+                filtered.sort((a, b) => a.distance - b.distance);
+            }
+
+            renderParkingList(filtered);
+        }
+
+        function toggleFavorite(id) {
+            const index = favorites.indexOf(id);
+            if (index > -1) {
+                favorites.splice(index, 1);
+            } else {
+                favorites.push(id);
+            }
+            localStorage.setItem('parkingFavorites', JSON.stringify(favorites));
+            filterParking();
+            renderFavorites();
+        }
+
+        function openReservation(id) {
+            const lot = parkingLots.find(l => l.id === id);
+            const modal = document.getElementById('reservationModal');
+            const content = document.getElementById('reservationContent');
+
+            const now = new Date();
+            const minDate = now.toISOString().slice(0, 16);
+
+            content.innerHTML = `
+                <div class="mb-4">
+                    <h3 class="font-bold text-lg mb-2">${lot.name}</h3>
+                    <p class="text-sm text-gray-600">${lot.location}</p>
+                </div>
+
+                <div class="bg-purple-50 rounded-xl p-4 mb-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">실시간 주차 가능</span>
+                        <span class="font-bold text-lg ${lot.available < 10 ? 'text-red-500' : 'text-green-500'}">
+                            ${lot.available}/${lot.total}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="space-y-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">입차 시간</label>
+                        <input type="datetime-local" id="entryTime" min="${minDate}"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">예상 주차 시간</label>
+                        <select id="parkingDuration" onchange="calculateCost(${lot.id})"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="1">1시간</option>
+                            <option value="2">2시간</option>
+                            <option value="3">3시간</option>
+                            <option value="4">4시간</option>
+                            <option value="6">6시간</option>
+                            <option value="12">12시간</option>
+                            <option value="24">종일권</option>
+                        </select>
+                    </div>
+                    ${lot.hasEV ? `
+                        <div class="flex items-center">
+                            <input type="checkbox" id="needEV" class="mr-2">
+                            <label for="needEV" class="text-sm">전기차 충전 필요</label>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 mb-6">
+                    <div class="flex justify-between items-center">
+                        <span class="font-semibold">예상 요금</span>
+                        <span id="estimatedCost" class="text-2xl font-bold text-purple-600">${lot.hourlyRate.toLocaleString()}원</span>
+                    </div>
+                </div>
+
+                <button onclick="confirmReservation(${lot.id})"
+                        class="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition">
+                    예약 확정하기
+                </button>
+            `;
+
+            modal.classList.remove('hidden');
+        }
+
+        function calculateCost(lotId) {
+            const lot = parkingLots.find(l => l.id === lotId);
+            const duration = parseInt(document.getElementById('parkingDuration').value);
+            let cost;
+
+            if (duration === 24) {
+                cost = lot.dailyRate;
+            } else {
+                cost = lot.hourlyRate * duration;
+            }
+
+            document.getElementById('estimatedCost').textContent = cost.toLocaleString() + '원';
+        }
+
+        function confirmReservation(lotId) {
+            const lot = parkingLots.find(l => l.id === lotId);
+            const duration = parseInt(document.getElementById('parkingDuration').value);
+            const entryTime = document.getElementById('entryTime').value;
+
+            if (!entryTime) {
+                alert('입차 시간을 선택해주세요.');
+                return;
+            }
+
+            let cost;
+            if (duration === 24) {
+                cost = lot.dailyRate;
+            } else {
+                cost = lot.hourlyRate * duration;
+            }
+
+            const record = {
+                lotId: lotId,
+                date: new Date().toLocaleDateString('ko-KR'),
+                duration: duration === 24 ? '종일권' : `${duration}시간`,
+                cost: cost,
+                entryTime: entryTime
+            };
+
+            history.unshift(record);
+            if (history.length > 20) history.pop();
+            localStorage.setItem('parkingHistory', JSON.stringify(history));
+
+            closeReservationModal();
+            alert(`예약이 완료되었습니다!\n\n주차장: ${lot.name}\n입차시간: ${new Date(entryTime).toLocaleString('ko-KR')}\n예상요금: ${cost.toLocaleString()}원`);
+        }
+
+        function closeReservationModal() {
+            document.getElementById('reservationModal').classList.add('hidden');
+        }
+
+        function reserveAgain(lotId) {
+            openReservation(lotId);
+        }
+
+        function openNavigation(lotId) {
+            const lot = parkingLots.find(l => l.id === lotId);
+            const url = `https://map.kakao.com/link/to/${encodeURIComponent(lot.name)},${lot.lat},${lot.lng}`;
+            window.open(url, '_blank');
+        }
+
+        function openMap() {
+            alert('지도 기능은 개발 중입니다.');
+        }
+
+        function showSettings() {
+            alert('설정 기능은 개발 중입니다.');
+        }
+
+        // Initialize
+        renderParkingList(parkingLots);
+
+        // Simulate real-time availability updates
+        setInterval(() => {
+            parkingLots.forEach(lot => {
+                const change = Math.floor(Math.random() * 5) - 2;
+                lot.available = Math.max(0, Math.min(lot.total, lot.available + change));
+            });
+
+            const currentTab = !document.getElementById('searchContent').classList.contains('hidden') ? 'search' :
+                              !document.getElementById('favoritesContent').classList.contains('hidden') ? 'favorites' :
+                              'history';
+
+            if (currentTab === 'search') {
+                filterParking();
+            } else if (currentTab === 'favorites') {
+                renderFavorites();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

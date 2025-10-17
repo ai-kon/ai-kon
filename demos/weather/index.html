@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>날씨 앱 - Weather App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .weather-card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        .weather-icon {
+            font-size: 120px;
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        .hourly-card {
+            min-width: 100px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .day-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            transition: all 0.3s ease;
+        }
+        .day-card:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            transform: translateY(-5px);
+        }
+        .aqi-good { background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); }
+        .aqi-moderate { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); }
+        .aqi-unhealthy { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .aqi-hazardous { background: linear-gradient(135deg, #ff0844 0%, #ffb199 100%); }
+        .city-btn {
+            transition: all 0.3s ease;
+        }
+        .city-btn:hover {
+            transform: scale(1.05);
+        }
+        .city-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="container mx-auto max-w-6xl">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-4xl font-bold text-white mb-4">
+                <i class="fas fa-cloud-sun mr-2"></i>날씨 정보
+            </h1>
+
+            <!-- City Selection -->
+            <div class="flex flex-wrap justify-center gap-3 mb-4">
+                <button class="city-btn px-6 py-2 rounded-full bg-white text-gray-800 font-semibold shadow-lg" onclick="selectCity('Seoul')">
+                    서울
+                </button>
+                <button class="city-btn px-6 py-2 rounded-full bg-white text-gray-800 font-semibold shadow-lg" onclick="selectCity('Busan')">
+                    부산
+                </button>
+                <button class="city-btn px-6 py-2 rounded-full bg-white text-gray-800 font-semibold shadow-lg" onclick="selectCity('Incheon')">
+                    인천
+                </button>
+                <button class="city-btn px-6 py-2 rounded-full bg-white text-gray-800 font-semibold shadow-lg" onclick="selectCity('Daegu')">
+                    대구
+                </button>
+                <button class="city-btn px-6 py-2 rounded-full bg-white text-gray-800 font-semibold shadow-lg" onclick="selectCity('Gwangju')">
+                    광주
+                </button>
+            </div>
+        </div>
+
+        <!-- Current Weather -->
+        <div class="weather-card p-8 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Left Side - Main Weather -->
+                <div class="text-center md:text-left">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2" id="cityName">서울</h2>
+                    <p class="text-gray-600 mb-4" id="currentDate">2025년 10월 17일</p>
+                    <div class="weather-icon mb-4" id="weatherIcon">🌤️</div>
+                    <div class="text-6xl font-bold text-gray-800 mb-2" id="temperature">23°</div>
+                    <div class="text-2xl text-gray-600 mb-4" id="weatherDescription">맑음</div>
+                    <div class="text-lg text-gray-600">
+                        체감온도 <span id="feelsLike" class="font-semibold">21°</span>
+                    </div>
+                </div>
+
+                <!-- Right Side - Details -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl">
+                        <div class="flex items-center mb-2">
+                            <i class="fas fa-wind text-blue-500 text-2xl mr-3"></i>
+                            <span class="text-gray-600">풍속</span>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-800" id="windSpeed">3.2 m/s</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-cyan-50 to-cyan-100 p-4 rounded-xl">
+                        <div class="flex items-center mb-2">
+                            <i class="fas fa-tint text-cyan-500 text-2xl mr-3"></i>
+                            <span class="text-gray-600">습도</span>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-800" id="humidity">65%</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl">
+                        <div class="flex items-center mb-2">
+                            <i class="fas fa-sun text-orange-500 text-2xl mr-3"></i>
+                            <span class="text-gray-600">일출</span>
+                        </div>
+                        <div class="text-xl font-bold text-gray-800" id="sunrise">06:42</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl">
+                        <div class="flex items-center mb-2">
+                            <i class="fas fa-moon text-purple-500 text-2xl mr-3"></i>
+                            <span class="text-gray-600">일몰</span>
+                        </div>
+                        <div class="text-xl font-bold text-gray-800" id="sunset">18:15</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Air Quality & UV Index -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <!-- Air Quality -->
+            <div class="weather-card p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-smog mr-2"></i>미세먼지
+                </h3>
+                <div class="aqi-good rounded-xl p-4 text-center" id="aqiCard">
+                    <div class="text-3xl font-bold text-white mb-2" id="aqiValue">42</div>
+                    <div class="text-white font-semibold" id="aqiStatus">좋음</div>
+                </div>
+                <div class="mt-4 text-sm text-gray-600">
+                    PM2.5: <span id="pm25" class="font-semibold">15 μg/m³</span>
+                </div>
+                <div class="text-sm text-gray-600">
+                    PM10: <span id="pm10" class="font-semibold">25 μg/m³</span>
+                </div>
+            </div>
+
+            <!-- UV Index -->
+            <div class="weather-card p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-sun mr-2"></i>자외선 지수
+                </h3>
+                <div class="bg-gradient-to-br from-yellow-100 to-orange-100 rounded-xl p-4 text-center">
+                    <div class="text-3xl font-bold text-orange-600 mb-2" id="uvIndex">5</div>
+                    <div class="text-gray-700 font-semibold" id="uvStatus">보통</div>
+                </div>
+                <div class="mt-4 text-sm text-gray-600">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    <span id="uvAdvice">자외선 차단제 사용 권장</span>
+                </div>
+            </div>
+
+            <!-- Precipitation -->
+            <div class="weather-card p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-cloud-rain mr-2"></i>강수량
+                </h3>
+                <div class="bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl p-4 text-center">
+                    <div class="text-3xl font-bold text-blue-600 mb-2" id="precipitation">0 mm</div>
+                    <div class="text-gray-700 font-semibold">지난 1시간</div>
+                </div>
+                <div class="mt-4 text-sm text-gray-600">
+                    강수확률: <span id="precipChance" class="font-semibold">10%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weather Warning -->
+        <div id="weatherWarning" class="weather-card p-4 mb-6 bg-yellow-50 border-l-4 border-yellow-400 hidden">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-yellow-600 text-2xl mr-3"></i>
+                <div>
+                    <h4 class="font-bold text-gray-800">기상 특보</h4>
+                    <p class="text-gray-600" id="warningText">현재 특보가 없습니다</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hourly Forecast -->
+        <div class="weather-card p-6 mb-6">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-clock mr-2"></i>시간별 예보
+            </h3>
+            <div class="overflow-x-auto">
+                <div class="flex gap-4 pb-4" id="hourlyForecast">
+                    <!-- Hourly items will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Temperature Trend Chart -->
+        <div class="weather-card p-6 mb-6">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-chart-line mr-2"></i>온도 추이
+            </h3>
+            <canvas id="temperatureChart"></canvas>
+        </div>
+
+        <!-- 7-Day Forecast -->
+        <div class="weather-card p-6 mb-6">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-calendar-week mr-2"></i>주간 예보
+            </h3>
+            <div class="space-y-4" id="weeklyForecast">
+                <!-- Weekly items will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center text-white text-sm py-4">
+            <p>마지막 업데이트: <span id="lastUpdate">--:--</span></p>
+            <p class="mt-2">데이터는 시뮬레이션되었습니다</p>
+        </div>
+    </div>
+
+    <script>
+        // Weather data simulation
+        const weatherData = {
+            Seoul: { lat: 37.5665, lon: 126.9780, name: '서울' },
+            Busan: { lat: 35.1796, lon: 129.0756, name: '부산' },
+            Incheon: { lat: 37.4563, lon: 126.7052, name: '인천' },
+            Daegu: { lat: 35.8714, lon: 128.6014, name: '대구' },
+            Gwangju: { lat: 35.1595, lon: 126.8526, name: '광주' }
+        };
+
+        const weatherEmojis = {
+            clear: '☀️',
+            partlyCloudy: '🌤️',
+            cloudy: '☁️',
+            rainy: '🌧️',
+            stormy: '⛈️',
+            snowy: '❄️',
+            foggy: '🌫️'
+        };
+
+        const weatherDescriptions = {
+            clear: '맑음',
+            partlyCloudy: '구름 조금',
+            cloudy: '흐림',
+            rainy: '비',
+            stormy: '천둥번개',
+            snowy: '눈',
+            foggy: '안개'
+        };
+
+        let currentCity = 'Seoul';
+        let temperatureChart = null;
+
+        // Initialize app
+        function init() {
+            const savedCity = localStorage.getItem('selectedCity') || 'Seoul';
+            selectCity(savedCity);
+            updateDateTime();
+            setInterval(updateDateTime, 60000); // Update every minute
+        }
+
+        function updateDateTime() {
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('ko-KR', options);
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function selectCity(city) {
+            currentCity = city;
+            localStorage.setItem('selectedCity', city);
+
+            // Update active button
+            document.querySelectorAll('.city-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event?.target?.classList.add('active');
+
+            updateWeather();
+        }
+
+        function updateWeather() {
+            const city = weatherData[currentCity];
+
+            // Simulate weather data
+            const baseTemp = 15 + Math.random() * 15;
+            const weatherTypes = ['clear', 'partlyCloudy', 'cloudy', 'rainy'];
+            const weatherType = weatherTypes[Math.floor(Math.random() * weatherTypes.length)];
+
+            // Update current weather
+            document.getElementById('cityName').textContent = city.name;
+            document.getElementById('weatherIcon').textContent = weatherEmojis[weatherType];
+            document.getElementById('temperature').textContent = Math.round(baseTemp) + '°';
+            document.getElementById('weatherDescription').textContent = weatherDescriptions[weatherType];
+            document.getElementById('feelsLike').textContent = Math.round(baseTemp - 2) + '°';
+            document.getElementById('windSpeed').textContent = (Math.random() * 5 + 1).toFixed(1) + ' m/s';
+            document.getElementById('humidity').textContent = Math.round(50 + Math.random() * 30) + '%';
+
+            // Sunrise/Sunset
+            document.getElementById('sunrise').textContent = '06:' + Math.floor(Math.random() * 60).toString().padStart(2, '0');
+            document.getElementById('sunset').textContent = '18:' + Math.floor(Math.random() * 60).toString().padStart(2, '0');
+
+            // Air Quality
+            const aqi = Math.floor(Math.random() * 150);
+            updateAirQuality(aqi);
+
+            // UV Index
+            const uv = Math.floor(Math.random() * 11);
+            updateUVIndex(uv);
+
+            // Precipitation
+            const precip = Math.random() < 0.3 ? (Math.random() * 10).toFixed(1) : 0;
+            document.getElementById('precipitation').textContent = precip + ' mm';
+            document.getElementById('precipChance').textContent = Math.floor(Math.random() * 100) + '%';
+
+            // Weather Warning
+            if (aqi > 100 || uv > 8) {
+                document.getElementById('weatherWarning').classList.remove('hidden');
+                if (aqi > 100) {
+                    document.getElementById('warningText').textContent = '미세먼지 나쁨 - 외출 시 마스크 착용 권장';
+                } else if (uv > 8) {
+                    document.getElementById('warningText').textContent = '자외선 매우 높음 - 자외선 차단 필수';
+                }
+            } else {
+                document.getElementById('weatherWarning').classList.add('hidden');
+            }
+
+            // Update hourly and weekly forecasts
+            updateHourlyForecast(baseTemp, weatherType);
+            updateWeeklyForecast(baseTemp);
+            updateTemperatureChart(baseTemp);
+        }
+
+        function updateAirQuality(aqi) {
+            const aqiCard = document.getElementById('aqiCard');
+            document.getElementById('aqiValue').textContent = aqi;
+
+            aqiCard.className = 'rounded-xl p-4 text-center';
+
+            if (aqi <= 50) {
+                aqiCard.classList.add('aqi-good');
+                document.getElementById('aqiStatus').textContent = '좋음';
+            } else if (aqi <= 100) {
+                aqiCard.classList.add('aqi-moderate');
+                document.getElementById('aqiStatus').textContent = '보통';
+            } else if (aqi <= 150) {
+                aqiCard.classList.add('aqi-unhealthy');
+                document.getElementById('aqiStatus').textContent = '나쁨';
+            } else {
+                aqiCard.classList.add('aqi-hazardous');
+                document.getElementById('aqiStatus').textContent = '매우 나쁨';
+            }
+
+            document.getElementById('pm25').textContent = Math.floor(aqi * 0.4) + ' μg/m³';
+            document.getElementById('pm10').textContent = Math.floor(aqi * 0.6) + ' μg/m³';
+        }
+
+        function updateUVIndex(uv) {
+            document.getElementById('uvIndex').textContent = uv;
+
+            let status, advice;
+            if (uv <= 2) {
+                status = '낮음';
+                advice = '선크림 불필요';
+            } else if (uv <= 5) {
+                status = '보통';
+                advice = '자외선 차단제 사용 권장';
+            } else if (uv <= 7) {
+                status = '높음';
+                advice = '자외선 차단제 필수';
+            } else if (uv <= 10) {
+                status = '매우 높음';
+                advice = '외출 시 각별히 주의';
+            } else {
+                status = '위험';
+                advice = '가능한 실내에 머물 것';
+            }
+
+            document.getElementById('uvStatus').textContent = status;
+            document.getElementById('uvAdvice').innerHTML = '<i class="fas fa-info-circle mr-1"></i>' + advice;
+        }
+
+        function updateHourlyForecast(baseTemp, baseWeather) {
+            const container = document.getElementById('hourlyForecast');
+            container.innerHTML = '';
+
+            const weatherTypes = ['clear', 'partlyCloudy', 'cloudy', 'rainy'];
+
+            for (let i = 0; i < 24; i++) {
+                const hour = (new Date().getHours() + i) % 24;
+                const temp = Math.round(baseTemp + (Math.random() - 0.5) * 8);
+                const weather = i < 3 ? baseWeather : weatherTypes[Math.floor(Math.random() * weatherTypes.length)];
+
+                const card = document.createElement('div');
+                card.className = 'hourly-card p-4 rounded-xl text-center flex-shrink-0';
+                card.innerHTML = `
+                    <div class="text-sm font-semibold mb-2">${hour.toString().padStart(2, '0')}:00</div>
+                    <div class="text-4xl mb-2">${weatherEmojis[weather]}</div>
+                    <div class="text-xl font-bold">${temp}°</div>
+                    <div class="text-xs mt-2">${Math.floor(Math.random() * 100)}%</div>
+                `;
+                container.appendChild(card);
+            }
+        }
+
+        function updateWeeklyForecast(baseTemp) {
+            const container = document.getElementById('weeklyForecast');
+            container.innerHTML = '';
+
+            const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+            const weatherTypes = ['clear', 'partlyCloudy', 'cloudy', 'rainy'];
+
+            for (let i = 0; i < 7; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() + i);
+                const dayName = i === 0 ? '오늘' : days[date.getDay()];
+
+                const maxTemp = Math.round(baseTemp + (Math.random() - 0.5) * 10 + 3);
+                const minTemp = Math.round(baseTemp + (Math.random() - 0.5) * 10 - 3);
+                const weather = weatherTypes[Math.floor(Math.random() * weatherTypes.length)];
+                const precipChance = Math.floor(Math.random() * 100);
+
+                const card = document.createElement('div');
+                card.className = 'day-card p-4 rounded-xl cursor-pointer';
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4 flex-1">
+                            <div class="w-24">
+                                <div class="font-bold text-gray-800">${dayName}</div>
+                                <div class="text-sm text-gray-600">${date.getMonth() + 1}/${date.getDate()}</div>
+                            </div>
+                            <div class="text-5xl">${weatherEmojis[weather]}</div>
+                            <div class="flex-1">
+                                <div class="text-gray-700 font-semibold">${weatherDescriptions[weather]}</div>
+                                <div class="text-sm text-gray-600">
+                                    <i class="fas fa-tint text-blue-500"></i> ${precipChance}%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-red-500">${maxTemp}°</div>
+                            <div class="text-xl text-blue-500">${minTemp}°</div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            }
+        }
+
+        function updateTemperatureChart(baseTemp) {
+            const ctx = document.getElementById('temperatureChart').getContext('2d');
+
+            const hours = [];
+            const temps = [];
+
+            for (let i = 0; i < 24; i++) {
+                const hour = (new Date().getHours() + i) % 24;
+                hours.push(hour.toString().padStart(2, '0') + ':00');
+                temps.push(baseTemp + (Math.random() - 0.5) * 8);
+            }
+
+            if (temperatureChart) {
+                temperatureChart.destroy();
+            }
+
+            temperatureChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hours,
+                    datasets: [{
+                        label: '온도 (°C)',
+                        data: temps,
+                        borderColor: 'rgb(102, 126, 234)',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y.toFixed(1) + '°C';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(0) + '°';
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxTicksLimit: 12
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', init);
+
+        // Refresh data every 5 minutes
+        setInterval(updateWeather, 300000);
+    </script>
+</body>
+</html>

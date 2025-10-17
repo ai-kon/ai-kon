@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>헬스 트래커</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .stat-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        .badge {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="glass rounded-2xl p-6 mb-6 shadow-xl">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-teal-600">
+                        <i class="fas fa-heartbeat mr-2"></i>헬스 트래커
+                    </h1>
+                    <p class="text-gray-600 mt-1" id="currentDate"></p>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-gray-600">연속 기록</div>
+                    <div class="text-2xl font-bold text-green-600" id="streak">0일</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="glass rounded-2xl p-2 mb-6 shadow-xl">
+            <div class="flex gap-2 overflow-x-auto">
+                <button onclick="showTab('dashboard')" class="tab-btn flex-1 px-4 py-3 rounded-xl font-semibold transition-all bg-gradient-to-r from-green-500 to-teal-500 text-white" data-tab="dashboard">
+                    <i class="fas fa-home mr-2"></i>대시보드
+                </button>
+                <button onclick="showTab('exercise')" class="tab-btn flex-1 px-4 py-3 rounded-xl font-semibold transition-all hover:bg-gray-100" data-tab="exercise">
+                    <i class="fas fa-running mr-2"></i>운동
+                </button>
+                <button onclick="showTab('stats')" class="tab-btn flex-1 px-4 py-3 rounded-xl font-semibold transition-all hover:bg-gray-100" data-tab="stats">
+                    <i class="fas fa-chart-line mr-2"></i>통계
+                </button>
+                <button onclick="showTab('profile')" class="tab-btn flex-1 px-4 py-3 rounded-xl font-semibold transition-all hover:bg-gray-100" data-tab="profile">
+                    <i class="fas fa-user mr-2"></i>프로필
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboardTab" class="tab-content">
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="glass rounded-2xl p-6 stat-card shadow-xl">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-walking text-3xl text-blue-500"></i>
+                        <button onclick="addSteps()" class="text-blue-500 hover:text-blue-700">
+                            <i class="fas fa-plus-circle text-2xl"></i>
+                        </button>
+                    </div>
+                    <div class="text-3xl font-bold text-gray-800" id="stepCount">0</div>
+                    <div class="text-sm text-gray-600">걸음 수</div>
+                    <div class="mt-2 bg-gray-200 rounded-full h-2">
+                        <div id="stepProgress" class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">목표: <span id="stepGoal">10000</span></div>
+                </div>
+
+                <div class="glass rounded-2xl p-6 stat-card shadow-xl">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-fire text-3xl text-orange-500"></i>
+                        <button onclick="addCalories()" class="text-orange-500 hover:text-orange-700">
+                            <i class="fas fa-plus-circle text-2xl"></i>
+                        </button>
+                    </div>
+                    <div class="text-3xl font-bold text-gray-800" id="caloriesBurned">0</div>
+                    <div class="text-sm text-gray-600">소모 칼로리</div>
+                    <div class="mt-2 bg-gray-200 rounded-full h-2">
+                        <div id="calorieProgress" class="bg-gradient-to-r from-orange-500 to-red-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">목표: <span id="calorieGoal">500</span> kcal</div>
+                </div>
+
+                <div class="glass rounded-2xl p-6 stat-card shadow-xl">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-tint text-3xl text-cyan-500"></i>
+                        <button onclick="addWater()" class="text-cyan-500 hover:text-cyan-700">
+                            <i class="fas fa-plus-circle text-2xl"></i>
+                        </button>
+                    </div>
+                    <div class="text-3xl font-bold text-gray-800" id="waterIntake">0</div>
+                    <div class="text-sm text-gray-600">물 섭취량 (ml)</div>
+                    <div class="mt-2 bg-gray-200 rounded-full h-2">
+                        <div id="waterProgress" class="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">목표: <span id="waterGoal">2000</span> ml</div>
+                </div>
+
+                <div class="glass rounded-2xl p-6 stat-card shadow-xl">
+                    <div class="flex items-center justify-between mb-2">
+                        <i class="fas fa-moon text-3xl text-purple-500"></i>
+                        <button onclick="addSleep()" class="text-purple-500 hover:text-purple-700">
+                            <i class="fas fa-plus-circle text-2xl"></i>
+                        </button>
+                    </div>
+                    <div class="text-3xl font-bold text-gray-800" id="sleepHours">0</div>
+                    <div class="text-sm text-gray-600">수면 시간 (h)</div>
+                    <div class="mt-2 bg-gray-200 rounded-full h-2">
+                        <div id="sleepProgress" class="bg-gradient-to-r from-purple-500 to-indigo-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">목표: <span id="sleepGoal">8</span> 시간</div>
+                </div>
+            </div>
+
+            <!-- Weight & BMI -->
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-bold text-gray-800">
+                            <i class="fas fa-weight text-green-500 mr-2"></i>체중 기록
+                        </h2>
+                        <button onclick="addWeight()" class="bg-gradient-to-r from-green-500 to-teal-500 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all">
+                            <i class="fas fa-plus mr-2"></i>추가
+                        </button>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-4xl font-bold text-gray-800" id="currentWeight">--</div>
+                        <div class="text-gray-600">kg</div>
+                    </div>
+                    <canvas id="weightChart" class="mt-4" height="150"></canvas>
+                </div>
+
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-calculator text-blue-500 mr-2"></i>BMI 계산기
+                    </h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-700 mb-2">신장 (cm)</label>
+                            <input type="number" id="heightInput" placeholder="170" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-700 mb-2">체중 (kg)</label>
+                            <input type="number" id="weightInput" placeholder="70" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500">
+                        </div>
+                        <button onclick="calculateBMI()" class="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all">
+                            계산하기
+                        </button>
+                        <div id="bmiResult" class="text-center p-4 rounded-lg bg-gray-100 hidden">
+                            <div class="text-3xl font-bold text-gray-800" id="bmiValue">--</div>
+                            <div class="text-sm text-gray-600" id="bmiCategory">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Achievements -->
+            <div class="glass rounded-2xl p-6 shadow-xl mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-trophy text-yellow-500 mr-2"></i>업적 배지
+                </h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" id="badgeContainer"></div>
+            </div>
+        </div>
+
+        <!-- Exercise Tab -->
+        <div id="exerciseTab" class="tab-content hidden">
+            <div class="glass rounded-2xl p-6 shadow-xl mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-plus-circle text-green-500 mr-2"></i>운동 추가
+                </h2>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-2">운동 종류</label>
+                        <select id="exerciseType" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500">
+                            <option value="걷기">🚶 걷기</option>
+                            <option value="달리기">🏃 달리기</option>
+                            <option value="자전거">🚴 자전거</option>
+                            <option value="수영">🏊 수영</option>
+                            <option value="헬스">💪 헬스</option>
+                            <option value="요가">🧘 요가</option>
+                            <option value="등산">⛰️ 등산</option>
+                            <option value="축구">⚽ 축구</option>
+                            <option value="농구">🏀 농구</option>
+                            <option value="테니스">🎾 테니스</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-2">운동 시간 (분)</label>
+                        <input type="number" id="exerciseDuration" placeholder="30" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-2">소모 칼로리 (kcal)</label>
+                        <input type="number" id="exerciseCalories" placeholder="200" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-2">메모</label>
+                        <input type="text" id="exerciseNote" placeholder="운동 메모..." class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                </div>
+                <button onclick="addExercise()" class="mt-4 w-full bg-gradient-to-r from-green-500 to-teal-500 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all">
+                    <i class="fas fa-plus mr-2"></i>운동 기록 추가
+                </button>
+            </div>
+
+            <!-- Exercise Log -->
+            <div class="glass rounded-2xl p-6 shadow-xl">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-list text-blue-500 mr-2"></i>오늘의 운동 기록
+                </h2>
+                <div id="exerciseLog" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- Stats Tab -->
+        <div id="statsTab" class="tab-content hidden">
+            <div class="glass rounded-2xl p-6 shadow-xl mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">
+                        <i class="fas fa-chart-bar text-purple-500 mr-2"></i>주간/월간 통계
+                    </h2>
+                    <div class="flex gap-2">
+                        <button onclick="showStats('week')" class="stats-btn px-4 py-2 rounded-lg font-semibold transition-all bg-gradient-to-r from-purple-500 to-pink-500 text-white" data-period="week">
+                            주간
+                        </button>
+                        <button onclick="showStats('month')" class="stats-btn px-4 py-2 rounded-lg font-semibold transition-all hover:bg-gray-100" data-period="month">
+                            월간
+                        </button>
+                    </div>
+                </div>
+                <canvas id="statsChart" height="100"></canvas>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">
+                        <i class="fas fa-running text-green-500 mr-2"></i>운동 분포
+                    </h3>
+                    <canvas id="exerciseDistChart" height="200"></canvas>
+                </div>
+
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">
+                        <i class="fas fa-fire text-orange-500 mr-2"></i>칼로리 소모 추이
+                    </h3>
+                    <canvas id="caloriesTrendChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Tab -->
+        <div id="profileTab" class="tab-content hidden">
+            <div class="glass rounded-2xl p-6 shadow-xl mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-user-cog text-blue-500 mr-2"></i>프로필 설정
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-2">이름</label>
+                        <input type="text" id="profileName" placeholder="홍길동" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-2">나이</label>
+                        <input type="number" id="profileAge" placeholder="25" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-2">성별</label>
+                        <select id="profileGender" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="남성">남성</option>
+                            <option value="여성">여성</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass rounded-2xl p-6 shadow-xl mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-bullseye text-green-500 mr-2"></i>목표 설정
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-2">일일 걸음 수 목표</label>
+                        <input type="number" id="goalSteps" placeholder="10000" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-2">일일 칼로리 소모 목표 (kcal)</label>
+                        <input type="number" id="goalCalories" placeholder="500" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-2">일일 물 섭취 목표 (ml)</label>
+                        <input type="number" id="goalWater" placeholder="2000" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-2">수면 시간 목표 (시간)</label>
+                        <input type="number" id="goalSleep" placeholder="8" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="saveProfile()" class="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-lg font-bold text-lg hover:shadow-lg transition-all">
+                <i class="fas fa-save mr-2"></i>설정 저장
+            </button>
+
+            <div class="glass rounded-2xl p-6 shadow-xl mt-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-database text-red-500 mr-2"></i>데이터 관리
+                </h2>
+                <div class="flex gap-4">
+                    <button onclick="exportData()" class="flex-1 bg-gradient-to-r from-green-500 to-teal-500 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all">
+                        <i class="fas fa-download mr-2"></i>데이터 내보내기
+                    </button>
+                    <button onclick="resetData()" class="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all">
+                        <i class="fas fa-trash mr-2"></i>데이터 초기화
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Storage
+        let data = {
+            profile: { name: '', age: 0, gender: '남성', height: 0, weight: 0 },
+            goals: { steps: 10000, calories: 500, water: 2000, sleep: 8 },
+            daily: { steps: 0, calories: 0, water: 0, sleep: 0 },
+            exercises: [],
+            weights: [],
+            history: {}
+        };
+
+        // Achievements
+        const badges = [
+            { id: 'first_step', name: '첫 걸음', icon: '👣', condition: (d) => d.daily.steps > 0, unlocked: false },
+            { id: 'step_master', name: '만보 달성', icon: '🏃', condition: (d) => d.daily.steps >= 10000, unlocked: false },
+            { id: 'marathon', name: '마라토너', icon: '🏅', condition: (d) => d.daily.steps >= 20000, unlocked: false },
+            { id: 'calorie_burner', name: '칼로리 버너', icon: '🔥', condition: (d) => d.daily.calories >= 500, unlocked: false },
+            { id: 'hydration_hero', name: '수분 영웅', icon: '💧', condition: (d) => d.daily.water >= 2000, unlocked: false },
+            { id: 'sleep_champion', name: '수면 챔피언', icon: '😴', condition: (d) => d.daily.sleep >= 8, unlocked: false },
+            { id: 'week_warrior', name: '주간 전사', icon: '⚔️', condition: (d) => getStreak() >= 7, unlocked: false },
+            { id: 'fitness_master', name: '운동 마스터', icon: '💪', condition: (d) => d.exercises.length >= 10, unlocked: false },
+            { id: 'weight_tracker', name: '체중 관리자', icon: '⚖️', condition: (d) => d.weights.length >= 7, unlocked: false },
+            { id: 'perfect_day', name: '완벽한 하루', icon: '⭐', condition: (d) =>
+                d.daily.steps >= d.goals.steps &&
+                d.daily.calories >= d.goals.calories &&
+                d.daily.water >= d.goals.water &&
+                d.daily.sleep >= d.goals.sleep, unlocked: false },
+            { id: 'early_bird', name: '새벽 운동', icon: '🌅', condition: (d) => d.exercises.some(e => new Date(e.timestamp).getHours() < 7), unlocked: false },
+            { id: 'consistency', name: '꾸준함', icon: '📅', condition: (d) => getStreak() >= 30, unlocked: false }
+        ];
+
+        // Initialize
+        function init() {
+            loadData();
+            updateDate();
+            updateDashboard();
+            renderBadges();
+            loadProfile();
+            showTab('dashboard');
+            checkNewDay();
+            setInterval(checkNewDay, 60000); // Check every minute
+        }
+
+        function updateDate() {
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('ko-KR', options);
+        }
+
+        function checkNewDay() {
+            const today = new Date().toDateString();
+            const lastDate = localStorage.getItem('lastDate');
+
+            if (lastDate && lastDate !== today) {
+                // Save yesterday's data to history
+                data.history[lastDate] = { ...data.daily, exercises: [...data.exercises] };
+
+                // Reset daily data
+                data.daily = { steps: 0, calories: 0, water: 0, sleep: 0 };
+                data.exercises = [];
+                saveData();
+                updateDashboard();
+            }
+
+            localStorage.setItem('lastDate', today);
+        }
+
+        function getStreak() {
+            const dates = Object.keys(data.history).sort().reverse();
+            let streak = 0;
+            const today = new Date();
+
+            for (let i = 0; i < dates.length; i++) {
+                const date = new Date(dates[i]);
+                const diffDays = Math.floor((today - date) / (1000 * 60 * 60 * 24));
+
+                if (diffDays === i + 1) {
+                    streak++;
+                } else {
+                    break;
+                }
+            }
+
+            return streak;
+        }
+
+        // Tab Navigation
+        function showTab(tab) {
+            const tabs = ['dashboard', 'exercise', 'stats', 'profile'];
+            tabs.forEach(t => {
+                document.getElementById(t + 'Tab').classList.toggle('hidden', t !== tab);
+                const btn = document.querySelector(`[data-tab="${t}"]`);
+                if (btn) {
+                    if (t === tab) {
+                        btn.classList.add('bg-gradient-to-r', 'from-green-500', 'to-teal-500', 'text-white');
+                        btn.classList.remove('hover:bg-gray-100');
+                    } else {
+                        btn.classList.remove('bg-gradient-to-r', 'from-green-500', 'to-teal-500', 'text-white');
+                        btn.classList.add('hover:bg-gray-100');
+                    }
+                }
+            });
+
+            if (tab === 'stats') {
+                showStats('week');
+            }
+        }
+
+        // Data Management
+        function loadData() {
+            const saved = localStorage.getItem('fitnessData');
+            if (saved) {
+                data = JSON.parse(saved);
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('fitnessData', JSON.stringify(data));
+        }
+
+        // Dashboard Functions
+        function updateDashboard() {
+            // Update step count
+            document.getElementById('stepCount').textContent = data.daily.steps.toLocaleString();
+            document.getElementById('stepGoal').textContent = data.goals.steps.toLocaleString();
+            const stepProgress = Math.min((data.daily.steps / data.goals.steps) * 100, 100);
+            document.getElementById('stepProgress').style.width = stepProgress + '%';
+
+            // Update calories
+            document.getElementById('caloriesBurned').textContent = data.daily.calories;
+            document.getElementById('calorieGoal').textContent = data.goals.calories;
+            const calorieProgress = Math.min((data.daily.calories / data.goals.calories) * 100, 100);
+            document.getElementById('calorieProgress').style.width = calorieProgress + '%';
+
+            // Update water
+            document.getElementById('waterIntake').textContent = data.daily.water;
+            document.getElementById('waterGoal').textContent = data.goals.water;
+            const waterProgress = Math.min((data.daily.water / data.goals.water) * 100, 100);
+            document.getElementById('waterProgress').style.width = waterProgress + '%';
+
+            // Update sleep
+            document.getElementById('sleepHours').textContent = data.daily.sleep;
+            document.getElementById('sleepGoal').textContent = data.goals.sleep;
+            const sleepProgress = Math.min((data.daily.sleep / data.goals.sleep) * 100, 100);
+            document.getElementById('sleepProgress').style.width = sleepProgress + '%';
+
+            // Update streak
+            document.getElementById('streak').textContent = getStreak() + '일';
+
+            // Update weight chart
+            updateWeightChart();
+
+            // Update exercise log
+            updateExerciseLog();
+
+            // Check badges
+            checkBadges();
+        }
+
+        function addSteps() {
+            const steps = prompt('추가할 걸음 수를 입력하세요:', '1000');
+            if (steps && !isNaN(steps)) {
+                data.daily.steps += parseInt(steps);
+                saveData();
+                updateDashboard();
+            }
+        }
+
+        function addCalories() {
+            const calories = prompt('소모한 칼로리를 입력하세요 (kcal):', '100');
+            if (calories && !isNaN(calories)) {
+                data.daily.calories += parseInt(calories);
+                saveData();
+                updateDashboard();
+            }
+        }
+
+        function addWater() {
+            const amounts = [200, 250, 300, 500];
+            const amount = prompt('마신 물의 양을 입력하세요 (ml):\n추천: 200ml (컵 1잔), 250ml (머그잔), 500ml (페트병)', '250');
+            if (amount && !isNaN(amount)) {
+                data.daily.water += parseInt(amount);
+                saveData();
+                updateDashboard();
+            }
+        }
+
+        function addSleep() {
+            const hours = prompt('수면 시간을 입력하세요 (시간):', '8');
+            if (hours && !isNaN(hours)) {
+                data.daily.sleep = parseFloat(hours);
+                saveData();
+                updateDashboard();
+            }
+        }
+
+        function addWeight() {
+            const weight = prompt('현재 체중을 입력하세요 (kg):', data.weights.length > 0 ? data.weights[data.weights.length - 1].value : '70');
+            if (weight && !isNaN(weight)) {
+                data.weights.push({
+                    value: parseFloat(weight),
+                    date: new Date().toISOString()
+                });
+                data.profile.weight = parseFloat(weight);
+                document.getElementById('currentWeight').textContent = weight;
+                saveData();
+                updateDashboard();
+            }
+        }
+
+        function calculateBMI() {
+            const height = parseFloat(document.getElementById('heightInput').value);
+            const weight = parseFloat(document.getElementById('weightInput').value);
+
+            if (height && weight && height > 0 && weight > 0) {
+                const heightM = height / 100;
+                const bmi = (weight / (heightM * heightM)).toFixed(1);
+
+                let category = '';
+                let color = '';
+
+                if (bmi < 18.5) {
+                    category = '저체중';
+                    color = 'text-blue-600';
+                } else if (bmi < 23) {
+                    category = '정상';
+                    color = 'text-green-600';
+                } else if (bmi < 25) {
+                    category = '과체중';
+                    color = 'text-yellow-600';
+                } else if (bmi < 30) {
+                    category = '비만';
+                    color = 'text-orange-600';
+                } else {
+                    category = '고도비만';
+                    color = 'text-red-600';
+                }
+
+                document.getElementById('bmiValue').textContent = bmi;
+                document.getElementById('bmiValue').className = `text-3xl font-bold ${color}`;
+                document.getElementById('bmiCategory').textContent = category;
+                document.getElementById('bmiResult').classList.remove('hidden');
+
+                data.profile.height = height;
+                data.profile.weight = weight;
+                saveData();
+            } else {
+                alert('신장과 체중을 올바르게 입력해주세요.');
+            }
+        }
+
+        // Weight Chart
+        let weightChart = null;
+
+        function updateWeightChart() {
+            const ctx = document.getElementById('weightChart').getContext('2d');
+
+            if (data.weights.length > 0) {
+                document.getElementById('currentWeight').textContent = data.weights[data.weights.length - 1].value;
+            }
+
+            const labels = data.weights.map(w => new Date(w.date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }));
+            const values = data.weights.map(w => w.value);
+
+            if (weightChart) {
+                weightChart.destroy();
+            }
+
+            weightChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '체중 (kg)',
+                        data: values,
+                        borderColor: 'rgb(34, 197, 94)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // Exercise Functions
+        function addExercise() {
+            const type = document.getElementById('exerciseType').value;
+            const duration = parseInt(document.getElementById('exerciseDuration').value);
+            const calories = parseInt(document.getElementById('exerciseCalories').value);
+            const note = document.getElementById('exerciseNote').value;
+
+            if (duration && calories) {
+                const exercise = {
+                    type,
+                    duration,
+                    calories,
+                    note,
+                    timestamp: new Date().toISOString()
+                };
+
+                data.exercises.push(exercise);
+                data.daily.calories += calories;
+
+                // Calculate steps from exercise
+                const stepsPerMinute = { '걷기': 100, '달리기': 150, '자전거': 50, '수영': 80, '헬스': 30 };
+                const estimatedSteps = (stepsPerMinute[type] || 50) * duration;
+                data.daily.steps += estimatedSteps;
+
+                saveData();
+                updateDashboard();
+
+                // Clear inputs
+                document.getElementById('exerciseDuration').value = '';
+                document.getElementById('exerciseCalories').value = '';
+                document.getElementById('exerciseNote').value = '';
+
+                alert(`운동이 기록되었습니다!\n예상 걸음 수: ${estimatedSteps.toLocaleString()}보`);
+            } else {
+                alert('운동 시간과 칼로리를 입력해주세요.');
+            }
+        }
+
+        function updateExerciseLog() {
+            const log = document.getElementById('exerciseLog');
+
+            if (data.exercises.length === 0) {
+                log.innerHTML = '<div class="text-center text-gray-500 py-8">오늘 운동 기록이 없습니다.</div>';
+                return;
+            }
+
+            log.innerHTML = data.exercises.map((ex, idx) => `
+                <div class="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-xl border-l-4 border-green-500">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-2xl">${getExerciseIcon(ex.type)}</span>
+                                <span class="font-bold text-gray-800">${ex.type}</span>
+                            </div>
+                            <div class="mt-2 text-sm text-gray-600">
+                                <span class="mr-4"><i class="far fa-clock mr-1"></i>${ex.duration}분</span>
+                                <span class="mr-4"><i class="fas fa-fire mr-1"></i>${ex.calories} kcal</span>
+                                <span><i class="far fa-clock mr-1"></i>${new Date(ex.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            ${ex.note ? `<div class="mt-2 text-sm text-gray-500">${ex.note}</div>` : ''}
+                        </div>
+                        <button onclick="deleteExercise(${idx})" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getExerciseIcon(type) {
+            const icons = {
+                '걷기': '🚶',
+                '달리기': '🏃',
+                '자전거': '🚴',
+                '수영': '🏊',
+                '헬스': '💪',
+                '요가': '🧘',
+                '등산': '⛰️',
+                '축구': '⚽',
+                '농구': '🏀',
+                '테니스': '🎾'
+            };
+            return icons[type] || '🏋️';
+        }
+
+        function deleteExercise(idx) {
+            if (confirm('이 운동 기록을 삭제하시겠습니까?')) {
+                const exercise = data.exercises[idx];
+                data.daily.calories -= exercise.calories;
+                data.exercises.splice(idx, 1);
+                saveData();
+                updateDashboard();
+            }
+        }
+
+        // Statistics
+        let statsChart = null;
+        let exerciseDistChart = null;
+        let caloriesTrendChart = null;
+
+        function showStats(period) {
+            document.querySelectorAll('.stats-btn').forEach(btn => {
+                if (btn.dataset.period === period) {
+                    btn.classList.add('bg-gradient-to-r', 'from-purple-500', 'to-pink-500', 'text-white');
+                    btn.classList.remove('hover:bg-gray-100');
+                } else {
+                    btn.classList.remove('bg-gradient-to-r', 'from-purple-500', 'to-pink-500', 'text-white');
+                    btn.classList.add('hover:bg-gray-100');
+                }
+            });
+
+            updateStatsChart(period);
+            updateExerciseDistChart();
+            updateCaloriesTrendChart(period);
+        }
+
+        function updateStatsChart(period) {
+            const ctx = document.getElementById('statsChart').getContext('2d');
+            const days = period === 'week' ? 7 : 30;
+
+            const labels = [];
+            const stepsData = [];
+            const caloriesData = [];
+
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toDateString();
+
+                labels.push(date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }));
+
+                if (i === 0) {
+                    stepsData.push(data.daily.steps);
+                    caloriesData.push(data.daily.calories);
+                } else if (data.history[dateStr]) {
+                    stepsData.push(data.history[dateStr].steps || 0);
+                    caloriesData.push(data.history[dateStr].calories || 0);
+                } else {
+                    stepsData.push(0);
+                    caloriesData.push(0);
+                }
+            }
+
+            if (statsChart) {
+                statsChart.destroy();
+            }
+
+            statsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '걸음 수',
+                            data: stepsData,
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: '칼로리 (kcal)',
+                            data: caloriesData,
+                            backgroundColor: 'rgba(249, 115, 22, 0.8)',
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: { display: true, text: '걸음 수' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            title: { display: true, text: '칼로리' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateExerciseDistChart() {
+            const ctx = document.getElementById('exerciseDistChart').getContext('2d');
+
+            const exerciseTypes = {};
+            data.exercises.forEach(ex => {
+                exerciseTypes[ex.type] = (exerciseTypes[ex.type] || 0) + ex.duration;
+            });
+
+            // Add history
+            Object.values(data.history).forEach(day => {
+                if (day.exercises) {
+                    day.exercises.forEach(ex => {
+                        exerciseTypes[ex.type] = (exerciseTypes[ex.type] || 0) + ex.duration;
+                    });
+                }
+            });
+
+            if (exerciseDistChart) {
+                exerciseDistChart.destroy();
+            }
+
+            exerciseDistChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(exerciseTypes),
+                    datasets: [{
+                        data: Object.values(exerciseTypes),
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(249, 115, 22, 0.8)',
+                            'rgba(168, 85, 247, 0.8)',
+                            'rgba(236, 72, 153, 0.8)',
+                            'rgba(14, 165, 233, 0.8)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(16, 185, 129, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        function updateCaloriesTrendChart(period) {
+            const ctx = document.getElementById('caloriesTrendChart').getContext('2d');
+            const days = period === 'week' ? 7 : 30;
+
+            const labels = [];
+            const data_values = [];
+
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toDateString();
+
+                labels.push(date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }));
+
+                if (i === 0) {
+                    data_values.push(data.daily.calories);
+                } else if (data.history[dateStr]) {
+                    data_values.push(data.history[dateStr].calories || 0);
+                } else {
+                    data_values.push(0);
+                }
+            }
+
+            if (caloriesTrendChart) {
+                caloriesTrendChart.destroy();
+            }
+
+            caloriesTrendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '칼로리 소모',
+                        data: data_values,
+                        borderColor: 'rgb(249, 115, 22)',
+                        backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // Badges
+        function renderBadges() {
+            const container = document.getElementById('badgeContainer');
+            container.innerHTML = badges.map(badge => `
+                <div class="text-center p-4 rounded-xl ${badge.unlocked ? 'bg-gradient-to-br from-yellow-100 to-yellow-200 badge' : 'bg-gray-100 opacity-50'}">
+                    <div class="text-4xl mb-2">${badge.icon}</div>
+                    <div class="text-xs font-semibold text-gray-700">${badge.name}</div>
+                    ${badge.unlocked ? '<div class="text-xs text-green-600 mt-1"><i class="fas fa-check-circle"></i></div>' : ''}
+                </div>
+            `).join('');
+        }
+
+        function checkBadges() {
+            let newBadges = false;
+            badges.forEach(badge => {
+                if (!badge.unlocked && badge.condition(data)) {
+                    badge.unlocked = true;
+                    newBadges = true;
+                }
+            });
+
+            if (newBadges) {
+                renderBadges();
+                saveData();
+            }
+        }
+
+        // Profile Functions
+        function loadProfile() {
+            document.getElementById('profileName').value = data.profile.name || '';
+            document.getElementById('profileAge').value = data.profile.age || '';
+            document.getElementById('profileGender').value = data.profile.gender || '남성';
+            document.getElementById('goalSteps').value = data.goals.steps;
+            document.getElementById('goalCalories').value = data.goals.calories;
+            document.getElementById('goalWater').value = data.goals.water;
+            document.getElementById('goalSleep').value = data.goals.sleep;
+
+            if (data.profile.height) {
+                document.getElementById('heightInput').value = data.profile.height;
+            }
+            if (data.profile.weight) {
+                document.getElementById('weightInput').value = data.profile.weight;
+            }
+        }
+
+        function saveProfile() {
+            data.profile.name = document.getElementById('profileName').value;
+            data.profile.age = parseInt(document.getElementById('profileAge').value) || 0;
+            data.profile.gender = document.getElementById('profileGender').value;
+            data.goals.steps = parseInt(document.getElementById('goalSteps').value) || 10000;
+            data.goals.calories = parseInt(document.getElementById('goalCalories').value) || 500;
+            data.goals.water = parseInt(document.getElementById('goalWater').value) || 2000;
+            data.goals.sleep = parseInt(document.getElementById('goalSleep').value) || 8;
+
+            saveData();
+            updateDashboard();
+            alert('프로필이 저장되었습니다!');
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `fitness-data-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function resetData() {
+            if (confirm('모든 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                if (confirm('정말로 삭제하시겠습니까?')) {
+                    localStorage.clear();
+                    location.reload();
+                }
+            }
+        }
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>

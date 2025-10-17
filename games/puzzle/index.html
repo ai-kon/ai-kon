@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>슬라이딩 퍼즐 게임</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .puzzle-tile {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            user-select: none;
+            aspect-ratio: 1;
+        }
+
+        .puzzle-tile:hover:not(.empty) {
+            transform: scale(1.05);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .empty {
+            opacity: 0;
+            cursor: default;
+        }
+
+        .victory-animation {
+            animation: celebrate 0.6s ease-in-out;
+        }
+
+        @keyframes celebrate {
+            0%, 100% { transform: scale(1); }
+            25% { transform: scale(1.1) rotate(5deg); }
+            50% { transform: scale(1.1) rotate(-5deg); }
+            75% { transform: scale(1.1) rotate(5deg); }
+        }
+
+        .pulse-ring {
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 1; }
+            80%, 100% { transform: scale(1.2); opacity: 0; }
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #f0f;
+            position: absolute;
+            animation: confetti-fall 3s linear;
+        }
+
+        @keyframes confetti-fall {
+            to { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-2">
+                <i class="fas fa-puzzle-piece mr-3"></i>슬라이딩 퍼즐
+            </h1>
+            <p class="text-white/80">타일을 움직여 퍼즐을 완성하세요!</p>
+        </div>
+
+        <!-- Game Container -->
+        <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8">
+            <!-- Controls -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <!-- Difficulty Selection -->
+                <div class="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl p-4 text-white">
+                    <label class="block text-sm font-semibold mb-2">
+                        <i class="fas fa-sliders-h mr-2"></i>난이도
+                    </label>
+                    <select id="difficulty" class="w-full px-3 py-2 rounded-lg text-gray-800 font-semibold focus:outline-none focus:ring-2 focus:ring-purple-300">
+                        <option value="3">쉬움 (3×3)</option>
+                        <option value="4" selected>보통 (4×4)</option>
+                        <option value="5">어려움 (5×5)</option>
+                    </select>
+                </div>
+
+                <!-- Puzzle Type -->
+                <div class="bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl p-4 text-white">
+                    <label class="block text-sm font-semibold mb-2">
+                        <i class="fas fa-palette mr-2"></i>퍼즐 타입
+                    </label>
+                    <select id="puzzleType" class="w-full px-3 py-2 rounded-lg text-gray-800 font-semibold focus:outline-none focus:ring-2 focus:ring-pink-300">
+                        <option value="numbers">숫자</option>
+                        <option value="emojis">이모지</option>
+                        <option value="colors">색상</option>
+                    </select>
+                </div>
+
+                <!-- Stats -->
+                <div class="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl p-4 text-white">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <div class="text-xs opacity-80">움직임</div>
+                            <div id="moves" class="text-2xl font-bold">0</div>
+                        </div>
+                        <div>
+                            <div class="text-xs opacity-80">시간</div>
+                            <div id="timer" class="text-2xl font-bold">0:00</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-3 mb-6">
+                <button id="newGame" class="flex-1 min-w-[120px] bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105">
+                    <i class="fas fa-play mr-2"></i>새 게임
+                </button>
+                <button id="shuffle" class="flex-1 min-w-[120px] bg-gradient-to-r from-orange-500 to-amber-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105">
+                    <i class="fas fa-random mr-2"></i>섞기
+                </button>
+                <button id="hint" class="flex-1 min-w-[120px] bg-gradient-to-r from-purple-500 to-violet-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105">
+                    <i class="fas fa-lightbulb mr-2"></i>힌트
+                </button>
+                <button id="reset" class="flex-1 min-w-[120px] bg-gradient-to-r from-red-500 to-rose-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105">
+                    <i class="fas fa-redo mr-2"></i>초기화
+                </button>
+            </div>
+
+            <!-- Puzzle Board -->
+            <div id="puzzleBoard" class="mb-6 mx-auto" style="max-width: 500px;"></div>
+
+            <!-- Best Records -->
+            <div class="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl p-4 text-white">
+                <h3 class="font-bold text-lg mb-3">
+                    <i class="fas fa-trophy mr-2"></i>최고 기록
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="bg-white/20 rounded-lg p-3">
+                        <div class="text-xs opacity-80">3×3</div>
+                        <div id="record3" class="font-bold">-</div>
+                    </div>
+                    <div class="bg-white/20 rounded-lg p-3">
+                        <div class="text-xs opacity-80">4×4</div>
+                        <div id="record4" class="font-bold">-</div>
+                    </div>
+                    <div class="bg-white/20 rounded-lg p-3">
+                        <div class="text-xs opacity-80">5×5</div>
+                        <div id="record5" class="font-bold">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Victory Modal -->
+        <div id="victoryModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50">
+            <div class="bg-white rounded-2xl p-8 max-w-md mx-4 text-center transform scale-95 transition-transform">
+                <div class="text-6xl mb-4">🎉</div>
+                <h2 class="text-3xl font-bold text-gray-800 mb-4">축하합니다!</h2>
+                <p class="text-gray-600 mb-6">퍼즐을 완성했습니다!</p>
+                <div class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl p-4 text-white mb-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-sm opacity-80">움직임</div>
+                            <div id="finalMoves" class="text-2xl font-bold">0</div>
+                        </div>
+                        <div>
+                            <div class="text-sm opacity-80">시간</div>
+                            <div id="finalTime" class="text-2xl font-bold">0:00</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="newRecordBadge" class="hidden bg-yellow-400 text-yellow-900 rounded-lg px-4 py-2 mb-4 font-bold">
+                    <i class="fas fa-star mr-2"></i>신기록!
+                </div>
+                <button id="closeModal" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg transition-all">
+                    다시 하기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SlidingPuzzle {
+            constructor() {
+                this.size = 4;
+                this.tiles = [];
+                this.emptyPos = { row: 0, col: 0 };
+                this.moves = 0;
+                this.timer = 0;
+                this.timerInterval = null;
+                this.gameStarted = false;
+                this.puzzleType = 'numbers';
+
+                this.emojiSets = [
+                    ['🍎', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍒', '🍑', '🥝', '🥥', '🍍', '🥭', '🍏', '🍐', '🫐', '🥑', '🍈', '🍅', '🌶️', '🥕', '🌽', '🥒', '🥦', '🍆'],
+                    ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗'],
+                    ['⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🥊', '🥋', '🥅', '⛳', '🏹', '🎣', '🥏', '🪀', '🎯', '🎮', '🎲', '🎰', '🎳', '🎪', '🎨']
+                ];
+
+                this.colorSets = [
+                    '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F',
+                    '#BB8FCE', '#85C1E2', '#F8B88B', '#FAD7A0', '#D7BDE2', '#A2D9CE',
+                    '#F5B7B1', '#D2B4DE', '#AED6F1', '#A3E4D7', '#F9E79F', '#EDBB99',
+                    '#E8DAEF', '#D6EAF8', '#D1F2EB', '#FCF3CF', '#FADBD8', '#EBDEF0',
+                    '#D4E6F1', '#D0ECE7', '#F7DC6F', '#EDBB99', '#E59866', '#DC7633'
+                ];
+
+                this.init();
+                this.loadRecords();
+                this.displayRecords();
+            }
+
+            init() {
+                document.getElementById('newGame').addEventListener('click', () => this.newGame());
+                document.getElementById('shuffle').addEventListener('click', () => this.shuffle());
+                document.getElementById('hint').addEventListener('click', () => this.showHint());
+                document.getElementById('reset').addEventListener('click', () => this.resetPuzzle());
+                document.getElementById('difficulty').addEventListener('change', (e) => {
+                    this.size = parseInt(e.target.value);
+                    this.newGame();
+                });
+                document.getElementById('puzzleType').addEventListener('change', (e) => {
+                    this.puzzleType = e.target.value;
+                    this.render();
+                });
+                document.getElementById('closeModal').addEventListener('click', () => {
+                    document.getElementById('victoryModal').classList.add('hidden');
+                    document.getElementById('victoryModal').classList.remove('flex');
+                    this.newGame();
+                });
+
+                this.newGame();
+            }
+
+            newGame() {
+                this.stopTimer();
+                this.moves = 0;
+                this.timer = 0;
+                this.gameStarted = false;
+                this.updateStats();
+                this.createPuzzle();
+                this.shuffle();
+            }
+
+            createPuzzle() {
+                this.tiles = [];
+                for (let i = 0; i < this.size; i++) {
+                    this.tiles[i] = [];
+                    for (let j = 0; j < this.size; j++) {
+                        this.tiles[i][j] = i * this.size + j;
+                    }
+                }
+                this.emptyPos = { row: this.size - 1, col: this.size - 1 };
+                this.render();
+            }
+
+            render() {
+                const board = document.getElementById('puzzleBoard');
+                board.innerHTML = '';
+                board.className = `grid gap-2`;
+                board.style.gridTemplateColumns = `repeat(${this.size}, 1fr)`;
+
+                for (let i = 0; i < this.size; i++) {
+                    for (let j = 0; j < this.size; j++) {
+                        const tile = document.createElement('div');
+                        const value = this.tiles[i][j];
+                        const isEmpty = i === this.emptyPos.row && j === this.emptyPos.col;
+
+                        tile.className = `puzzle-tile rounded-xl font-bold text-2xl flex items-center justify-center ${isEmpty ? 'empty' : 'bg-gradient-to-br shadow-lg'}`;
+
+                        if (!isEmpty) {
+                            const content = this.getTileContent(value);
+                            tile.innerHTML = content;
+                            tile.style.background = this.getTileBackground(value);
+                            tile.style.color = this.puzzleType === 'colors' ? '#fff' : '#1f2937';
+                            tile.addEventListener('click', () => this.moveTile(i, j));
+                        }
+
+                        board.appendChild(tile);
+                    }
+                }
+            }
+
+            getTileContent(value) {
+                if (value === this.size * this.size - 1) return '';
+
+                switch(this.puzzleType) {
+                    case 'numbers':
+                        return value + 1;
+                    case 'emojis':
+                        const emojiSet = this.emojiSets[Math.floor(this.size / 2) % this.emojiSets.length];
+                        return emojiSet[value % emojiSet.length];
+                    case 'colors':
+                        return value + 1;
+                    default:
+                        return value + 1;
+                }
+            }
+
+            getTileBackground(value) {
+                if (value === this.size * this.size - 1) return 'transparent';
+
+                switch(this.puzzleType) {
+                    case 'numbers':
+                        return `linear-gradient(135deg, hsl(${value * 360 / (this.size * this.size)}, 70%, 60%), hsl(${value * 360 / (this.size * this.size) + 30}, 70%, 50%))`;
+                    case 'emojis':
+                        return `linear-gradient(135deg, hsl(${value * 360 / (this.size * this.size)}, 80%, 85%), hsl(${value * 360 / (this.size * this.size) + 30}, 80%, 75%))`;
+                    case 'colors':
+                        return this.colorSets[value % this.colorSets.length];
+                    default:
+                        return `linear-gradient(135deg, hsl(${value * 360 / (this.size * this.size)}, 70%, 60%), hsl(${value * 360 / (this.size * this.size) + 30}, 70%, 50%))`;
+                }
+            }
+
+            shuffle() {
+                const moves = this.size * this.size * 20;
+                for (let i = 0; i < moves; i++) {
+                    const possibleMoves = this.getPossibleMoves();
+                    const randomMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+                    this.swapTiles(randomMove.row, randomMove.col, this.emptyPos.row, this.emptyPos.col, false);
+                }
+                this.render();
+            }
+
+            getPossibleMoves() {
+                const moves = [];
+                const { row, col } = this.emptyPos;
+
+                if (row > 0) moves.push({ row: row - 1, col });
+                if (row < this.size - 1) moves.push({ row: row + 1, col });
+                if (col > 0) moves.push({ row, col: col - 1 });
+                if (col < this.size - 1) moves.push({ row, col: col + 1 });
+
+                return moves;
+            }
+
+            moveTile(row, col) {
+                const { row: emptyRow, col: emptyCol } = this.emptyPos;
+                const isAdjacent = (Math.abs(row - emptyRow) === 1 && col === emptyCol) ||
+                                   (Math.abs(col - emptyCol) === 1 && row === emptyRow);
+
+                if (isAdjacent) {
+                    if (!this.gameStarted) {
+                        this.startTimer();
+                        this.gameStarted = true;
+                    }
+
+                    this.swapTiles(row, col, emptyRow, emptyCol, true);
+                    this.render();
+
+                    if (this.checkWin()) {
+                        this.stopTimer();
+                        this.showVictory();
+                    }
+                }
+            }
+
+            swapTiles(row1, col1, row2, col2, countMove = true) {
+                const temp = this.tiles[row1][col1];
+                this.tiles[row1][col1] = this.tiles[row2][col2];
+                this.tiles[row2][col2] = temp;
+                this.emptyPos = { row: row1, col: col1 };
+
+                if (countMove) {
+                    this.moves++;
+                    this.updateStats();
+                }
+            }
+
+            checkWin() {
+                for (let i = 0; i < this.size; i++) {
+                    for (let j = 0; j < this.size; j++) {
+                        if (this.tiles[i][j] !== i * this.size + j) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+
+            showHint() {
+                const possibleMoves = this.getPossibleMoves();
+                if (possibleMoves.length > 0) {
+                    const hint = possibleMoves[0];
+                    const tiles = document.getElementById('puzzleBoard').children;
+                    const index = hint.row * this.size + hint.col;
+                    tiles[index].classList.add('pulse-ring');
+                    setTimeout(() => tiles[index].classList.remove('pulse-ring'), 1500);
+                }
+            }
+
+            resetPuzzle() {
+                this.stopTimer();
+                this.moves = 0;
+                this.timer = 0;
+                this.gameStarted = false;
+                this.updateStats();
+                this.createPuzzle();
+                this.render();
+            }
+
+            startTimer() {
+                this.timerInterval = setInterval(() => {
+                    this.timer++;
+                    this.updateStats();
+                }, 1000);
+            }
+
+            stopTimer() {
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+            }
+
+            updateStats() {
+                document.getElementById('moves').textContent = this.moves;
+                const minutes = Math.floor(this.timer / 60);
+                const seconds = this.timer % 60;
+                document.getElementById('timer').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            showVictory() {
+                document.getElementById('finalMoves').textContent = this.moves;
+                const minutes = Math.floor(this.timer / 60);
+                const seconds = this.timer % 60;
+                const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                document.getElementById('finalTime').textContent = timeStr;
+
+                const isNewRecord = this.checkAndSaveRecord();
+                if (isNewRecord) {
+                    document.getElementById('newRecordBadge').classList.remove('hidden');
+                } else {
+                    document.getElementById('newRecordBadge').classList.add('hidden');
+                }
+
+                document.getElementById('victoryModal').classList.remove('hidden');
+                document.getElementById('victoryModal').classList.add('flex');
+
+                this.createConfetti();
+            }
+
+            createConfetti() {
+                const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#F7DC6F', '#BB8FCE'];
+                for (let i = 0; i < 50; i++) {
+                    setTimeout(() => {
+                        const confetti = document.createElement('div');
+                        confetti.className = 'confetti';
+                        confetti.style.left = Math.random() * 100 + 'vw';
+                        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                        confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                        document.body.appendChild(confetti);
+                        setTimeout(() => confetti.remove(), 3000);
+                    }, i * 30);
+                }
+            }
+
+            loadRecords() {
+                this.records = {
+                    3: JSON.parse(localStorage.getItem('puzzle_record_3')) || null,
+                    4: JSON.parse(localStorage.getItem('puzzle_record_4')) || null,
+                    5: JSON.parse(localStorage.getItem('puzzle_record_5')) || null
+                };
+            }
+
+            checkAndSaveRecord() {
+                const currentRecord = this.records[this.size];
+                const currentScore = this.timer * 1000 + this.moves;
+
+                if (!currentRecord || currentScore < (currentRecord.time * 1000 + currentRecord.moves)) {
+                    this.records[this.size] = { time: this.timer, moves: this.moves };
+                    localStorage.setItem(`puzzle_record_${this.size}`, JSON.stringify(this.records[this.size]));
+                    this.displayRecords();
+                    return true;
+                }
+                return false;
+            }
+
+            displayRecords() {
+                for (let size of [3, 4, 5]) {
+                    const record = this.records[size];
+                    const elem = document.getElementById(`record${size}`);
+                    if (record) {
+                        const minutes = Math.floor(record.time / 60);
+                        const seconds = record.time % 60;
+                        elem.textContent = `${minutes}:${seconds.toString().padStart(2, '0')} (${record.moves}회)`;
+                    } else {
+                        elem.textContent = '-';
+                    }
+                }
+            }
+        }
+
+        // Initialize game
+        new SlidingPuzzle();
+    </script>
+</body>
+</html>

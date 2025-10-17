@@ -250,6 +250,12 @@
         { id: 'delivery', name: 'Delivery', iconClass: 'icon-world', icon: 'fas fa-motorcycle', url: './demos/delivery/' },
         { id: 'music', name: 'Music', iconClass: 'icon-about', icon: 'fas fa-music', url: './demos/music/' },
         { id: 'realestate', name: 'Real Estate', iconClass: 'icon-code', icon: 'fas fa-building', url: './demos/realestate/' },
+        { id: 'map', name: 'Map', iconClass: 'icon-world', icon: 'fas fa-map-marked-alt', url: './demos/map/' },
+        { id: 'navigation', name: 'Navigation', iconClass: 'icon-code', icon: 'fas fa-route', url: './demos/navigation/' },
+        { id: 'transit', name: 'Transit', iconClass: 'icon-about', icon: 'fas fa-bus', url: './demos/transit/' },
+        { id: 'parking', name: 'Parking', iconClass: 'icon-vision', icon: 'fas fa-parking', url: './demos/parking/' },
+        { id: 'weather', name: 'Weather', iconClass: 'icon-chat', icon: 'fas fa-cloud-sun', url: './demos/weather/' },
+        { id: 'fitness', name: 'Fitness', iconClass: 'icon-world', icon: 'fas fa-heartbeat', url: './demos/fitness/' },
         { id: 'world', name: 'World Model', iconClass: 'icon-world', icon: 'fas fa-globe', url: './demos/world/' },
         { id: 'about', name: 'About', iconClass: 'icon-about', icon: 'fas fa-info-circle' }
     ];
@@ -491,9 +497,57 @@
                     <div class="app-icon-large icon-code"><i class="fas fa-building"></i></div>
                     <div class="app-label">Real Estate</div>
                 </div>
+                <div class="app-card" onclick="wm.openApp('map')">
+                    <div class="app-icon-large icon-world"><i class="fas fa-map-marked-alt"></i></div>
+                    <div class="app-label">Map</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('navigation')">
+                    <div class="app-icon-large icon-code"><i class="fas fa-route"></i></div>
+                    <div class="app-label">Navigation</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('transit')">
+                    <div class="app-icon-large icon-about"><i class="fas fa-bus"></i></div>
+                    <div class="app-label">Transit</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('parking')">
+                    <div class="app-icon-large icon-vision"><i class="fas fa-parking"></i></div>
+                    <div class="app-label">Parking</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('weather')">
+                    <div class="app-icon-large icon-chat"><i class="fas fa-cloud-sun"></i></div>
+                    <div class="app-label">Weather</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('fitness')">
+                    <div class="app-icon-large icon-world"><i class="fas fa-heartbeat"></i></div>
+                    <div class="app-label">Fitness</div>
+                </div>
                 <div class="app-card" onclick="wm.openApp('world')">
                     <div class="app-icon-large icon-world"><i class="fas fa-globe"></i></div>
                     <div class="app-label">World Model</div>
+                </div>
+                <div class="app-card" onclick="window.open('./games/match3/', '_blank')">
+                    <div class="app-icon-large icon-about"><i class="fas fa-th"></i></div>
+                    <div class="app-label">Match-3</div>
+                </div>
+                <div class="app-card" onclick="window.open('./games/runner/', '_blank')">
+                    <div class="app-icon-large icon-vision"><i class="fas fa-running"></i></div>
+                    <div class="app-label">Runner</div>
+                </div>
+                <div class="app-card" onclick="window.open('./games/board/', '_blank')">
+                    <div class="app-icon-large icon-code"><i class="fas fa-dice"></i></div>
+                    <div class="app-label">Board Game</div>
+                </div>
+                <div class="app-card" onclick="window.open('./games/quiz/', '_blank')">
+                    <div class="app-icon-large icon-chat"><i class="fas fa-question-circle"></i></div>
+                    <div class="app-label">Quiz</div>
+                </div>
+                <div class="app-card" onclick="window.open('./games/puzzle/', '_blank')">
+                    <div class="app-icon-large icon-world"><i class="fas fa-puzzle-piece"></i></div>
+                    <div class="app-label">Puzzle</div>
+                </div>
+                <div class="app-card" onclick="window.open('./games/cards/', '_blank')">
+                    <div class="app-icon-large icon-about"><i class="fas fa-cards"></i></div>
+                    <div class="app-label">Cards</div>
                 </div>
                 <div class="app-card" onclick="wm.openApp('about')">
                     <div class="app-icon-large icon-about"><i class="fas fa-info-circle"></i></div>

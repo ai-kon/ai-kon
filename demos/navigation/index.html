@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navigation - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%); }
+        .route-card { transition: all 0.3s; }
+        .route-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.2); }
+        .navigation-active { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .traffic-good { background: #22c55e; }
+        .traffic-moderate { background: #f59e0b; }
+        .traffic-bad { background: #ef4444; }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <div class="bg-white rounded-lg shadow-2xl p-6">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800"><i class="fas fa-route text-cyan-600 mr-3"></i>내비게이션</h1>
+                    <p class="text-gray-600">T맵/카카오내비 스타일</p>
+                </div>
+                <button onclick="window.location.href='../'" class="px-4 py-2 bg-cyan-600 text-white rounded-lg">뒤로가기</button>
+            </div>
+
+            <!-- Search Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-bold mb-2 text-gray-700">출발지</label>
+                    <input type="text" id="startInput" value="현재 위치" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-cyan-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2 text-gray-700">도착지</label>
+                    <input type="text" id="endInput" placeholder="목적지 입력" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-cyan-500 focus:outline-none">
+                </div>
+            </div>
+
+            <!-- Route Type -->
+            <div class="flex gap-2 mb-6">
+                <button onclick="setRouteType('fast')" class="route-type-btn flex-1 px-4 py-3 bg-cyan-100 text-cyan-700 font-bold rounded-lg active">⚡ 빠른길</button>
+                <button onclick="setRouteType('short')" class="route-type-btn flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-bold rounded-lg">📏 최단거리</button>
+                <button onclick="setRouteType('easy')" class="route-type-btn flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-bold rounded-lg">🛣️ 편한길</button>
+            </div>
+
+            <button onclick="startNavigation()" class="w-full mb-6 px-6 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white text-xl font-bold rounded-lg transition-all">
+                <i class="fas fa-play mr-2"></i>길찾기 시작
+            </button>
+
+            <!-- Navigation Display -->
+            <div id="navigationDisplay" class="hidden mb-6">
+                <div class="bg-gradient-to-r from-cyan-500 to-blue-500 text-white p-8 rounded-lg mb-4">
+                    <div class="text-6xl mb-4 text-center navigation-active" id="navIcon">⬆️</div>
+                    <div class="text-4xl font-bold text-center mb-2" id="navDistance">500m</div>
+                    <div class="text-2xl text-center" id="navInstruction">직진</div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                    <div class="bg-blue-50 p-4 rounded-lg text-center">
+                        <div class="text-sm text-blue-600">남은 거리</div>
+                        <div class="text-2xl font-bold" id="remainDistance">12.5km</div>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg text-center">
+                        <div class="text-sm text-green-600">예상 시간</div>
+                        <div class="text-2xl font-bold" id="remainTime">25분</div>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg text-center">
+                        <div class="text-sm text-purple-600">도착 예정</div>
+                        <div class="text-2xl font-bold" id="arrivalTime">--:--</div>
+                    </div>
+                </div>
+
+                <button onclick="stopNavigation()" class="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors">
+                    <i class="fas fa-stop mr-2"></i>내비게이션 종료
+                </button>
+            </div>
+
+            <!-- Route List -->
+            <div id="routeList" class="space-y-4 mb-6"></div>
+
+            <!-- Recent Destinations -->
+            <div class="mb-6">
+                <h3 class="text-xl font-bold mb-4 text-gray-800">최근 목적지</h3>
+                <div id="recentList" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-4 gap-4">
+                <div class="bg-cyan-50 p-4 rounded-lg text-center">
+                    <div class="text-sm text-cyan-600">총 이동거리</div>
+                    <div class="text-2xl font-bold" id="totalDistance">0km</div>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg text-center">
+                    <div class="text-sm text-blue-600">내비 사용</div>
+                    <div class="text-2xl font-bold" id="navCount">0회</div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg text-center">
+                    <div class="text-sm text-green-600">평균 속도</div>
+                    <div class="text-2xl font-bold" id="avgSpeed">0km/h</div>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg text-center">
+                    <div class="text-sm text-purple-600">즐겨찾기</div>
+                    <div class="text-2xl font-bold" id="favoriteCount">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentRouteType = 'fast';
+        let navigationActive = false;
+        let navigationInterval = null;
+        let recentDestinations = JSON.parse(localStorage.getItem('nav_recent') || '[]');
+        let totalDistance = parseFloat(localStorage.getItem('nav_total_distance') || '0');
+        let navCount = parseInt(localStorage.getItem('nav_count') || '0');
+
+        const destinations = [
+            '강남역', '홍대입구역', '서울역', '여의도', '잠실',
+            '명동', '이태원', '압구정', '신촌', '대학로'
+        ];
+
+        const navigationSteps = [
+            {icon: '⬆️', instruction: '직진', distance: 500},
+            {icon: '➡️', instruction: '우회전', distance: 300},
+            {icon: '⬆️', instruction: '직진', distance: 800},
+            {icon: '⬅️', instruction: '좌회전', distance: 200},
+            {icon: '🔄', instruction: '유턴', distance: 100},
+            {icon: '↗️', instruction: '우측 방향', distance: 600},
+        ];
+
+        function setRouteType(type) {
+            currentRouteType = type;
+            document.querySelectorAll('.route-type-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-cyan-100', 'text-cyan-700');
+                btn.classList.add('bg-gray-100', 'text-gray-700');
+            });
+            event.target.classList.add('active', 'bg-cyan-100', 'text-cyan-700');
+            event.target.classList.remove('bg-gray-100', 'text-gray-700');
+        }
+
+        function generateRoutes(destination) {
+            const routes = [
+                {
+                    name: '빠른길',
+                    distance: (Math.random() * 10 + 5).toFixed(1),
+                    time: Math.floor(Math.random() * 20 + 15),
+                    traffic: ['good', 'moderate', 'bad'][Math.floor(Math.random() * 3)],
+                    toll: Math.random() > 0.5
+                },
+                {
+                    name: '최단거리',
+                    distance: (Math.random() * 8 + 4).toFixed(1),
+                    time: Math.floor(Math.random() * 25 + 20),
+                    traffic: ['good', 'moderate', 'bad'][Math.floor(Math.random() * 3)],
+                    toll: Math.random() > 0.7
+                },
+                {
+                    name: '편한길',
+                    distance: (Math.random() * 12 + 6).toFixed(1),
+                    time: Math.floor(Math.random() * 18 + 18),
+                    traffic: 'good',
+                    toll: false
+                }
+            ];
+
+            const trafficLabels = {
+                good: '원활',
+                moderate: '보통',
+                bad: '혼잡'
+            };
+
+            return routes.map((route, i) => `
+                <div class="route-card bg-white border-2 border-gray-200 rounded-lg p-4 cursor-pointer hover:border-cyan-500" onclick="selectRoute(${i})">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h4 class="text-lg font-bold text-gray-800">${route.name}</h4>
+                            <div class="text-sm text-gray-600">${destination}</div>
+                        </div>
+                        <div class="traffic-${route.traffic} text-white px-3 py-1 rounded text-sm font-bold">
+                            ${trafficLabels[route.traffic]}
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                            <div class="text-xs text-gray-500">거리</div>
+                            <div class="font-bold">${route.distance}km</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">시간</div>
+                            <div class="font-bold">${route.time}분</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">통행료</div>
+                            <div class="font-bold">${route.toll ? '있음' : '없음'}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function startNavigation() {
+            const destination = document.getElementById('endInput').value;
+            if (!destination) {
+                alert('도착지를 입력하세요.');
+                return;
+            }
+
+            document.getElementById('routeList').innerHTML = generateRoutes(destination);
+        }
+
+        window.selectRoute = (index) => {
+            navigationActive = true;
+            document.getElementById('navigationDisplay').classList.remove('hidden');
+            document.getElementById('routeList').classList.add('hidden');
+
+            // Save to recent
+            const destination = document.getElementById('endInput').value;
+            if (!recentDestinations.includes(destination)) {
+                recentDestinations.unshift(destination);
+                if (recentDestinations.length > 5) recentDestinations.pop();
+                localStorage.setItem('nav_recent', JSON.stringify(recentDestinations));
+            }
+
+            navCount++;
+            localStorage.setItem('nav_count', navCount.toString());
+
+            // Simulate navigation
+            let stepIndex = 0;
+            let remainingDistance = 12.5;
+            const now = new Date();
+            now.setMinutes(now.getMinutes() + 25);
+            document.getElementById('arrivalTime').textContent =
+                now.toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'});
+
+            navigationInterval = setInterval(() => {
+                const step = navigationSteps[stepIndex % navigationSteps.length];
+                document.getElementById('navIcon').textContent = step.icon;
+                document.getElementById('navDistance').textContent = step.distance + 'm';
+                document.getElementById('navInstruction').textContent = step.instruction;
+
+                remainingDistance -= 0.5;
+                if (remainingDistance <= 0) {
+                    stopNavigation();
+                    alert('목적지에 도착했습니다!');
+                    totalDistance += 12.5;
+                    localStorage.setItem('nav_total_distance', totalDistance.toString());
+                    updateStats();
+                    return;
+                }
+
+                document.getElementById('remainDistance').textContent = remainingDistance.toFixed(1) + 'km';
+                document.getElementById('remainTime').textContent = Math.ceil(remainingDistance * 2) + '분';
+
+                stepIndex++;
+            }, 3000);
+
+            updateStats();
+            renderRecent();
+        };
+
+        function stopNavigation() {
+            navigationActive = false;
+            if (navigationInterval) {
+                clearInterval(navigationInterval);
+                navigationInterval = null;
+            }
+            document.getElementById('navigationDisplay').classList.add('hidden');
+            document.getElementById('routeList').classList.remove('hidden');
+        }
+
+        function renderRecent() {
+            document.getElementById('recentList').innerHTML = recentDestinations.map(dest => `
+                <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center hover:bg-gray-100 transition-colors cursor-pointer" onclick="setDestination('${dest}')">
+                    <div>
+                        <i class="fas fa-map-marker-alt text-cyan-600 mr-2"></i>
+                        <span class="font-medium">${dest}</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-400"></i>
+                </div>
+            `).join('') || '<div class="col-span-2 text-center text-gray-400 py-4">최근 목적지가 없습니다</div>';
+        }
+
+        window.setDestination = (dest) => {
+            document.getElementById('endInput').value = dest;
+        };
+
+        function updateStats() {
+            document.getElementById('totalDistance').textContent = totalDistance.toFixed(1) + 'km';
+            document.getElementById('navCount').textContent = navCount + '회';
+            document.getElementById('avgSpeed').textContent = totalDistance > 0 ?
+                (totalDistance / (navCount || 1) * 2).toFixed(0) + 'km/h' : '0km/h';
+            document.getElementById('favoriteCount').textContent = recentDestinations.length;
+        }
+
+        renderRecent();
+        updateStats();
+    </script>
+</body>
+</html>
