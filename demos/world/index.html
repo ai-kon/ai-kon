@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Model Prototype | AI-KON Demos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        canvas {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            image-rendering: pixelated;
+        }
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto p-4 max-w-6xl">
+        <!-- Header -->
+        <header class="bg-white rounded-lg shadow-sm p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">🌍 World Model Prototype</h1>
+                    <p class="text-sm text-gray-600">Simple RL environment simulation</p>
+                </div>
+                <a href="../" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                    ← Back to Demos
+                </a>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left: Canvas -->
+            <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Environment</h2>
+                <div class="flex justify-center">
+                    <canvas id="world-canvas" width="600" height="600"></canvas>
+                </div>
+
+                <div class="mt-4 grid grid-cols-3 gap-3">
+                    <button id="start-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                        ▶ Start
+                    </button>
+                    <button id="pause-btn" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-medium" disabled>
+                        ⏸ Pause
+                    </button>
+                    <button id="reset-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                        ↻ Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right: Stats & Controls -->
+            <div class="space-y-4">
+                <!-- Stats -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold mb-4">Statistics</h3>
+                    <div class="space-y-3">
+                        <div class="stat-box p-3 rounded-lg text-white">
+                            <p class="text-sm opacity-90">Episode</p>
+                            <p class="text-2xl font-bold" id="episode-stat">0</p>
+                        </div>
+                        <div class="bg-blue-100 p-3 rounded-lg">
+                            <p class="text-sm text-blue-800">Steps</p>
+                            <p class="text-2xl font-bold text-blue-900" id="steps-stat">0</p>
+                        </div>
+                        <div class="bg-green-100 p-3 rounded-lg">
+                            <p class="text-sm text-green-800">Success Rate</p>
+                            <p class="text-2xl font-bold text-green-900" id="success-stat">0%</p>
+                        </div>
+                        <div class="bg-purple-100 p-3 rounded-lg">
+                            <p class="text-sm text-purple-800">Avg Reward</p>
+                            <p class="text-2xl font-bold text-purple-900" id="reward-stat">0.0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold mb-4">Settings</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Speed</label>
+                            <input type="range" id="speed-slider" min="1" max="10" value="5" class="w-full">
+                            <p class="text-xs text-gray-500 mt-1">Current: <span id="speed-value">5</span>x</p>
+                        </div>
+                        <div>
+                            <label class="flex items-center space-x-2">
+                                <input type="checkbox" id="show-path-check" checked class="rounded">
+                                <span class="text-sm font-medium text-gray-700">Show Path</span>
+                            </label>
+                        </div>
+                        <div>
+                            <label class="flex items-center space-x-2">
+                                <input type="checkbox" id="random-goal-check" class="rounded">
+                                <span class="text-sm font-medium text-gray-700">Random Goal</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold mb-4">Legend</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 bg-blue-500 rounded"></div>
+                            <span>Agent</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 bg-green-500 rounded"></div>
+                            <span>Goal</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 bg-gray-700 rounded"></div>
+                            <span>Obstacle</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 bg-purple-300 rounded opacity-50"></div>
+                            <span>Path (visited)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p class="text-sm text-blue-800">
+                <strong>About:</strong> This is a simple grid world environment where an AI agent learns to navigate to a goal while avoiding obstacles.
+                The agent uses Q-learning (a reinforcement learning algorithm) to improve over time. This demonstrates the concept of a "world model"
+                where the AI learns the environment's dynamics through trial and error.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('world-canvas');
+        const ctx = canvas.getContext('2d');
+
+        const GRID_SIZE = 20;
+        const CELL_SIZE = canvas.width / GRID_SIZE;
+
+        // Elements
+        const startBtn = document.getElementById('start-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValue = document.getElementById('speed-value');
+        const showPathCheck = document.getElementById('show-path-check');
+        const randomGoalCheck = document.getElementById('random-goal-check');
+
+        const episodeStat = document.getElementById('episode-stat');
+        const stepsStat = document.getElementById('steps-stat');
+        const successStat = document.getElementById('success-stat');
+        const rewardStat = document.getElementById('reward-stat');
+
+        // Environment state
+        let agent = { x: 1, y: 1 };
+        let goal = { x: 18, y: 18 };
+        let obstacles = [];
+        let path = [];
+        let isRunning = false;
+        let animationId = null;
+
+        // Stats
+        let episode = 0;
+        let steps = 0;
+        let totalSuccesses = 0;
+        let totalRewards = 0;
+        let episodeReward = 0;
+
+        // Q-table (simplified RL)
+        let qTable = {};
+
+        function initObstacles() {
+            obstacles = [];
+            for (let i = 0; i < 40; i++) {
+                const x = Math.floor(Math.random() * GRID_SIZE);
+                const y = Math.floor(Math.random() * GRID_SIZE);
+                if ((x !== agent.x || y !== agent.y) && (x !== goal.x || y !== goal.y)) {
+                    obstacles.push({ x, y });
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            ctx.strokeStyle = '#e5e7eb';
+            for (let i = 0; i <= GRID_SIZE; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * CELL_SIZE, 0);
+                ctx.lineTo(i * CELL_SIZE, canvas.height);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, i * CELL_SIZE);
+                ctx.lineTo(canvas.width, i * CELL_SIZE);
+                ctx.stroke();
+            }
+
+            // Draw path
+            if (showPathCheck.checked) {
+                ctx.fillStyle = 'rgba(168, 85, 247, 0.2)';
+                path.forEach(p => {
+                    ctx.fillRect(p.x * CELL_SIZE, p.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                });
+            }
+
+            // Draw obstacles
+            ctx.fillStyle = '#374151';
+            obstacles.forEach(obs => {
+                ctx.fillRect(obs.x * CELL_SIZE, obs.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            });
+
+            // Draw goal
+            ctx.fillStyle = '#10b981';
+            ctx.fillRect(goal.x * CELL_SIZE, goal.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+
+            // Draw agent
+            ctx.fillStyle = '#3b82f6';
+            ctx.beginPath();
+            ctx.arc(
+                agent.x * CELL_SIZE + CELL_SIZE / 2,
+                agent.y * CELL_SIZE + CELL_SIZE / 2,
+                CELL_SIZE / 3,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
+
+        function getState() {
+            return `${agent.x},${agent.y}`;
+        }
+
+        function getQValue(state, action) {
+            const key = `${state}_${action}`;
+            return qTable[key] || 0;
+        }
+
+        function setQValue(state, action, value) {
+            const key = `${state}_${action}`;
+            qTable[key] = value;
+        }
+
+        function chooseAction(state, epsilon = 0.1) {
+            if (Math.random() < epsilon) {
+                // Explore
+                return Math.floor(Math.random() * 4);
+            } else {
+                // Exploit
+                const actions = [0, 1, 2, 3];
+                let bestAction = 0;
+                let bestValue = getQValue(state, 0);
+                for (let i = 1; i < 4; i++) {
+                    const value = getQValue(state, i);
+                    if (value > bestValue) {
+                        bestValue = value;
+                        bestAction = i;
+                    }
+                }
+                return bestAction;
+            }
+        }
+
+        function moveAgent(action) {
+            const newPos = { ...agent };
+
+            // 0: up, 1: right, 2: down, 3: left
+            if (action === 0) newPos.y--;
+            else if (action === 1) newPos.x++;
+            else if (action === 2) newPos.y++;
+            else if (action === 3) newPos.x--;
+
+            // Check bounds and obstacles
+            if (newPos.x < 0 || newPos.x >= GRID_SIZE || newPos.y < 0 || newPos.y >= GRID_SIZE) {
+                return -1; // Hit wall
+            }
+
+            if (obstacles.some(obs => obs.x === newPos.x && obs.y === newPos.y)) {
+                return -1; // Hit obstacle
+            }
+
+            agent = newPos;
+            path.push({ ...agent });
+
+            // Check if reached goal
+            if (agent.x === goal.x && agent.y === goal.y) {
+                return 10; // Success!
+            }
+
+            // Small negative reward for each step (encourage efficiency)
+            return -0.1;
+        }
+
+        function step() {
+            const state = getState();
+            const action = chooseAction(state, Math.max(0.1, 1 - episode / 100));
+
+            const reward = moveAgent(action);
+            episodeReward += reward;
+            steps++;
+
+            const nextState = getState();
+
+            // Q-learning update
+            const alpha = 0.1;
+            const gamma = 0.9;
+            const maxNextQ = Math.max(...[0, 1, 2, 3].map(a => getQValue(nextState, a)));
+            const currentQ = getQValue(state, action);
+            const newQ = currentQ + alpha * (reward + gamma * maxNextQ - currentQ);
+            setQValue(state, action, newQ);
+
+            // Update stats
+            stepsStat.textContent = steps;
+
+            // Check if episode is done
+            if (reward === 10 || steps > 200) {
+                if (reward === 10) totalSuccesses++;
+                totalRewards += episodeReward;
+                episode++;
+
+                episodeStat.textContent = episode;
+                successStat.textContent = ((totalSuccesses / episode) * 100).toFixed(1) + '%';
+                rewardStat.textContent = (totalRewards / episode).toFixed(2);
+
+                // Reset for next episode
+                agent = { x: 1, y: 1 };
+                if (randomGoalCheck.checked) {
+                    goal = {
+                        x: Math.floor(Math.random() * (GRID_SIZE - 2)) + 1,
+                        y: Math.floor(Math.random() * (GRID_SIZE - 2)) + 1
+                    };
+                }
+                path = [];
+                steps = 0;
+                episodeReward = 0;
+            }
+
+            draw();
+        }
+
+        function gameLoop() {
+            const speed = parseInt(speedSlider.value);
+            const delay = Math.max(10, 200 - speed * 20);
+
+            if (isRunning) {
+                step();
+                animationId = setTimeout(gameLoop, delay);
+            }
+        }
+
+        // Event listeners
+        startBtn.addEventListener('click', () => {
+            if (!isRunning) {
+                isRunning = true;
+                startBtn.disabled = true;
+                pauseBtn.disabled = false;
+                gameLoop();
+            }
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            isRunning = false;
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+            if (animationId) clearTimeout(animationId);
+        });
+
+        resetBtn.addEventListener('click', () => {
+            isRunning = false;
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+            if (animationId) clearTimeout(animationId);
+
+            agent = { x: 1, y: 1 };
+            goal = { x: 18, y: 18 };
+            path = [];
+            episode = 0;
+            steps = 0;
+            totalSuccesses = 0;
+            totalRewards = 0;
+            episodeReward = 0;
+            qTable = {};
+
+            initObstacles();
+
+            episodeStat.textContent = '0';
+            stepsStat.textContent = '0';
+            successStat.textContent = '0%';
+            rewardStat.textContent = '0.0';
+
+            draw();
+        });
+
+        speedSlider.addEventListener('input', (e) => {
+            speedValue.textContent = e.target.value;
+        });
+
+        // Initialize
+        initObstacles();
+        draw();
+    </script>
+</body>
+</html>

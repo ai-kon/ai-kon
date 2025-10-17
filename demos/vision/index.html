@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Analysis | AI-KON Demos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .loader {
+            border: 6px solid #f3f4f6;
+            border-top: 6px solid #6366f1;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .result-bar {
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center z-50">
+        <div class="loader"></div>
+        <h2 class="text-white text-xl font-semibold mt-4">Loading Vision Model...</h2>
+        <p class="text-white text-sm mt-2">This may take a minute</p>
+        <progress id="progress-bar" value="0" max="100" class="w-64 mt-4 h-2"></progress>
+        <p id="progress-text" class="text-white text-sm mt-2">0%</p>
+    </div>
+
+    <div class="container mx-auto p-4 max-w-6xl">
+        <!-- Header -->
+        <header class="bg-white rounded-lg shadow-sm p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">👁️ Image Analysis</h1>
+                    <p class="text-sm text-gray-600">Zero-shot image classification with CLIP</p>
+                </div>
+                <a href="../" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                    ← Back to Demos
+                </a>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Left: Image Upload -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Upload Image</h2>
+
+                <div
+                    id="drop-area"
+                    class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition"
+                >
+                    <div id="placeholder">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <p class="mt-2 text-sm text-gray-600">
+                            <span class="font-semibold text-indigo-600">Click to upload</span> or drag and drop
+                        </p>
+                        <p class="text-xs text-gray-500">PNG, JPG, WEBP</p>
+                    </div>
+                    <div id="preview-container" class="hidden">
+                        <img id="preview-img" class="mx-auto rounded-lg max-h-96" />
+                    </div>
+                    <input type="file" id="file-input" class="hidden" accept="image/*" />
+                </div>
+
+                <!-- Custom Labels -->
+                <div class="mt-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Custom Labels (comma-separated)
+                    </label>
+                    <input
+                        type="text"
+                        id="labels-input"
+                        placeholder="dog, cat, car, tree, person..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        value="cat, dog, bird, car, airplane, ship, truck, horse, person, bicycle"
+                    />
+                </div>
+
+                <button
+                    id="analyze-btn"
+                    class="w-full mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 font-medium"
+                    disabled
+                >
+                    Analyze Image
+                </button>
+
+                <!-- Example Images -->
+                <div class="mt-6">
+                    <h3 class="text-sm font-medium text-gray-700 mb-2">Or try examples:</h3>
+                    <div class="grid grid-cols-3 gap-2">
+                        <img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200"
+                             class="example-img cursor-pointer rounded border hover:border-indigo-500 w-full h-24 object-cover"
+                             alt="Cat" />
+                        <img src="https://images.unsplash.com/photo-1568572933382-74d440642117?w=200"
+                             class="example-img cursor-pointer rounded border hover:border-indigo-500 w-full h-24 object-cover"
+                             alt="Dog" />
+                        <img src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=200"
+                             class="example-img cursor-pointer rounded border hover:border-indigo-500 w-full h-24 object-cover"
+                             alt="Car" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Results -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Results</h2>
+
+                <div id="results-placeholder" class="text-center text-gray-500 py-12">
+                    Upload an image to see classification results
+                </div>
+
+                <div id="results-container" class="hidden space-y-3">
+                    <!-- Results will be inserted here -->
+                </div>
+
+                <div id="loading-results" class="hidden text-center py-12">
+                    <div class="inline-block w-8 h-8 border-4 border-gray-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                    <p class="text-gray-600 mt-2">Analyzing image...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p class="text-sm text-blue-800">
+                <strong>How it works:</strong> This demo uses CLIP (Contrastive Language-Image Pre-training) to classify images
+                based on your custom text labels. The model compares the image against each label and returns similarity scores.
+                All processing happens in your browser!
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5';
+
+        env.allowLocalModels = false;
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const dropArea = document.getElementById('drop-area');
+        const placeholder = document.getElementById('placeholder');
+        const previewContainer = document.getElementById('preview-container');
+        const previewImg = document.getElementById('preview-img');
+        const fileInput = document.getElementById('file-input');
+        const labelsInput = document.getElementById('labels-input');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const resultsPlaceholder = document.getElementById('results-placeholder');
+        const resultsContainer = document.getElementById('results-container');
+        const loadingResults = document.getElementById('loading-results');
+        const exampleImgs = document.querySelectorAll('.example-img');
+
+        let classifier;
+        let currentImage = null;
+
+        // Initialize model
+        async function initModel() {
+            try {
+                classifier = await pipeline('zero-shot-image-classification', 'onnx-community/clip-vit-base-patch32', {
+                    device: 'webgpu',
+                    progress_callback: (progress) => {
+                        if (progress.status === 'progress') {
+                            const percent = Math.round(progress.progress);
+                            progressBar.value = percent;
+                            progressText.textContent = percent + '%';
+                        }
+                    }
+                });
+                loadingOverlay.style.display = 'none';
+                console.log('Model loaded');
+            } catch (error) {
+                console.error('Failed to load model:', error);
+                loadingOverlay.innerHTML = `
+                    <h2 class="text-white text-xl font-semibold">Failed to Load Model</h2>
+                    <p class="text-white text-sm mt-2">${error.message}</p>
+                `;
+            }
+        }
+
+        // Handle image selection
+        function handleImage(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentImage = e.target.result;
+                previewImg.src = currentImage;
+                placeholder.classList.add('hidden');
+                previewContainer.classList.remove('hidden');
+                analyzeBtn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Analyze image
+        async function analyzeImage() {
+            if (!classifier || !currentImage) return;
+
+            const labels = labelsInput.value.split(',').map(l => l.trim()).filter(l => l);
+            if (labels.length === 0) {
+                alert('Please enter at least one label');
+                return;
+            }
+
+            resultsPlaceholder.classList.add('hidden');
+            resultsContainer.classList.add('hidden');
+            loadingResults.classList.remove('hidden');
+
+            try {
+                const results = await classifier(currentImage, labels);
+
+                // Sort by score
+                results.sort((a, b) => b.score - a.score);
+
+                // Display results
+                resultsContainer.innerHTML = results.map((result, i) => {
+                    const percentage = (result.score * 100).toFixed(1);
+                    const barColor = i === 0 ? 'bg-indigo-600' : 'bg-gray-400';
+
+                    return `
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-sm">
+                                <span class="font-medium text-gray-700">${result.label}</span>
+                                <span class="text-gray-600">${percentage}%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="result-bar ${barColor} h-2 rounded-full" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                loadingResults.classList.add('hidden');
+                resultsContainer.classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                loadingResults.classList.add('hidden');
+                resultsPlaceholder.classList.remove('hidden');
+                resultsPlaceholder.textContent = 'Error analyzing image. Please try again.';
+            }
+        }
+
+        // Event listeners
+        dropArea.addEventListener('click', () => fileInput.click());
+
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('border-indigo-500', 'bg-indigo-50');
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('border-indigo-500', 'bg-indigo-50');
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('border-indigo-500', 'bg-indigo-50');
+            if (e.dataTransfer.files[0]) {
+                handleImage(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                handleImage(e.target.files[0]);
+            }
+        });
+
+        analyzeBtn.addEventListener('click', analyzeImage);
+
+        exampleImgs.forEach(img => {
+            img.addEventListener('click', async () => {
+                try {
+                    const response = await fetch(img.src);
+                    const blob = await response.blob();
+                    handleImage(blob);
+                } catch (error) {
+                    console.error('Failed to load example image:', error);
+                }
+            });
+        });
+
+        // Initialize
+        initModel();
+    </script>
+</body>
+</html>
