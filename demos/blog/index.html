@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>블로그 - Naver 스타일</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #ff69b4 0%, #ff8c00 100%);
+            min-height: 100vh;
+        }
+        .blog-post:hover {
+            transform: translateY(-3px);
+            transition: transform 0.3s;
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-3xl font-bold text-pink-600">
+                    <i class="fas fa-blog mr-2"></i>내 블로그
+                </h1>
+                <button id="newPostBtn" class="bg-gradient-to-r from-pink-500 to-orange-500 text-white px-6 py-3 rounded-lg hover:from-pink-600 hover:to-orange-600 font-bold">
+                    <i class="fas fa-pen mr-2"></i>새 글 쓰기
+                </button>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="flex gap-4 mb-4">
+                <input type="text" id="searchInput" placeholder="블로그 검색..." class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                <select id="categoryFilter" class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                    <option value="all">전체 카테고리</option>
+                    <option value="일상">일상</option>
+                    <option value="여행">여행</option>
+                    <option value="음식">음식</option>
+                    <option value="취미">취미</option>
+                    <option value="기술">기술</option>
+                </select>
+            </div>
+
+            <!-- Tags -->
+            <div class="flex gap-2 flex-wrap" id="popularTags">
+                <span class="text-sm text-gray-600">인기 태그:</span>
+            </div>
+        </div>
+
+        <!-- Post Grid -->
+        <div id="postGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+        <!-- New Post Modal -->
+        <div id="postModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold">새 글 쓰기</h2>
+                        <button id="closeModal" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-2">제목</label>
+                            <input type="text" id="postTitle" placeholder="제목을 입력하세요" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold mb-2">카테고리</label>
+                            <select id="postCategory" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                                <option value="일상">일상</option>
+                                <option value="여행">여행</option>
+                                <option value="음식">음식</option>
+                                <option value="취미">취미</option>
+                                <option value="기술">기술</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold mb-2">태그 (쉼표로 구분)</label>
+                            <input type="text" id="postTags" placeholder="예: 일상, 행복, 힐링" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold mb-2">썸네일 (이모지)</label>
+                            <input type="text" id="postThumbnail" placeholder="예: 📝" maxlength="2" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold mb-2">내용</label>
+                            <textarea id="postContent" rows="10" placeholder="내용을 입력하세요..." class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"></textarea>
+                        </div>
+
+                        <button id="publishBtn" class="w-full bg-gradient-to-r from-pink-500 to-orange-500 text-white py-3 rounded-lg hover:from-pink-600 hover:to-orange-600 font-bold">
+                            <i class="fas fa-paper-plane mr-2"></i>발행하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Post Modal -->
+        <div id="viewPostModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-8">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1">
+                            <div class="text-6xl mb-4" id="viewThumbnail"></div>
+                            <h2 class="text-3xl font-bold mb-2" id="viewTitle"></h2>
+                            <div class="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                                <span id="viewCategory" class="bg-pink-100 text-pink-700 px-3 py-1 rounded-full"></span>
+                                <span id="viewDate"></span>
+                            </div>
+                            <div class="flex gap-2 mb-4" id="viewTags"></div>
+                        </div>
+                        <button id="closeViewModal" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <div id="viewContent" class="prose max-w-none mb-6 whitespace-pre-wrap"></div>
+
+                    <div class="flex gap-4 mb-6">
+                        <button id="likeBtn" class="flex items-center gap-2 bg-pink-50 text-pink-600 px-6 py-3 rounded-lg hover:bg-pink-100 font-bold">
+                            <i class="fas fa-heart"></i>
+                            <span id="likeCount">0</span>
+                        </button>
+                        <button class="flex items-center gap-2 bg-blue-50 text-blue-600 px-6 py-3 rounded-lg hover:bg-blue-100 font-bold">
+                            <i class="fas fa-comment"></i>
+                            <span id="commentCount">0</span>
+                        </button>
+                        <button id="deletePostBtn" class="ml-auto bg-red-50 text-red-600 px-6 py-3 rounded-lg hover:bg-red-100 font-bold">
+                            <i class="fas fa-trash mr-2"></i>삭제
+                        </button>
+                    </div>
+
+                    <!-- Comments Section -->
+                    <div class="border-t pt-6">
+                        <h3 class="text-xl font-bold mb-4">댓글 <span id="commentCountText">0</span></h3>
+
+                        <div class="mb-4">
+                            <textarea id="commentInput" rows="3" placeholder="댓글을 입력하세요..." class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 mb-2"></textarea>
+                            <button id="addCommentBtn" class="bg-pink-500 text-white px-6 py-2 rounded-lg hover:bg-pink-600">
+                                <i class="fas fa-comment mr-2"></i>댓글 작성
+                            </button>
+                        </div>
+
+                        <div id="commentsList" class="space-y-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize data
+        if (!localStorage.getItem('posts')) {
+            const samplePosts = [
+                {
+                    id: 1,
+                    title: '블로그 시작합니다!',
+                    content: '안녕하세요! 오늘부터 블로그를 시작합니다.\n일상, 여행, 맛집 등 다양한 이야기를 공유할 예정입니다.\n많은 관심 부탁드립니다!',
+                    category: '일상',
+                    tags: ['시작', '일상', '인사'],
+                    thumbnail: '👋',
+                    date: new Date().toLocaleString('ko-KR'),
+                    likes: 5,
+                    comments: []
+                }
+            ];
+            localStorage.setItem('posts', JSON.stringify(samplePosts));
+        }
+
+        let posts = JSON.parse(localStorage.getItem('posts'));
+        let currentPostId = null;
+
+        function saveToLocalStorage() {
+            localStorage.setItem('posts', JSON.stringify(posts));
+        }
+
+        function getAllTags() {
+            const tagSet = new Set();
+            posts.forEach(post => {
+                post.tags.forEach(tag => tagSet.add(tag));
+            });
+            return Array.from(tagSet);
+        }
+
+        function renderPopularTags() {
+            const tags = getAllTags().slice(0, 10);
+            const container = document.getElementById('popularTags');
+            const baseHTML = '<span class="text-sm text-gray-600">인기 태그:</span>';
+
+            if (tags.length === 0) {
+                container.innerHTML = baseHTML;
+                return;
+            }
+
+            container.innerHTML = baseHTML + tags.map(tag =>
+                `<button class="tag-btn bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm hover:bg-pink-200" data-tag="${tag}">#${tag}</button>`
+            ).join('');
+
+            // Add click handlers to tag buttons
+            document.querySelectorAll('.tag-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.getElementById('searchInput').value = btn.dataset.tag;
+                    filterPosts();
+                });
+            });
+        }
+
+        function renderPosts(filteredPosts = posts) {
+            const grid = document.getElementById('postGrid');
+
+            if (filteredPosts.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center text-white text-xl py-12">검색 결과가 없습니다</div>';
+                return;
+            }
+
+            grid.innerHTML = filteredPosts.map(post => `
+                <div class="blog-post bg-white rounded-lg shadow-lg overflow-hidden cursor-pointer hover:shadow-xl transition-shadow" onclick="viewPost(${post.id})">
+                    <div class="bg-gradient-to-br from-pink-100 to-orange-100 p-8 flex items-center justify-center">
+                        <div class="text-7xl">${post.thumbnail || '📝'}</div>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-pink-100 text-pink-700 px-2 py-1 rounded text-sm">${post.category}</span>
+                            <span class="text-xs text-gray-500">${post.date}</span>
+                        </div>
+                        <h3 class="font-bold text-xl mb-2 line-clamp-2">${post.title}</h3>
+                        <p class="text-gray-600 text-sm mb-4 line-clamp-3">${post.content}</p>
+                        <div class="flex gap-2 flex-wrap mb-3">
+                            ${post.tags.slice(0, 3).map(tag =>
+                                `<span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">#${tag}</span>`
+                            ).join('')}
+                        </div>
+                        <div class="flex gap-4 text-sm text-gray-500">
+                            <span><i class="fas fa-heart text-pink-500"></i> ${post.likes}</span>
+                            <span><i class="fas fa-comment text-blue-500"></i> ${post.comments.length}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function viewPost(postId) {
+            currentPostId = postId;
+            const post = posts.find(p => p.id === postId);
+            if (!post) return;
+
+            document.getElementById('viewThumbnail').textContent = post.thumbnail || '📝';
+            document.getElementById('viewTitle').textContent = post.title;
+            document.getElementById('viewCategory').textContent = post.category;
+            document.getElementById('viewDate').textContent = post.date;
+            document.getElementById('viewContent').textContent = post.content;
+            document.getElementById('likeCount').textContent = post.likes;
+            document.getElementById('commentCount').textContent = post.comments.length;
+            document.getElementById('commentCountText').textContent = post.comments.length;
+
+            document.getElementById('viewTags').innerHTML = post.tags.map(tag =>
+                `<span class="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm">#${tag}</span>`
+            ).join('');
+
+            renderComments(post.comments);
+            document.getElementById('viewPostModal').classList.remove('hidden');
+        }
+
+        function renderComments(comments) {
+            const list = document.getElementById('commentsList');
+            if (comments.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-500 py-4">첫 댓글을 남겨보세요!</div>';
+                return;
+            }
+
+            list.innerHTML = comments.map((comment, index) => `
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="font-bold">익명${index + 1}</div>
+                        <div class="text-xs text-gray-500">${comment.date}</div>
+                    </div>
+                    <div class="text-gray-700">${comment.text}</div>
+                </div>
+            `).join('');
+        }
+
+        function addComment() {
+            const text = document.getElementById('commentInput').value.trim();
+            if (!text) {
+                alert('댓글을 입력해주세요!');
+                return;
+            }
+
+            const post = posts.find(p => p.id === currentPostId);
+            if (!post) return;
+
+            post.comments.push({
+                text,
+                date: new Date().toLocaleString('ko-KR')
+            });
+
+            saveToLocalStorage();
+            document.getElementById('commentInput').value = '';
+
+            renderComments(post.comments);
+            document.getElementById('commentCount').textContent = post.comments.length;
+            document.getElementById('commentCountText').textContent = post.comments.length;
+
+            renderPosts();
+        }
+
+        function likePost() {
+            const post = posts.find(p => p.id === currentPostId);
+            if (!post) return;
+
+            post.likes++;
+            saveToLocalStorage();
+
+            document.getElementById('likeCount').textContent = post.likes;
+            renderPosts();
+        }
+
+        function deletePost() {
+            if (!confirm('이 글을 삭제하시겠습니까?')) return;
+
+            posts = posts.filter(p => p.id !== currentPostId);
+            saveToLocalStorage();
+
+            document.getElementById('viewPostModal').classList.add('hidden');
+            renderPosts();
+            renderPopularTags();
+        }
+
+        function publishPost() {
+            const title = document.getElementById('postTitle').value.trim();
+            const content = document.getElementById('postContent').value.trim();
+            const category = document.getElementById('postCategory').value;
+            const tagsInput = document.getElementById('postTags').value.trim();
+            const thumbnail = document.getElementById('postThumbnail').value.trim();
+
+            if (!title || !content) {
+                alert('제목과 내용을 입력해주세요!');
+                return;
+            }
+
+            const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+
+            const post = {
+                id: Date.now(),
+                title,
+                content,
+                category,
+                tags,
+                thumbnail: thumbnail || '📝',
+                date: new Date().toLocaleString('ko-KR'),
+                likes: 0,
+                comments: []
+            };
+
+            posts.unshift(post);
+            saveToLocalStorage();
+
+            // Clear form
+            document.getElementById('postTitle').value = '';
+            document.getElementById('postContent').value = '';
+            document.getElementById('postTags').value = '';
+            document.getElementById('postThumbnail').value = '';
+
+            document.getElementById('postModal').classList.add('hidden');
+            renderPosts();
+            renderPopularTags();
+            alert('글이 발행되었습니다!');
+        }
+
+        function filterPosts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+
+            let filtered = posts;
+
+            if (category !== 'all') {
+                filtered = filtered.filter(p => p.category === category);
+            }
+
+            if (searchTerm) {
+                filtered = filtered.filter(p =>
+                    p.title.toLowerCase().includes(searchTerm) ||
+                    p.content.toLowerCase().includes(searchTerm) ||
+                    p.tags.some(tag => tag.toLowerCase().includes(searchTerm))
+                );
+            }
+
+            renderPosts(filtered);
+        }
+
+        // Event listeners
+        document.getElementById('newPostBtn').addEventListener('click', () => {
+            document.getElementById('postModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closeModal').addEventListener('click', () => {
+            document.getElementById('postModal').classList.add('hidden');
+        });
+
+        document.getElementById('closeViewModal').addEventListener('click', () => {
+            document.getElementById('viewPostModal').classList.add('hidden');
+        });
+
+        document.getElementById('publishBtn').addEventListener('click', publishPost);
+        document.getElementById('likeBtn').addEventListener('click', likePost);
+        document.getElementById('addCommentBtn').addEventListener('click', addComment);
+        document.getElementById('deletePostBtn').addEventListener('click', deletePost);
+
+        document.getElementById('searchInput').addEventListener('input', filterPosts);
+        document.getElementById('categoryFilter').addEventListener('change', filterPosts);
+
+        // Initial render
+        renderPosts();
+        renderPopularTags();
+    </script>
+</body>
+</html>

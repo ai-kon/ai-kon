@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation Maker - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .slide {
+            aspect-ratio: 16/9;
+            background: white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .slide-thumbnail {
+            aspect-ratio: 16/9;
+            background: white;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .slide-thumbnail:hover {
+            border-color: #f093fb;
+            transform: scale(1.05);
+        }
+        .slide-thumbnail.active {
+            border-color: #f5576c;
+            box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+        }
+        .fullscreen-slide {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: black;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .slide-element {
+            position: absolute;
+            cursor: move;
+        }
+        .slide-element.selected {
+            outline: 2px dashed #f5576c;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-full mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-t-lg shadow-2xl p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                        <i class="fas fa-presentation text-pink-600"></i>
+                        Presentation Maker
+                    </h1>
+                    <p class="text-gray-600 text-sm">한쇼 스타일 프레젠테이션 도구</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="window.location.href='../'" class="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg transition-colors">
+                        <i class="fas fa-home mr-2"></i>뒤로
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="bg-white rounded-b-lg shadow-2xl">
+            <div class="grid grid-cols-12 gap-0" style="height: calc(100vh - 200px);">
+                <!-- Left Sidebar - Slide Thumbnails -->
+                <div class="col-span-2 border-r border-gray-200 p-4 overflow-y-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-gray-700">슬라이드</h3>
+                        <button onclick="addSlide()" class="px-2 py-1 bg-pink-500 hover:bg-pink-600 text-white rounded text-sm">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div id="slidesList" class="space-y-2">
+                    </div>
+                </div>
+
+                <!-- Main Canvas -->
+                <div class="col-span-8 p-6 bg-gray-50 flex items-center justify-center">
+                    <div id="slideCanvas" class="slide relative" style="width: 800px;">
+                        <div class="absolute inset-0 flex items-center justify-center text-gray-400">
+                            <div class="text-center">
+                                <i class="fas fa-plus-circle text-6xl mb-4"></i>
+                                <p>새 슬라이드를 추가하세요</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Sidebar - Tools -->
+                <div class="col-span-2 border-l border-gray-200 p-4 overflow-y-auto">
+                    <h3 class="font-bold text-gray-700 mb-4">도구</h3>
+
+                    <!-- Add Elements -->
+                    <div class="space-y-2 mb-6">
+                        <button onclick="addText()" class="w-full px-3 py-2 bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600 text-white rounded-lg text-sm">
+                            <i class="fas fa-font mr-2"></i>텍스트
+                        </button>
+                        <button onclick="addImage()" class="w-full px-3 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-lg text-sm">
+                            <i class="fas fa-image mr-2"></i>이미지
+                        </button>
+                        <button onclick="addShape('rect')" class="w-full px-3 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg text-sm">
+                            <i class="fas fa-square mr-2"></i>사각형
+                        </button>
+                        <button onclick="addShape('circle')" class="w-full px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg text-sm">
+                            <i class="fas fa-circle mr-2"></i>원
+                        </button>
+                    </div>
+
+                    <!-- Templates -->
+                    <div class="mb-6">
+                        <h4 class="font-bold text-gray-700 mb-2">템플릿</h4>
+                        <div class="space-y-2">
+                            <button onclick="applyTemplate('title')" class="w-full px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">제목 슬라이드</button>
+                            <button onclick="applyTemplate('content')" class="w-full px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">내용 슬라이드</button>
+                            <button onclick="applyTemplate('twoColumn')" class="w-full px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">2단 슬라이드</button>
+                        </div>
+                    </div>
+
+                    <!-- Slide Actions -->
+                    <div class="space-y-2 mb-6">
+                        <button onclick="deleteSlide()" class="w-full px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm">
+                            <i class="fas fa-trash mr-2"></i>슬라이드 삭제
+                        </button>
+                        <button onclick="duplicateSlide()" class="w-full px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm">
+                            <i class="fas fa-copy mr-2"></i>복제
+                        </button>
+                    </div>
+
+                    <!-- Presentation -->
+                    <div class="space-y-2">
+                        <button onclick="startPresentation()" class="w-full px-3 py-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-lg text-sm">
+                            <i class="fas fa-play mr-2"></i>발표 시작
+                        </button>
+                        <button onclick="exportPDF()" class="w-full px-3 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg text-sm">
+                            <i class="fas fa-file-pdf mr-2"></i>PDF 내보내기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Presentation Mode -->
+    <div id="presentationMode" class="hidden fullscreen-slide">
+        <div id="presentationSlide" class="slide" style="width: 90vw; max-width: 1200px;"></div>
+        <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-4 z-50">
+            <button onclick="prevSlide()" class="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg backdrop-blur">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <span class="px-4 py-2 bg-white/20 text-white rounded-lg backdrop-blur" id="slideNumber">1 / 1</span>
+            <button onclick="nextSlide()" class="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg backdrop-blur">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            <button onclick="exitPresentation()" class="px-4 py-2 bg-red-500/80 hover:bg-red-600 text-white rounded-lg backdrop-blur">
+                <i class="fas fa-times mr-2"></i>종료
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let slides = [];
+        let currentSlideIndex = 0;
+        let selectedElement = null;
+
+        function initPresentation() {
+            const saved = localStorage.getItem('presentation_data');
+            if (saved) {
+                slides = JSON.parse(saved);
+            }
+
+            if (slides.length === 0) {
+                addSlide();
+            } else {
+                renderSlidesList();
+                renderCurrentSlide();
+            }
+        }
+
+        function savePresentation() {
+            localStorage.setItem('presentation_data', JSON.stringify(slides));
+        }
+
+        window.addSlide = function() {
+            slides.push({
+                id: Date.now(),
+                elements: [],
+                background: '#ffffff'
+            });
+            currentSlideIndex = slides.length - 1;
+            renderSlidesList();
+            renderCurrentSlide();
+            savePresentation();
+        };
+
+        window.deleteSlide = function() {
+            if (slides.length <= 1) {
+                alert('최소 1개의 슬라이드가 필요합니다');
+                return;
+            }
+
+            if (confirm('이 슬라이드를 삭제하시겠습니까?')) {
+                slides.splice(currentSlideIndex, 1);
+                currentSlideIndex = Math.max(0, currentSlideIndex - 1);
+                renderSlidesList();
+                renderCurrentSlide();
+                savePresentation();
+            }
+        };
+
+        window.duplicateSlide = function() {
+            const slide = JSON.parse(JSON.stringify(slides[currentSlideIndex]));
+            slide.id = Date.now();
+            slides.splice(currentSlideIndex + 1, 0, slide);
+            currentSlideIndex++;
+            renderSlidesList();
+            renderCurrentSlide();
+            savePresentation();
+        };
+
+        function selectSlide(index) {
+            currentSlideIndex = index;
+            renderSlidesList();
+            renderCurrentSlide();
+        }
+
+        function renderSlidesList() {
+            const list = document.getElementById('slidesList');
+            list.innerHTML = slides.map((slide, index) => `
+                <div class="slide-thumbnail ${index === currentSlideIndex ? 'active' : ''}"
+                     onclick="selectSlide(${index})"
+                     style="background: ${slide.background}">
+                    <div class="p-2 text-xs text-center">${index + 1}</div>
+                    ${renderSlidePreview(slide)}
+                </div>
+            `).join('');
+        }
+
+        function renderSlidePreview(slide) {
+            return slide.elements.map(el => {
+                if (el.type === 'text') {
+                    return `<div style="position:absolute; left:${el.x}%; top:${el.y}%; font-size:${el.fontSize/4}px;">${el.content}</div>`;
+                } else if (el.type === 'shape') {
+                    return `<div style="position:absolute; left:${el.x}%; top:${el.y}%; width:${el.width/4}px; height:${el.height/4}px; background:${el.color}; border-radius:${el.shape === 'circle' ? '50%' : '0'};"></div>`;
+                }
+                return '';
+            }).join('');
+        }
+
+        function renderCurrentSlide() {
+            const canvas = document.getElementById('slideCanvas');
+            const slide = slides[currentSlideIndex];
+
+            canvas.style.background = slide.background;
+            canvas.innerHTML = slide.elements.map((el, idx) => {
+                if (el.type === 'text') {
+                    return `
+                        <div class="slide-element ${selectedElement === idx ? 'selected' : ''}"
+                             onclick="selectElement(${idx})"
+                             style="left:${el.x}%; top:${el.y}%; font-size:${el.fontSize}px; color:${el.color}; font-weight:${el.bold ? 'bold' : 'normal'};">
+                            ${el.content}
+                        </div>
+                    `;
+                } else if (el.type === 'shape') {
+                    return `
+                        <div class="slide-element ${selectedElement === idx ? 'selected' : ''}"
+                             onclick="selectElement(${idx})"
+                             style="left:${el.x}%; top:${el.y}%; width:${el.width}px; height:${el.height}px; background:${el.color}; border-radius:${el.shape === 'circle' ? '50%' : '0'};">
+                        </div>
+                    `;
+                } else if (el.type === 'image') {
+                    return `
+                        <div class="slide-element ${selectedElement === idx ? 'selected' : ''}"
+                             onclick="selectElement(${idx})"
+                             style="left:${el.x}%; top:${el.y}%; width:${el.width}px; height:${el.height}px;">
+                            <img src="${el.src}" style="width:100%; height:100%; object-fit:cover;">
+                        </div>
+                    `;
+                }
+                return '';
+            }).join('');
+        }
+
+        function selectElement(index) {
+            selectedElement = index;
+            renderCurrentSlide();
+        }
+
+        window.addText = function() {
+            const text = prompt('텍스트를 입력하세요', '텍스트');
+            if (text) {
+                slides[currentSlideIndex].elements.push({
+                    type: 'text',
+                    content: text,
+                    x: 10,
+                    y: 10,
+                    fontSize: 24,
+                    color: '#000000',
+                    bold: false
+                });
+                renderCurrentSlide();
+                savePresentation();
+            }
+        };
+
+        window.addImage = function() {
+            const url = prompt('이미지 URL을 입력하세요');
+            if (url) {
+                slides[currentSlideIndex].elements.push({
+                    type: 'image',
+                    src: url,
+                    x: 10,
+                    y: 10,
+                    width: 200,
+                    height: 150
+                });
+                renderCurrentSlide();
+                savePresentation();
+            }
+        };
+
+        window.addShape = function(shape) {
+            slides[currentSlideIndex].elements.push({
+                type: 'shape',
+                shape: shape,
+                x: 30,
+                y: 30,
+                width: 200,
+                height: 150,
+                color: shape === 'rect' ? '#667eea' : '#f093fb'
+            });
+            renderCurrentSlide();
+            savePresentation();
+        };
+
+        window.applyTemplate = function(template) {
+            slides[currentSlideIndex].elements = [];
+
+            if (template === 'title') {
+                slides[currentSlideIndex].elements.push(
+                    { type: 'text', content: '제목을 입력하세요', x: 10, y: 30, fontSize: 48, color: '#000000', bold: true },
+                    { type: 'text', content: '부제목을 입력하세요', x: 10, y: 50, fontSize: 24, color: '#666666', bold: false }
+                );
+            } else if (template === 'content') {
+                slides[currentSlideIndex].elements.push(
+                    { type: 'text', content: '제목', x: 5, y: 5, fontSize: 36, color: '#000000', bold: true },
+                    { type: 'text', content: '• 내용 1', x: 10, y: 25, fontSize: 20, color: '#333333', bold: false },
+                    { type: 'text', content: '• 내용 2', x: 10, y: 35, fontSize: 20, color: '#333333', bold: false },
+                    { type: 'text', content: '• 내용 3', x: 10, y: 45, fontSize: 20, color: '#333333', bold: false }
+                );
+            } else if (template === 'twoColumn') {
+                slides[currentSlideIndex].elements.push(
+                    { type: 'text', content: '왼쪽 내용', x: 5, y: 20, fontSize: 24, color: '#000000', bold: false },
+                    { type: 'text', content: '오른쪽 내용', x: 55, y: 20, fontSize: 24, color: '#000000', bold: false }
+                );
+            }
+
+            renderCurrentSlide();
+            savePresentation();
+        };
+
+        window.startPresentation = function() {
+            currentSlideIndex = 0;
+            document.getElementById('presentationMode').classList.remove('hidden');
+            showPresentationSlide();
+
+            // Keyboard navigation
+            document.addEventListener('keydown', handlePresentationKeys);
+        };
+
+        window.exitPresentation = function() {
+            document.getElementById('presentationMode').classList.add('hidden');
+            document.removeEventListener('keydown', handlePresentationKeys);
+        };
+
+        function handlePresentationKeys(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            } else if (e.key === 'Escape') {
+                exitPresentation();
+            }
+        }
+
+        window.nextSlide = function() {
+            if (currentSlideIndex < slides.length - 1) {
+                currentSlideIndex++;
+                showPresentationSlide();
+            }
+        };
+
+        window.prevSlide = function() {
+            if (currentSlideIndex > 0) {
+                currentSlideIndex--;
+                showPresentationSlide();
+            }
+        };
+
+        function showPresentationSlide() {
+            const slide = slides[currentSlideIndex];
+            const container = document.getElementById('presentationSlide');
+
+            container.style.background = slide.background;
+            container.innerHTML = slide.elements.map(el => {
+                if (el.type === 'text') {
+                    return `<div style="position:absolute; left:${el.x}%; top:${el.y}%; font-size:${el.fontSize * 1.5}px; color:${el.color}; font-weight:${el.bold ? 'bold' : 'normal'};">${el.content}</div>`;
+                } else if (el.type === 'shape') {
+                    return `<div style="position:absolute; left:${el.x}%; top:${el.y}%; width:${el.width * 1.5}px; height:${el.height * 1.5}px; background:${el.color}; border-radius:${el.shape === 'circle' ? '50%' : '0'};"></div>`;
+                } else if (el.type === 'image') {
+                    return `<div style="position:absolute; left:${el.x}%; top:${el.y}%; width:${el.width * 1.5}px; height:${el.height * 1.5}px;"><img src="${el.src}" style="width:100%; height:100%; object-fit:cover;"></div>`;
+                }
+                return '';
+            }).join('');
+
+            document.getElementById('slideNumber').textContent = `${currentSlideIndex + 1} / ${slides.length}`;
+        }
+
+        window.exportPDF = function() {
+            alert('PDF 내보내기 기능은 실제 프로덕션에서는 jsPDF 또는 html2canvas 라이브러리를 사용하여 구현됩니다.');
+        };
+
+        // Initialize
+        initPresentation();
+    </script>
+</body>
+</html>

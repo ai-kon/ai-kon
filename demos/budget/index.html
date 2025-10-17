@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>예산 관리 - Toss 스타일</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0066ff 0%, #8b00ff 100%);
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h1 class="text-3xl font-bold text-blue-600 mb-6">
+                <i class="fas fa-wallet mr-2"></i>예산 관리
+            </h1>
+
+            <!-- Monthly Budget Setting -->
+            <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold mb-2">월 예산 설정</h2>
+                        <div class="text-3xl font-bold text-blue-600" id="budgetDisplay">0원</div>
+                    </div>
+                    <button id="setBudgetBtn" class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600">
+                        <i class="fas fa-cog mr-2"></i>예산 설정
+                    </button>
+                </div>
+                <div class="mt-4">
+                    <div class="flex justify-between text-sm mb-2">
+                        <span>사용액: <span id="totalExpense" class="font-bold text-red-500">0원</span></span>
+                        <span>잔액: <span id="remaining" class="font-bold text-green-500">0원</span></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                        <div id="budgetProgress" class="bg-gradient-to-r from-blue-500 to-purple-500 h-4 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-green-50 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm text-gray-600 mb-1">수입</div>
+                            <div class="text-2xl font-bold text-green-600" id="totalIncome">0원</div>
+                        </div>
+                        <i class="fas fa-arrow-down text-3xl text-green-500"></i>
+                    </div>
+                </div>
+                <div class="bg-red-50 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm text-gray-600 mb-1">지출</div>
+                            <div class="text-2xl font-bold text-red-600" id="totalExpenseCard">0원</div>
+                        </div>
+                        <i class="fas fa-arrow-up text-3xl text-red-500"></i>
+                    </div>
+                </div>
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm text-gray-600 mb-1">저축</div>
+                            <div class="text-2xl font-bold text-blue-600" id="savings">0원</div>
+                        </div>
+                        <i class="fas fa-piggy-bank text-3xl text-blue-500"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Transaction -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4">거래 추가</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-bold mb-2">거래 유형</label>
+                    <select id="transactionType" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="expense">지출</option>
+                        <option value="income">수입</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2">카테고리</label>
+                    <select id="category" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="식비">식비</option>
+                        <option value="교통">교통</option>
+                        <option value="쇼핑">쇼핑</option>
+                        <option value="문화">문화</option>
+                        <option value="월급">월급</option>
+                        <option value="기타">기타</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2">금액</label>
+                    <input type="number" id="amount" placeholder="금액 입력" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2">메모</label>
+                    <input type="text" id="memo" placeholder="메모 (선택사항)" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+            <button id="addTransactionBtn" class="w-full mt-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-lg hover:from-blue-600 hover:to-purple-600 font-bold">
+                <i class="fas fa-plus mr-2"></i>거래 추가
+            </button>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4">수입/지출 추이</h2>
+                <canvas id="lineChart"></canvas>
+            </div>
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4">카테고리별 지출</h2>
+                <canvas id="pieChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Transaction History -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-history mr-2 text-blue-600"></i>거래 내역
+            </h2>
+            <div id="transactionHistory" class="space-y-2"></div>
+        </div>
+
+        <!-- Budget Modal -->
+        <div id="budgetModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full">
+                <h2 class="text-2xl font-bold mb-4">월 예산 설정</h2>
+                <input type="number" id="budgetInput" placeholder="예산 금액 입력" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4">
+                <div class="flex gap-4">
+                    <button id="saveBudgetBtn" class="flex-1 bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 font-bold">저장</button>
+                    <button id="closeBudgetModal" class="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 font-bold">취소</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize data
+        if (!localStorage.getItem('budget')) {
+            localStorage.setItem('budget', JSON.stringify({ amount: 0 }));
+        }
+        if (!localStorage.getItem('transactions')) {
+            localStorage.setItem('transactions', JSON.stringify([]));
+        }
+
+        let budget = JSON.parse(localStorage.getItem('budget'));
+        let transactions = JSON.parse(localStorage.getItem('transactions'));
+
+        let lineChart, pieChart;
+
+        function saveToLocalStorage() {
+            localStorage.setItem('budget', JSON.stringify(budget));
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+        }
+
+        function formatPrice(price) {
+            return Math.abs(price).toLocaleString('ko-KR') + '원';
+        }
+
+        function calculateStats() {
+            const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+            const expense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+            const savings = income - expense;
+
+            return { income, expense, savings };
+        }
+
+        function updateBudgetDisplay() {
+            const stats = calculateStats();
+            const remaining = budget.amount - stats.expense;
+            const percentage = budget.amount > 0 ? (stats.expense / budget.amount * 100) : 0;
+
+            document.getElementById('budgetDisplay').textContent = formatPrice(budget.amount);
+            document.getElementById('totalExpense').textContent = formatPrice(stats.expense);
+            document.getElementById('remaining').textContent = formatPrice(remaining);
+            document.getElementById('budgetProgress').style.width = Math.min(percentage, 100) + '%';
+
+            // Update quick stats
+            document.getElementById('totalIncome').textContent = formatPrice(stats.income);
+            document.getElementById('totalExpenseCard').textContent = formatPrice(stats.expense);
+            document.getElementById('savings').textContent = formatPrice(stats.savings);
+
+            // Change progress bar color based on usage
+            const progressBar = document.getElementById('budgetProgress');
+            if (percentage > 90) {
+                progressBar.className = 'bg-red-500 h-4 rounded-full transition-all';
+            } else if (percentage > 70) {
+                progressBar.className = 'bg-yellow-500 h-4 rounded-full transition-all';
+            } else {
+                progressBar.className = 'bg-gradient-to-r from-blue-500 to-purple-500 h-4 rounded-full transition-all';
+            }
+        }
+
+        function addTransaction() {
+            const type = document.getElementById('transactionType').value;
+            const category = document.getElementById('category').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const memo = document.getElementById('memo').value;
+
+            if (!amount || amount <= 0) {
+                alert('유효한 금액을 입력해주세요!');
+                return;
+            }
+
+            const transaction = {
+                id: Date.now(),
+                type,
+                category,
+                amount,
+                memo,
+                date: new Date().toLocaleString('ko-KR')
+            };
+
+            transactions.unshift(transaction);
+            saveToLocalStorage();
+
+            // Clear inputs
+            document.getElementById('amount').value = '';
+            document.getElementById('memo').value = '';
+
+            renderTransactions();
+            updateBudgetDisplay();
+            updateCharts();
+
+            alert('거래가 추가되었습니다!');
+        }
+
+        function deleteTransaction(id) {
+            if (confirm('이 거래를 삭제하시겠습니까?')) {
+                transactions = transactions.filter(t => t.id !== id);
+                saveToLocalStorage();
+                renderTransactions();
+                updateBudgetDisplay();
+                updateCharts();
+            }
+        }
+
+        function renderTransactions() {
+            const history = document.getElementById('transactionHistory');
+            if (transactions.length === 0) {
+                history.innerHTML = '<div class="text-center text-gray-500 py-8">거래 내역이 없습니다</div>';
+                return;
+            }
+
+            history.innerHTML = transactions.map(t => `
+                <div class="flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition-shadow">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full flex items-center justify-center ${t.type === 'income' ? 'bg-green-100' : 'bg-red-100'}">
+                            <i class="fas ${t.type === 'income' ? 'fa-arrow-down text-green-500' : 'fa-arrow-up text-red-500'}"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold">${t.category}</div>
+                            <div class="text-sm text-gray-500">${t.memo || '메모 없음'}</div>
+                            <div class="text-xs text-gray-400">${t.date}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="text-xl font-bold ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}">
+                            ${t.type === 'income' ? '+' : '-'}${formatPrice(t.amount)}
+                        </div>
+                        <button onclick="deleteTransaction(${t.id})" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateCharts() {
+            // Line chart data (last 7 days)
+            const last7Days = [];
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                last7Days.push(date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }));
+            }
+
+            const incomeByDay = last7Days.map(() => 0);
+            const expenseByDay = last7Days.map(() => 0);
+
+            transactions.forEach(t => {
+                const transactionDate = new Date(t.date);
+                const dayIndex = last7Days.findIndex(day => {
+                    const checkDate = new Date();
+                    checkDate.setDate(checkDate.getDate() - (6 - last7Days.indexOf(day)));
+                    return transactionDate.toDateString() === checkDate.toDateString();
+                });
+
+                if (dayIndex !== -1) {
+                    if (t.type === 'income') {
+                        incomeByDay[dayIndex] += t.amount;
+                    } else {
+                        expenseByDay[dayIndex] += t.amount;
+                    }
+                }
+            });
+
+            if (lineChart) lineChart.destroy();
+            lineChart = new Chart(document.getElementById('lineChart'), {
+                type: 'line',
+                data: {
+                    labels: last7Days,
+                    datasets: [{
+                        label: '수입',
+                        data: incomeByDay,
+                        borderColor: 'rgb(34, 197, 94)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: '지출',
+                        data: expenseByDay,
+                        borderColor: 'rgb(239, 68, 68)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Pie chart data (expense by category)
+            const expensesByCategory = {};
+            transactions.filter(t => t.type === 'expense').forEach(t => {
+                expensesByCategory[t.category] = (expensesByCategory[t.category] || 0) + t.amount;
+            });
+
+            const categories = Object.keys(expensesByCategory);
+            const amounts = Object.values(expensesByCategory);
+
+            if (pieChart) pieChart.destroy();
+            pieChart = new Chart(document.getElementById('pieChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: categories,
+                    datasets: [{
+                        data: amounts,
+                        backgroundColor: [
+                            '#3b82f6',
+                            '#8b5cf6',
+                            '#ec4899',
+                            '#f59e0b',
+                            '#10b981',
+                            '#6366f1'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Event listeners
+        document.getElementById('setBudgetBtn').addEventListener('click', () => {
+            document.getElementById('budgetModal').classList.remove('hidden');
+            document.getElementById('budgetInput').value = budget.amount;
+        });
+
+        document.getElementById('closeBudgetModal').addEventListener('click', () => {
+            document.getElementById('budgetModal').classList.add('hidden');
+        });
+
+        document.getElementById('saveBudgetBtn').addEventListener('click', () => {
+            const amount = parseFloat(document.getElementById('budgetInput').value);
+            if (!amount || amount <= 0) {
+                alert('유효한 예산을 입력해주세요!');
+                return;
+            }
+
+            budget.amount = amount;
+            saveToLocalStorage();
+            updateBudgetDisplay();
+            document.getElementById('budgetModal').classList.add('hidden');
+            alert('예산이 설정되었습니다!');
+        });
+
+        document.getElementById('addTransactionBtn').addEventListener('click', addTransaction);
+
+        // Initial render
+        updateBudgetDisplay();
+        renderTransactions();
+        updateCharts();
+    </script>
+</body>
+</html>

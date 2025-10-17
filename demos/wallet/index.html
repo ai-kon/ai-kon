@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Wallet - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .balance-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .transaction-item {
+            transition: all 0.2s;
+        }
+        .transaction-item:hover {
+            transform: translateX(4px);
+            background: #f9fafb;
+        }
+        .amount-plus {
+            color: #10b981;
+        }
+        .amount-minus {
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-t-lg shadow-2xl p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
+                        <i class="fas fa-wallet text-purple-600"></i>
+                        Virtual Wallet
+                    </h1>
+                    <p class="text-gray-600 mt-1">토스 스타일 가상 지갑 - 송금, 결제, 통계</p>
+                </div>
+                <button onclick="window.location.href='../'" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
+                    <i class="fas fa-home mr-2"></i>뒤로가기
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="bg-white rounded-b-lg shadow-2xl p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left Panel - Balance & Quick Actions -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- Balance Card -->
+                    <div class="balance-card rounded-2xl p-6 shadow-xl">
+                        <div class="text-sm opacity-80 mb-2">총 잔액</div>
+                        <div class="text-4xl font-bold mb-4" id="totalBalance">₩0</div>
+                        <div class="flex gap-2">
+                            <button onclick="showChargeModal()" class="flex-1 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                                <i class="fas fa-plus mr-2"></i>충전
+                            </button>
+                            <button onclick="showWithdrawModal()" class="flex-1 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                                <i class="fas fa-minus mr-2"></i>출금
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="card rounded-2xl p-6 shadow-lg">
+                        <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <i class="fas fa-bolt text-yellow-500"></i>
+                            빠른 송금
+                        </h3>
+                        <div class="space-y-3">
+                            <button onclick="showSendModal()" class="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-lg transition-all">
+                                <i class="fas fa-paper-plane mr-2"></i>송금하기
+                            </button>
+                            <button onclick="showQRModal()" class="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg transition-all">
+                                <i class="fas fa-qrcode mr-2"></i>QR 코드로 받기
+                            </button>
+                            <button onclick="showRequestModal()" class="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all">
+                                <i class="fas fa-hand-holding-usd mr-2"></i>송금 요청
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Stats -->
+                    <div class="card rounded-2xl p-6 shadow-lg">
+                        <h3 class="font-bold text-gray-800 mb-4">이번 달 통계</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">총 수입</span>
+                                <span class="font-bold amount-plus" id="monthIncome">₩0</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">총 지출</span>
+                                <span class="font-bold amount-minus" id="monthExpense">₩0</span>
+                            </div>
+                            <div class="flex justify-between pt-3 border-t">
+                                <span class="text-gray-800 font-bold">순 수입</span>
+                                <span class="font-bold text-purple-600" id="monthNet">₩0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle Panel - Transactions -->
+                <div class="lg:col-span-1">
+                    <div class="card rounded-2xl p-6 shadow-lg">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-gray-800">거래 내역</h3>
+                            <button onclick="clearTransactions()" class="text-sm text-gray-500 hover:text-red-600">
+                                <i class="fas fa-trash mr-1"></i>전체 삭제
+                            </button>
+                        </div>
+                        <div id="transactionsList" class="space-y-2 max-h-[600px] overflow-y-auto">
+                            <div class="text-center text-gray-400 py-8">
+                                <i class="fas fa-receipt text-4xl mb-3"></i>
+                                <p>거래 내역이 없습니다</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel - Statistics Chart -->
+                <div class="lg:col-span-1">
+                    <div class="card rounded-2xl p-6 shadow-lg mb-6">
+                        <h3 class="font-bold text-gray-800 mb-4">주간 거래 통계</h3>
+                        <canvas id="weeklyChart" height="250"></canvas>
+                    </div>
+
+                    <div class="card rounded-2xl p-6 shadow-lg">
+                        <h3 class="font-bold text-gray-800 mb-4">카테고리별 지출</h3>
+                        <canvas id="categoryChart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charge Modal -->
+    <div id="chargeModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">잔액 충전</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">충전 금액</label>
+                    <input type="number" id="chargeAmount" placeholder="금액을 입력하세요"
+                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 outline-none text-lg">
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="setChargeAmount(10000)" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm">+ 1만원</button>
+                    <button onclick="setChargeAmount(50000)" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm">+ 5만원</button>
+                    <button onclick="setChargeAmount(100000)" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm">+ 10만원</button>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="closeChargeModal()" class="flex-1 px-4 py-3 bg-gray-200 hover:bg-gray-300 rounded-lg">취소</button>
+                    <button onclick="chargeBalance()" class="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg">충전하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdraw Modal -->
+    <div id="withdrawModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">출금</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">출금 금액</label>
+                    <input type="number" id="withdrawAmount" placeholder="금액을 입력하세요"
+                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 outline-none text-lg">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="closeWithdrawModal()" class="flex-1 px-4 py-3 bg-gray-200 hover:bg-gray-300 rounded-lg">취소</button>
+                    <button onclick="withdrawBalance()" class="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg">출금하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Send Money Modal -->
+    <div id="sendModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">송금하기</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">받는 사람</label>
+                    <input type="text" id="recipient" placeholder="이름 또는 계좌번호"
+                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">송금 금액</label>
+                    <input type="number" id="sendAmount" placeholder="금액을 입력하세요"
+                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 outline-none text-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">메모 (선택)</label>
+                    <input type="text" id="sendMemo" placeholder="메모를 입력하세요"
+                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 outline-none">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="closeSendModal()" class="flex-1 px-4 py-3 bg-gray-200 hover:bg-gray-300 rounded-lg">취소</button>
+                    <button onclick="sendMoney()" class="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg">송금하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="qrModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 text-center">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">QR 코드로 받기</h3>
+            <p class="text-gray-600 mb-4">아래 QR 코드를 스캔하면 송금할 수 있습니다</p>
+            <div id="qrcode" class="inline-block p-4 bg-white rounded-lg shadow mb-4"></div>
+            <div class="text-sm text-gray-500 mb-4" id="walletAddress">지갑 주소: WALLET-XXXX-XXXX</div>
+            <button onclick="closeQRModal()" class="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg">닫기</button>
+        </div>
+    </div>
+
+    <!-- Request Money Modal -->
+    <div id="requestModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">송금 요청</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">요청할 사람</label>
+                    <input type="text" id="requestRecipient" placeholder="이름 또는 연락처"
+                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">요청 금액</label>
+                    <input type="number" id="requestAmount" placeholder="금액을 입력하세요"
+                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 outline-none text-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">요청 사유</label>
+                    <input type="text" id="requestMemo" placeholder="사유를 입력하세요"
+                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 outline-none">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="closeRequestModal()" class="flex-1 px-4 py-3 bg-gray-200 hover:bg-gray-300 rounded-lg">취소</button>
+                    <button onclick="requestMoney()" class="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg">요청하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let balance = 0;
+        let transactions = [];
+        let weeklyChart = null;
+        let categoryChart = null;
+
+        // Initialize wallet address
+        const walletAddress = 'WALLET-' + Math.random().toString(36).substr(2, 8).toUpperCase();
+        document.getElementById('walletAddress').textContent = '지갑 주소: ' + walletAddress;
+
+        // Load data
+        function loadData() {
+            const saved = localStorage.getItem('wallet_data');
+            if (saved) {
+                const data = JSON.parse(saved);
+                balance = data.balance || 0;
+                transactions = data.transactions || [];
+                updateUI();
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('wallet_data', JSON.stringify({
+                balance,
+                transactions
+            }));
+        }
+
+        function formatCurrency(amount) {
+            return '₩' + amount.toLocaleString('ko-KR');
+        }
+
+        function updateUI() {
+            document.getElementById('totalBalance').textContent = formatCurrency(balance);
+            renderTransactions();
+            updateMonthlyStats();
+            updateCharts();
+            saveData();
+        }
+
+        // Charge Modal
+        window.showChargeModal = function() {
+            document.getElementById('chargeModal').classList.remove('hidden');
+        };
+
+        window.closeChargeModal = function() {
+            document.getElementById('chargeModal').classList.add('hidden');
+            document.getElementById('chargeAmount').value = '';
+        };
+
+        window.setChargeAmount = function(amount) {
+            const input = document.getElementById('chargeAmount');
+            input.value = (parseInt(input.value) || 0) + amount;
+        };
+
+        window.chargeBalance = function() {
+            const amount = parseInt(document.getElementById('chargeAmount').value);
+            if (!amount || amount <= 0) {
+                alert('금액을 입력하세요');
+                return;
+            }
+
+            balance += amount;
+            transactions.unshift({
+                id: Date.now(),
+                type: 'charge',
+                amount: amount,
+                recipient: '충전',
+                memo: '계좌 충전',
+                date: new Date().toISOString()
+            });
+
+            updateUI();
+            closeChargeModal();
+            showToast('충전 완료', `${formatCurrency(amount)}이 충전되었습니다`);
+        };
+
+        // Withdraw Modal
+        window.showWithdrawModal = function() {
+            document.getElementById('withdrawModal').classList.remove('hidden');
+        };
+
+        window.closeWithdrawModal = function() {
+            document.getElementById('withdrawModal').classList.add('hidden');
+            document.getElementById('withdrawAmount').value = '';
+        };
+
+        window.withdrawBalance = function() {
+            const amount = parseInt(document.getElementById('withdrawAmount').value);
+            if (!amount || amount <= 0) {
+                alert('금액을 입력하세요');
+                return;
+            }
+
+            if (amount > balance) {
+                alert('잔액이 부족합니다');
+                return;
+            }
+
+            balance -= amount;
+            transactions.unshift({
+                id: Date.now(),
+                type: 'withdraw',
+                amount: amount,
+                recipient: '출금',
+                memo: '계좌 출금',
+                date: new Date().toISOString()
+            });
+
+            updateUI();
+            closeWithdrawModal();
+            showToast('출금 완료', `${formatCurrency(amount)}이 출금되었습니다`);
+        };
+
+        // Send Modal
+        window.showSendModal = function() {
+            document.getElementById('sendModal').classList.remove('hidden');
+        };
+
+        window.closeSendModal = function() {
+            document.getElementById('sendModal').classList.add('hidden');
+            document.getElementById('recipient').value = '';
+            document.getElementById('sendAmount').value = '';
+            document.getElementById('sendMemo').value = '';
+        };
+
+        window.sendMoney = function() {
+            const recipient = document.getElementById('recipient').value.trim();
+            const amount = parseInt(document.getElementById('sendAmount').value);
+            const memo = document.getElementById('sendMemo').value.trim();
+
+            if (!recipient) {
+                alert('받는 사람을 입력하세요');
+                return;
+            }
+
+            if (!amount || amount <= 0) {
+                alert('금액을 입력하세요');
+                return;
+            }
+
+            if (amount > balance) {
+                alert('잔액이 부족합니다');
+                return;
+            }
+
+            balance -= amount;
+            transactions.unshift({
+                id: Date.now(),
+                type: 'send',
+                amount: amount,
+                recipient: recipient,
+                memo: memo || '송금',
+                date: new Date().toISOString()
+            });
+
+            updateUI();
+            closeSendModal();
+            showToast('송금 완료', `${recipient}님께 ${formatCurrency(amount)} 송금되었습니다`);
+        };
+
+        // QR Modal
+        window.showQRModal = function() {
+            const modal = document.getElementById('qrModal');
+            modal.classList.remove('hidden');
+
+            const qrDiv = document.getElementById('qrcode');
+            qrDiv.innerHTML = '';
+            new QRCode(qrDiv, {
+                text: walletAddress,
+                width: 200,
+                height: 200
+            });
+        };
+
+        window.closeQRModal = function() {
+            document.getElementById('qrModal').classList.add('hidden');
+        };
+
+        // Request Modal
+        window.showRequestModal = function() {
+            document.getElementById('requestModal').classList.remove('hidden');
+        };
+
+        window.closeRequestModal = function() {
+            document.getElementById('requestModal').classList.add('hidden');
+            document.getElementById('requestRecipient').value = '';
+            document.getElementById('requestAmount').value = '';
+            document.getElementById('requestMemo').value = '';
+        };
+
+        window.requestMoney = function() {
+            const recipient = document.getElementById('requestRecipient').value.trim();
+            const amount = parseInt(document.getElementById('requestAmount').value);
+            const memo = document.getElementById('requestMemo').value.trim();
+
+            if (!recipient || !amount || amount <= 0) {
+                alert('정보를 모두 입력하세요');
+                return;
+            }
+
+            // Simulate request (in real app, would send notification)
+            showToast('요청 전송 완료', `${recipient}님께 ${formatCurrency(amount)} 송금 요청을 보냈습니다`);
+            closeRequestModal();
+        };
+
+        // Transactions
+        function renderTransactions() {
+            const list = document.getElementById('transactionsList');
+
+            if (transactions.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        <i class="fas fa-receipt text-4xl mb-3"></i>
+                        <p>거래 내역이 없습니다</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = transactions.map(tx => {
+                const date = new Date(tx.date);
+                const icon = tx.type === 'charge' ? 'fa-plus-circle' :
+                            tx.type === 'withdraw' ? 'fa-minus-circle' :
+                            tx.type === 'send' ? 'fa-paper-plane' : 'fa-arrow-down';
+
+                const amountClass = tx.type === 'charge' ? 'amount-plus' : 'amount-minus';
+                const sign = tx.type === 'charge' ? '+' : '-';
+
+                return `
+                    <div class="transaction-item p-4 rounded-lg border border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                                    <i class="fas ${icon} text-purple-600"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-gray-800">${tx.recipient}</div>
+                                    <div class="text-sm text-gray-500">${tx.memo}</div>
+                                    <div class="text-xs text-gray-400">${date.toLocaleString('ko-KR')}</div>
+                                </div>
+                            </div>
+                            <div class="${amountClass} font-bold text-lg">
+                                ${sign}${formatCurrency(tx.amount)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateMonthlyStats() {
+            const now = new Date();
+            const thisMonth = transactions.filter(tx => {
+                const txDate = new Date(tx.date);
+                return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
+            });
+
+            const income = thisMonth.filter(tx => tx.type === 'charge').reduce((sum, tx) => sum + tx.amount, 0);
+            const expense = thisMonth.filter(tx => tx.type === 'send' || tx.type === 'withdraw').reduce((sum, tx) => sum + tx.amount, 0);
+
+            document.getElementById('monthIncome').textContent = formatCurrency(income);
+            document.getElementById('monthExpense').textContent = formatCurrency(expense);
+            document.getElementById('monthNet').textContent = formatCurrency(income - expense);
+        }
+
+        function updateCharts() {
+            // Weekly Chart
+            const weekData = [0, 0, 0, 0, 0, 0, 0];
+            const now = new Date();
+
+            transactions.forEach(tx => {
+                const txDate = new Date(tx.date);
+                const daysDiff = Math.floor((now - txDate) / (1000 * 60 * 60 * 24));
+                if (daysDiff < 7) {
+                    weekData[6 - daysDiff] += (tx.type === 'charge' ? tx.amount : -tx.amount);
+                }
+            });
+
+            if (weeklyChart) weeklyChart.destroy();
+            const ctx1 = document.getElementById('weeklyChart').getContext('2d');
+            weeklyChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: ['6일 전', '5일 전', '4일 전', '3일 전', '2일 전', '어제', '오늘'],
+                    datasets: [{
+                        label: '잔액 변화',
+                        data: weekData,
+                        borderColor: 'rgb(102, 126, 234)',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // Category Chart
+            const categories = { '충전': 0, '송금': 0, '출금': 0 };
+            transactions.forEach(tx => {
+                if (tx.type === 'charge') categories['충전'] += tx.amount;
+                if (tx.type === 'send') categories['송금'] += tx.amount;
+                if (tx.type === 'withdraw') categories['출금'] += tx.amount;
+            });
+
+            if (categoryChart) categoryChart.destroy();
+            const ctx2 = document.getElementById('categoryChart').getContext('2d');
+            categoryChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(categories),
+                    datasets: [{
+                        data: Object.values(categories),
+                        backgroundColor: [
+                            'rgb(102, 126, 234)',
+                            'rgb(239, 68, 68)',
+                            'rgb(245, 158, 11)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        window.clearTransactions = function() {
+            if (confirm('모든 거래 내역을 삭제하시겠습니까?')) {
+                transactions = [];
+                updateUI();
+                showToast('삭제 완료', '모든 거래 내역이 삭제되었습니다');
+            }
+        };
+
+        function showToast(title, message) {
+            // Simple toast notification
+            alert(`${title}\n${message}`);
+        }
+
+        // Initialize
+        loadData();
+        updateUI();
+    </script>
+</body>
+</html>

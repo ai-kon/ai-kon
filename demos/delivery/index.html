@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>배달 추적 - 배민 스타일</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #2ac1bc 0%, #00d4a1 100%);
+            min-height: 100vh;
+        }
+        .delivery-card:hover {
+            transform: translateY(-3px);
+            transition: transform 0.3s;
+        }
+        .status-progress {
+            position: relative;
+        }
+        .status-progress::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e5e7eb;
+        }
+        .status-item {
+            position: relative;
+            padding-left: 50px;
+        }
+        .status-icon {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+            background: white;
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-3xl font-bold text-teal-600">
+                    <i class="fas fa-motorcycle mr-2"></i>배달 추적
+                </h1>
+                <button id="newOrderBtn" class="bg-gradient-to-r from-teal-500 to-green-500 text-white px-6 py-3 rounded-lg hover:from-teal-600 hover:to-green-600 font-bold">
+                    <i class="fas fa-plus mr-2"></i>새 주문 등록
+                </button>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-yellow-50 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-yellow-600" id="preparingCount">0</div>
+                    <div class="text-sm text-gray-600">준비중</div>
+                </div>
+                <div class="bg-blue-50 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-blue-600" id="pickupCount">0</div>
+                    <div class="text-sm text-gray-600">픽업완료</div>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-purple-600" id="deliveringCount">0</div>
+                    <div class="text-sm text-gray-600">배달중</div>
+                </div>
+                <div class="bg-green-50 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-green-600" id="completedCount">0</div>
+                    <div class="text-sm text-gray-600">배달완료</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="bg-white rounded-lg shadow-lg p-4 mb-6">
+            <div class="flex gap-2 overflow-x-auto">
+                <button class="filter-btn whitespace-nowrap bg-teal-500 text-white px-6 py-2 rounded-lg font-bold" data-status="all">전체</button>
+                <button class="filter-btn whitespace-nowrap bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300" data-status="주문접수">주문접수</button>
+                <button class="filter-btn whitespace-nowrap bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300" data-status="조리중">조리중</button>
+                <button class="filter-btn whitespace-nowrap bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300" data-status="픽업완료">픽업완료</button>
+                <button class="filter-btn whitespace-nowrap bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300" data-status="배달중">배달중</button>
+                <button class="filter-btn whitespace-nowrap bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300" data-status="배달완료">배달완료</button>
+            </div>
+        </div>
+
+        <!-- Delivery Cards -->
+        <div id="deliveryGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+
+        <!-- New Order Modal -->
+        <div id="orderModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold">새 주문 등록</h2>
+                        <button id="closeModal" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-2">음식점 이름</label>
+                            <input type="text" id="restaurantName" placeholder="예: 맛있는 치킨집" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold mb-2">메뉴</label>
+                            <input type="text" id="menuItems" placeholder="예: 양념치킨, 감자튀김" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold mb-2">주문 금액</label>
+                            <input type="number" id="orderPrice" placeholder="예: 25000" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold mb-2">배달 주소</label>
+                            <input type="text" id="deliveryAddress" placeholder="예: 서울시 강남구..." class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold mb-2">아이콘 선택</label>
+                            <div class="grid grid-cols-6 gap-2">
+                                <button type="button" class="icon-btn text-4xl p-2 border rounded hover:bg-gray-100" data-icon="🍗">🍗</button>
+                                <button type="button" class="icon-btn text-4xl p-2 border rounded hover:bg-gray-100" data-icon="🍕">🍕</button>
+                                <button type="button" class="icon-btn text-4xl p-2 border rounded hover:bg-gray-100" data-icon="🍔">🍔</button>
+                                <button type="button" class="icon-btn text-4xl p-2 border rounded hover:bg-gray-100" data-icon="🍜">🍜</button>
+                                <button type="button" class="icon-btn text-4xl p-2 border rounded hover:bg-gray-100" data-icon="🍱">🍱</button>
+                                <button type="button" class="icon-btn text-4xl p-2 border rounded hover:bg-gray-100" data-icon="🍛">🍛</button>
+                                <button type="button" class="icon-btn text-4xl p-2 border rounded hover:bg-gray-100" data-icon="🥘">🥘</button>
+                                <button type="button" class="icon-btn text-4xl p-2 border rounded hover:bg-gray-100" data-icon="🍝">🍝</button>
+                                <button type="button" class="icon-btn text-4xl p-2 border rounded hover:bg-gray-100" data-icon="🌮">🌮</button>
+                                <button type="button" class="icon-btn text-4xl p-2 border rounded hover:bg-gray-100" data-icon="🍣">🍣</button>
+                                <button type="button" class="icon-btn text-4xl p-2 border rounded hover:bg-gray-100" data-icon="🥗">🥗</button>
+                                <button type="button" class="icon-btn text-4xl p-2 border rounded hover:bg-gray-100" data-icon="☕">☕</button>
+                            </div>
+                            <input type="hidden" id="selectedIcon" value="🍗">
+                        </div>
+
+                        <button id="createOrderBtn" class="w-full bg-gradient-to-r from-teal-500 to-green-500 text-white py-3 rounded-lg hover:from-teal-600 hover:to-green-600 font-bold">
+                            <i class="fas fa-check mr-2"></i>주문 등록
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Order Modal -->
+        <div id="viewOrderModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="flex items-center gap-4">
+                            <div class="text-6xl" id="viewIcon"></div>
+                            <div>
+                                <h2 class="text-2xl font-bold" id="viewRestaurant"></h2>
+                                <div class="text-sm text-gray-500" id="viewOrderNumber"></div>
+                            </div>
+                        </div>
+                        <button id="closeViewModal" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <!-- Order Info -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <div class="text-sm text-gray-600 mb-1">주문 금액</div>
+                                <div class="font-bold text-xl text-teal-600" id="viewPrice"></div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600 mb-1">주문 시간</div>
+                                <div class="font-bold" id="viewOrderTime"></div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="text-sm text-gray-600 mb-1">메뉴</div>
+                            <div class="font-bold" id="viewMenu"></div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="text-sm text-gray-600 mb-1">배달 주소</div>
+                            <div class="font-bold" id="viewAddress"></div>
+                        </div>
+                    </div>
+
+                    <!-- Status Progress -->
+                    <div class="mb-6">
+                        <h3 class="text-xl font-bold mb-4">배달 현황</h3>
+                        <div class="status-progress" id="statusProgress"></div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-4">
+                        <button id="updateStatusBtn" class="flex-1 bg-teal-500 text-white py-3 rounded-lg hover:bg-teal-600 font-bold">
+                            <i class="fas fa-arrow-right mr-2"></i>다음 단계
+                        </button>
+                        <button id="deleteOrderBtn" class="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 font-bold">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const statuses = ['주문접수', '조리중', '픽업완료', '배달중', '배달완료'];
+        const statusIcons = {
+            '주문접수': { icon: 'fa-file-alt', color: 'bg-gray-200 text-gray-600' },
+            '조리중': { icon: 'fa-fire', color: 'bg-yellow-200 text-yellow-600' },
+            '픽업완료': { icon: 'fa-box', color: 'bg-blue-200 text-blue-600' },
+            '배달중': { icon: 'fa-motorcycle', color: 'bg-purple-200 text-purple-600' },
+            '배달완료': { icon: 'fa-check', color: 'bg-green-200 text-green-600' }
+        };
+
+        // Initialize data
+        if (!localStorage.getItem('deliveryOrders')) {
+            const sampleOrders = [
+                {
+                    id: 1,
+                    restaurant: '맛있는 치킨집',
+                    menu: '양념치킨, 감자튀김',
+                    price: 25000,
+                    address: '서울시 강남구 역삼동',
+                    icon: '🍗',
+                    status: '배달중',
+                    orderTime: new Date().toLocaleString('ko-KR'),
+                    statusHistory: [
+                        { status: '주문접수', time: new Date().toLocaleString('ko-KR') },
+                        { status: '조리중', time: new Date().toLocaleString('ko-KR') },
+                        { status: '픽업완료', time: new Date().toLocaleString('ko-KR') },
+                        { status: '배달중', time: new Date().toLocaleString('ko-KR') }
+                    ]
+                }
+            ];
+            localStorage.setItem('deliveryOrders', JSON.stringify(sampleOrders));
+        }
+
+        let orders = JSON.parse(localStorage.getItem('deliveryOrders'));
+        let currentOrderId = null;
+        let currentFilter = 'all';
+
+        function saveToLocalStorage() {
+            localStorage.setItem('deliveryOrders', JSON.stringify(orders));
+        }
+
+        function formatPrice(price) {
+            return price.toLocaleString('ko-KR') + '원';
+        }
+
+        function updateStats() {
+            const preparing = orders.filter(o => ['주문접수', '조리중'].includes(o.status)).length;
+            const pickup = orders.filter(o => o.status === '픽업완료').length;
+            const delivering = orders.filter(o => o.status === '배달중').length;
+            const completed = orders.filter(o => o.status === '배달완료').length;
+
+            document.getElementById('preparingCount').textContent = preparing;
+            document.getElementById('pickupCount').textContent = pickup;
+            document.getElementById('deliveringCount').textContent = delivering;
+            document.getElementById('completedCount').textContent = completed;
+        }
+
+        function renderOrders(filteredOrders = orders) {
+            const grid = document.getElementById('deliveryGrid');
+
+            if (filteredOrders.length === 0) {
+                grid.innerHTML = '<div class="col-span-full bg-white rounded-lg shadow-lg p-12 text-center text-gray-500">주문이 없습니다</div>';
+                return;
+            }
+
+            grid.innerHTML = filteredOrders.map(order => {
+                const statusInfo = statusIcons[order.status];
+                return `
+                    <div class="delivery-card bg-white rounded-lg shadow-lg p-6 cursor-pointer hover:shadow-xl transition-shadow" onclick="viewOrder(${order.id})">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center gap-4">
+                                <div class="text-5xl">${order.icon}</div>
+                                <div>
+                                    <h3 class="font-bold text-xl">${order.restaurant}</h3>
+                                    <div class="text-sm text-gray-500">주문번호: #${order.id}</div>
+                                </div>
+                            </div>
+                            <div class="${statusInfo.color} px-3 py-1 rounded-full flex items-center gap-2">
+                                <i class="fas ${statusInfo.icon}"></i>
+                                <span class="text-sm font-bold">${order.status}</span>
+                            </div>
+                        </div>
+                        <div class="text-gray-700 mb-2">${order.menu}</div>
+                        <div class="text-teal-600 font-bold text-xl mb-2">${formatPrice(order.price)}</div>
+                        <div class="text-sm text-gray-500 mb-3">
+                            <i class="fas fa-map-marker-alt mr-1"></i>${order.address}
+                        </div>
+                        <div class="text-xs text-gray-400">
+                            <i class="fas fa-clock mr-1"></i>${order.orderTime}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function viewOrder(orderId) {
+            currentOrderId = orderId;
+            const order = orders.find(o => o.id === orderId);
+            if (!order) return;
+
+            document.getElementById('viewIcon').textContent = order.icon;
+            document.getElementById('viewRestaurant').textContent = order.restaurant;
+            document.getElementById('viewOrderNumber').textContent = `주문번호: #${order.id}`;
+            document.getElementById('viewPrice').textContent = formatPrice(order.price);
+            document.getElementById('viewOrderTime').textContent = order.orderTime;
+            document.getElementById('viewMenu').textContent = order.menu;
+            document.getElementById('viewAddress').textContent = order.address;
+
+            renderStatusProgress(order);
+            document.getElementById('viewOrderModal').classList.remove('hidden');
+
+            // Hide update button if completed
+            if (order.status === '배달완료') {
+                document.getElementById('updateStatusBtn').style.display = 'none';
+            } else {
+                document.getElementById('updateStatusBtn').style.display = 'block';
+            }
+        }
+
+        function renderStatusProgress(order) {
+            const progress = document.getElementById('statusProgress');
+            const currentIndex = statuses.indexOf(order.status);
+
+            progress.innerHTML = statuses.map((status, index) => {
+                const statusInfo = statusIcons[status];
+                const isCompleted = index <= currentIndex;
+                const statusTime = order.statusHistory.find(h => h.status === status)?.time || '';
+
+                return `
+                    <div class="status-item mb-6 ${isCompleted ? '' : 'opacity-50'}">
+                        <div class="status-icon ${statusInfo.color}">
+                            <i class="fas ${statusInfo.icon}"></i>
+                        </div>
+                        <div class="font-bold text-lg mb-1">${status}</div>
+                        ${statusTime ? `<div class="text-sm text-gray-500">${statusTime}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function createOrder() {
+            const restaurant = document.getElementById('restaurantName').value.trim();
+            const menu = document.getElementById('menuItems').value.trim();
+            const price = parseFloat(document.getElementById('orderPrice').value);
+            const address = document.getElementById('deliveryAddress').value.trim();
+            const icon = document.getElementById('selectedIcon').value;
+
+            if (!restaurant || !menu || !price || !address) {
+                alert('모든 필드를 입력해주세요!');
+                return;
+            }
+
+            const order = {
+                id: Date.now(),
+                restaurant,
+                menu,
+                price,
+                address,
+                icon,
+                status: '주문접수',
+                orderTime: new Date().toLocaleString('ko-KR'),
+                statusHistory: [
+                    { status: '주문접수', time: new Date().toLocaleString('ko-KR') }
+                ]
+            };
+
+            orders.unshift(order);
+            saveToLocalStorage();
+
+            // Clear form
+            document.getElementById('restaurantName').value = '';
+            document.getElementById('menuItems').value = '';
+            document.getElementById('orderPrice').value = '';
+            document.getElementById('deliveryAddress').value = '';
+
+            document.getElementById('orderModal').classList.add('hidden');
+            renderOrders();
+            updateStats();
+            alert('주문이 등록되었습니다!');
+        }
+
+        function updateOrderStatus() {
+            const order = orders.find(o => o.id === currentOrderId);
+            if (!order || order.status === '배달완료') return;
+
+            const currentIndex = statuses.indexOf(order.status);
+            if (currentIndex < statuses.length - 1) {
+                order.status = statuses[currentIndex + 1];
+                order.statusHistory.push({
+                    status: order.status,
+                    time: new Date().toLocaleString('ko-KR')
+                });
+
+                saveToLocalStorage();
+                renderStatusProgress(order);
+                renderOrders();
+                updateStats();
+
+                if (order.status === '배달완료') {
+                    alert('배달이 완료되었습니다!');
+                    document.getElementById('updateStatusBtn').style.display = 'none';
+                } else {
+                    alert(`상태가 '${order.status}'(으)로 변경되었습니다!`);
+                }
+            }
+        }
+
+        function deleteOrder() {
+            if (!confirm('이 주문을 삭제하시겠습니까?')) return;
+
+            orders = orders.filter(o => o.id !== currentOrderId);
+            saveToLocalStorage();
+
+            document.getElementById('viewOrderModal').classList.add('hidden');
+            renderOrders();
+            updateStats();
+        }
+
+        function filterOrders(status) {
+            currentFilter = status;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.dataset.status === status) {
+                    btn.className = 'filter-btn whitespace-nowrap bg-teal-500 text-white px-6 py-2 rounded-lg font-bold';
+                } else {
+                    btn.className = 'filter-btn whitespace-nowrap bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300';
+                }
+            });
+
+            const filtered = status === 'all' ? orders : orders.filter(o => o.status === status);
+            renderOrders(filtered);
+        }
+
+        // Icon selection
+        document.querySelectorAll('.icon-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.icon-btn').forEach(b => b.classList.remove('bg-teal-100', 'border-teal-500'));
+                btn.classList.add('bg-teal-100', 'border-teal-500');
+                document.getElementById('selectedIcon').value = btn.dataset.icon;
+            });
+        });
+
+        // Event listeners
+        document.getElementById('newOrderBtn').addEventListener('click', () => {
+            document.getElementById('orderModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closeModal').addEventListener('click', () => {
+            document.getElementById('orderModal').classList.add('hidden');
+        });
+
+        document.getElementById('closeViewModal').addEventListener('click', () => {
+            document.getElementById('viewOrderModal').classList.add('hidden');
+        });
+
+        document.getElementById('createOrderBtn').addEventListener('click', createOrder);
+        document.getElementById('updateStatusBtn').addEventListener('click', updateOrderStatus);
+        document.getElementById('deleteOrderBtn').addEventListener('click', deleteOrder);
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => filterOrders(btn.dataset.status));
+        });
+
+        // Initial render
+        renderOrders();
+        updateStats();
+    </script>
+</body>
+</html>

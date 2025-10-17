@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Estate Finder - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .property-card { transition: all 0.3s; }
+        .property-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <div class="bg-white rounded-lg shadow-2xl p-6">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800"><i class="fas fa-home text-purple-600 mr-3"></i>Real Estate Finder</h1>
+                    <p class="text-gray-600">직방 스타일 부동산 검색</p>
+                </div>
+                <button onclick="window.location.href='../'" class="px-4 py-2 bg-purple-600 text-white rounded-lg">뒤로가기</button>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="bg-gray-50 p-4 rounded-lg mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <select id="typeFilter" onchange="filterProperties()" class="px-4 py-2 border rounded-lg">
+                        <option value="">모든 유형</option>
+                        <option value="원룸">원룸</option>
+                        <option value="투룸">투룸</option>
+                        <option value="오피스텔">오피스텔</option>
+                        <option value="아파트">아파트</option>
+                    </select>
+                    <select id="locationFilter" onchange="filterProperties()" class="px-4 py-2 border rounded-lg">
+                        <option value="">모든 지역</option>
+                        <option value="강남구">강남구</option>
+                        <option value="서초구">서초구</option>
+                        <option value="송파구">송파구</option>
+                        <option value="마포구">마포구</option>
+                        <option value="용산구">용산구</option>
+                    </select>
+                    <input type="number" id="minPrice" placeholder="최소 가격" onchange="filterProperties()" class="px-4 py-2 border rounded-lg">
+                    <input type="number" id="maxPrice" placeholder="최대 가격" onchange="filterProperties()" class="px-4 py-2 border rounded-lg">
+                    <button onclick="resetFilters()" class="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg">필터 초기화</button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="bg-blue-50 p-4 rounded-lg"><div class="text-sm text-blue-600">매물 수</div><div class="text-2xl font-bold" id="totalCount">0</div></div>
+                <div class="bg-green-50 p-4 rounded-lg"><div class="text-sm text-green-600">평균 가격</div><div class="text-2xl font-bold" id="avgPrice">0만원</div></div>
+                <div class="bg-purple-50 p-4 rounded-lg"><div class="text-sm text-purple-600">최저 가격</div><div class="text-2xl font-bold" id="minPriceDisplay">0만원</div></div>
+                <div class="bg-orange-50 p-4 rounded-lg"><div class="text-sm text-orange-600">최고 가격</div><div class="text-2xl font-bold" id="maxPriceDisplay">0만원</div></div>
+            </div>
+
+            <!-- Property List -->
+            <div id="propertyList" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+        </div>
+    </div>
+
+    <script>
+        const properties = [
+            {id: 1, type: '원룸', location: '강남구', price: 500, deposit: 1000, area: 20, floor: 3, image: '🏠'},
+            {id: 2, type: '투룸', location: '서초구', price: 700, deposit: 2000, area: 35, floor: 5, image: '🏘️'},
+            {id: 3, type: '오피스텔', location: '송파구', price: 600, deposit: 1500, area: 28, floor: 8, image: '🏢'},
+            {id: 4, type: '아파트', location: '마포구', price: 1200, deposit: 5000, area: 60, floor: 12, image: '🏬'},
+            {id: 5, type: '원룸', location: '용산구', price: 550, deposit: 1200, area: 22, floor: 4, image: '🏠'},
+            {id: 6, type: '투룸', location: '강남구', price: 800, deposit: 3000, area: 40, floor: 7, image: '🏘️'},
+            {id: 7, type: '오피스텔', location: '서초구', price: 650, deposit: 2000, area: 30, floor: 10, image: '🏢'},
+            {id: 8, type: '아파트', location: '송파구', price: 1500, deposit: 8000, area: 80, floor: 15, image: '🏬'},
+            {id: 9, type: '원룸', location: '마포구', price: 480, deposit: 1000, area: 18, floor: 2, image: '🏠'},
+        ];
+
+        let filteredProperties = [...properties];
+
+        function renderProperties() {
+            const list = document.getElementById('propertyList');
+            list.innerHTML = filteredProperties.map(p => `
+                <div class="property-card bg-white border-2 border-gray-200 rounded-lg overflow-hidden">
+                    <div class="text-6xl text-center py-6 bg-gray-50">${p.image}</div>
+                    <div class="p-4">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded">${p.type}</span>
+                                <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded ml-1">${p.location}</span>
+                            </div>
+                            <button onclick="toggleWishlist(${p.id})" class="text-red-500">
+                                <i class="fas fa-heart"></i>
+                            </button>
+                        </div>
+                        <div class="text-xl font-bold text-gray-800 mb-1">월세 ${p.price}만원</div>
+                        <div class="text-sm text-gray-500 mb-3">보증금 ${p.deposit}만원</div>
+                        <div class="flex justify-between text-sm text-gray-600">
+                            <span><i class="fas fa-expand-arrows-alt mr-1"></i>${p.area}㎡</span>
+                            <span><i class="fas fa-layer-group mr-1"></i>${p.floor}층</span>
+                        </div>
+                        <button onclick="viewDetail(${p.id})" class="mt-3 w-full px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg">상세보기</button>
+                    </div>
+                </div>
+            `).join('');
+
+            updateStats();
+        }
+
+        function filterProperties() {
+            const type = document.getElementById('typeFilter').value;
+            const location = document.getElementById('locationFilter').value;
+            const minPrice = parseInt(document.getElementById('minPrice').value) || 0;
+            const maxPrice = parseInt(document.getElementById('maxPrice').value) || Infinity;
+
+            filteredProperties = properties.filter(p =>
+                (!type || p.type === type) &&
+                (!location || p.location === location) &&
+                (p.price >= minPrice && p.price <= maxPrice)
+            );
+
+            renderProperties();
+        }
+
+        function resetFilters() {
+            document.getElementById('typeFilter').value = '';
+            document.getElementById('locationFilter').value = '';
+            document.getElementById('minPrice').value = '';
+            document.getElementById('maxPrice').value = '';
+            filteredProperties = [...properties];
+            renderProperties();
+        }
+
+        function updateStats() {
+            document.getElementById('totalCount').textContent = filteredProperties.length;
+            const avg = Math.round(filteredProperties.reduce((sum, p) => sum + p.price, 0) / filteredProperties.length) || 0;
+            document.getElementById('avgPrice').textContent = avg + '만원';
+            const min = Math.min(...filteredProperties.map(p => p.price)) || 0;
+            document.getElementById('minPriceDisplay').textContent = min + '만원';
+            const max = Math.max(...filteredProperties.map(p => p.price)) || 0;
+            document.getElementById('maxPriceDisplay').textContent = max + '만원';
+        }
+
+        window.toggleWishlist = (id) => alert(`매물 ${id}를 찜했습니다!`);
+        window.viewDetail = (id) => {
+            const p = properties.find(prop => prop.id === id);
+            alert(`매물 상세:\n유형: ${p.type}\n위치: ${p.location}\n월세: ${p.price}만원\n보증금: ${p.deposit}만원\n면적: ${p.area}㎡\n층수: ${p.floor}층`);
+        };
+
+        renderProperties();
+    </script>
+</body>
+</html>
