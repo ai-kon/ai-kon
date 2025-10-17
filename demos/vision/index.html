@@ -142,6 +142,12 @@
     </div>
 
     <script type="module">
+        // Check WebGPU support first
+        if (!navigator.gpu) {
+            window.location.href = '../fallback.html';
+            throw new Error('WebGPU not supported');
+        }
+
         import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5';
 
         env.allowLocalModels = false;
@@ -181,9 +187,29 @@
                 console.log('Model loaded');
             } catch (error) {
                 console.error('Failed to load model:', error);
+                const errorDetails = error.message || 'Unknown error';
+                const errorName = error.name || '';
+
+                let helpText = 'Please refresh the page and try again.';
+                if (errorDetails.includes('gpu') || errorName.includes('GPU')) {
+                    helpText = 'Your browser may not fully support WebGPU. Please update to the latest Chrome/Edge version.';
+                } else if (errorDetails.includes('network') || errorDetails.includes('fetch')) {
+                    helpText = 'Network error while downloading model. Please check your connection and try again.';
+                }
+
                 loadingOverlay.innerHTML = `
-                    <h2 class="text-white text-xl font-semibold">Failed to Load Model</h2>
-                    <p class="text-white text-sm mt-2">${error.message}</p>
+                    <div class="text-center px-8">
+                        <div class="text-6xl mb-4">❌</div>
+                        <h2 class="text-white text-xl font-semibold mb-2">Failed to Load Model</h2>
+                        <p class="text-white text-sm mb-2">${helpText}</p>
+                        <p class="text-white text-xs opacity-75 mb-4">${errorDetails}</p>
+                        <button onclick="window.location.reload()" class="px-6 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 font-medium">
+                            Try Again
+                        </button>
+                        <a href="../" class="ml-2 px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium inline-block">
+                            Back to Demos
+                        </a>
+                    </div>
                 `;
             }
         }

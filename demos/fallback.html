@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Not Supported | AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8">
+            <div class="text-center mb-6">
+                <div class="text-6xl mb-4">⚠️</div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">WebGPU Not Supported</h1>
+                <p class="text-gray-600">Your browser doesn't support WebGPU, which is required for these AI demos.</p>
+            </div>
+
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <h2 class="font-semibold text-yellow-900 mb-2">💡 Quick Fix</h2>
+                <p class="text-sm text-yellow-800">
+                    Try one of these supported browsers:
+                </p>
+                <ul class="text-sm text-yellow-800 mt-2 space-y-1 ml-4">
+                    <li>• <strong>Chrome/Edge 113+</strong> (Recommended)</li>
+                    <li>• Make sure you're on the latest version</li>
+                    <li>• Enable WebGPU in chrome://flags if needed</li>
+                </ul>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-900 mb-2">Supported Browsers</h3>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>✅ Chrome 113+</li>
+                        <li>✅ Edge 113+</li>
+                        <li>✅ Brave (latest)</li>
+                        <li>✅ Opera (latest)</li>
+                    </ul>
+                </div>
+
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-900 mb-2">Not Supported</h3>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>❌ Safari (not yet)</li>
+                        <li>❌ Firefox (in development)</li>
+                        <li>❌ Older browsers</li>
+                        <li>❌ Some mobile browsers</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h2 class="font-semibold text-blue-900 mb-2">📚 Alternative Options</h2>
+                <ul class="text-sm text-blue-800 space-y-2">
+                    <li>• View our <a href="https://github.com/ai-kon/ai-kon" class="underline">GitHub repository</a> for code examples</li>
+                    <li>• Read our <a href="https://github.com/ai-kon/ai-kon/blob/main/VISION.md" class="underline">Vision document</a></li>
+                    <li>• Check the <a href="https://github.com/ai-kon/ai-kon/blob/main/ROADMAP.md" class="underline">Roadmap</a></li>
+                </ul>
+            </div>
+
+            <div class="flex justify-center space-x-4">
+                <button onclick="window.location.reload()" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+                    Try Again
+                </button>
+                <a href="../" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium inline-block">
+                    Back to Home
+                </a>
+            </div>
+
+            <div class="mt-6 text-center text-sm text-gray-500">
+                <p>
+                    Learn more about WebGPU:
+                    <a href="https://developer.chrome.com/docs/web-platform/webgpu" target="_blank" class="text-indigo-600 hover:underline">
+                        Chrome Developers
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
