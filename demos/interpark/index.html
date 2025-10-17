@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인터파크 티켓 - 공연, 전시, 스포츠 예매</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+
+        * {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #dc2626 0%, #7c3aed 100%);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #dc2626 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .event-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .event-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(220, 38, 38, 0.3);
+        }
+
+        .seat {
+            width: 40px;
+            height: 40px;
+            margin: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .seat:hover:not(.sold) {
+            transform: scale(1.1);
+        }
+
+        .seat.available {
+            background-color: #e5e7eb;
+            border: 2px solid #9ca3af;
+        }
+
+        .seat.selected {
+            background-color: #dc2626;
+            border: 2px solid #991b1b;
+            color: white;
+        }
+
+        .seat.sold {
+            background-color: #374151;
+            border: 2px solid #1f2937;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .badge-rank {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: linear-gradient(135deg, #dc2626 0%, #7c3aed 100%);
+            color: white;
+            font-weight: bold;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 10;
+        }
+
+        .poster {
+            width: 100%;
+            height: 320px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: #9ca3af;
+        }
+
+        .cart-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #dc2626;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-available {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .status-soldout {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .calendar-day {
+            padding: 8px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .calendar-day:hover {
+            background-color: #fecaca;
+        }
+
+        .calendar-day.selected {
+            background: linear-gradient(135deg, #dc2626 0%, #7c3aed 100%);
+            color: white;
+        }
+
+        .nav-tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .nav-tab:hover {
+            border-bottom-color: #dc2626;
+        }
+
+        .nav-tab.active {
+            border-bottom-color: #dc2626;
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-8">
+                    <h1 class="text-3xl font-bold cursor-pointer" onclick="showPage('home')">
+                        <i class="fas fa-ticket-alt mr-2"></i>인터파크 티켓
+                    </h1>
+                    <nav class="hidden md:flex space-x-6">
+                        <a href="#" onclick="filterCategory('all')" class="hover:text-purple-200 transition">전체</a>
+                        <a href="#" onclick="filterCategory('콘서트')" class="hover:text-purple-200 transition">콘서트</a>
+                        <a href="#" onclick="filterCategory('뮤지컬')" class="hover:text-purple-200 transition">뮤지컬</a>
+                        <a href="#" onclick="filterCategory('연극')" class="hover:text-purple-200 transition">연극</a>
+                        <a href="#" onclick="filterCategory('전시')" class="hover:text-purple-200 transition">전시</a>
+                        <a href="#" onclick="filterCategory('스포츠')" class="hover:text-purple-200 transition">스포츠</a>
+                        <a href="#" onclick="filterCategory('클래식')" class="hover:text-purple-200 transition">클래식</a>
+                    </nav>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="relative cursor-pointer" onclick="showPage('cart')">
+                        <i class="fas fa-shopping-cart text-2xl"></i>
+                        <span id="cartBadge" class="cart-badge">0</span>
+                    </div>
+                    <button onclick="showPage('mytickets')" class="bg-white text-red-600 px-4 py-2 rounded-lg font-semibold hover:bg-purple-100 transition">
+                        <i class="fas fa-ticket mr-2"></i>내 티켓
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Home Page -->
+        <div id="homePage">
+            <!-- Filters -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">카테고리</label>
+                        <select id="categoryFilter" onchange="applyFilters()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                            <option value="all">전체</option>
+                            <option value="콘서트">콘서트</option>
+                            <option value="뮤지컬">뮤지컬</option>
+                            <option value="연극">연극</option>
+                            <option value="전시">전시</option>
+                            <option value="스포츠">스포츠</option>
+                            <option value="클래식">클래식</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">지역</label>
+                        <select id="locationFilter" onchange="applyFilters()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                            <option value="all">전체</option>
+                            <option value="서울">서울</option>
+                            <option value="경기">경기</option>
+                            <option value="지방">지방</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">정렬</label>
+                        <select id="sortFilter" onchange="applyFilters()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                            <option value="rank">랭킹순</option>
+                            <option value="date">날짜순</option>
+                            <option value="price-low">낮은 가격순</option>
+                            <option value="price-high">높은 가격순</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">날짜</label>
+                        <input type="date" id="dateFilter" onchange="applyFilters()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ranking Section -->
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold mb-6 gradient-text">
+                    <i class="fas fa-crown mr-2"></i>실시간 예매 랭킹
+                </h2>
+                <div id="eventsGrid" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    <!-- Events will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Cart Page -->
+        <div id="cartPage" style="display: none;">
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <h2 class="text-3xl font-bold mb-6 gradient-text">
+                    <i class="fas fa-shopping-cart mr-2"></i>장바구니
+                </h2>
+                <div id="cartItems"></div>
+                <div class="mt-8 pt-8 border-t-2 border-gray-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-xl font-semibold">총 결제 금액</span>
+                        <span id="cartTotal" class="text-3xl font-bold gradient-text">0원</span>
+                    </div>
+                    <div class="flex space-x-4">
+                        <button onclick="showPage('home')" class="flex-1 bg-gray-500 text-white py-4 rounded-lg font-semibold hover:bg-gray-600 transition">
+                            계속 쇼핑하기
+                        </button>
+                        <button onclick="showPage('payment')" class="flex-1 gradient-bg text-white py-4 rounded-lg font-semibold hover:opacity-90 transition">
+                            결제하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Page -->
+        <div id="paymentPage" style="display: none;">
+            <div class="bg-white rounded-xl shadow-lg p-8 max-w-4xl mx-auto">
+                <h2 class="text-3xl font-bold mb-6 gradient-text">
+                    <i class="fas fa-credit-card mr-2"></i>결제하기
+                </h2>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold mb-4">주문 정보</h3>
+                    <div id="paymentItems" class="space-y-4"></div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold mb-4">예매자 정보</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" id="buyerName" placeholder="이름" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                        <input type="tel" id="buyerPhone" placeholder="전화번호" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                        <input type="email" id="buyerEmail" placeholder="이메일" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent col-span-2">
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold mb-4">결제 수단</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <label class="border-2 border-gray-300 rounded-lg p-4 cursor-pointer hover:border-red-500 transition">
+                            <input type="radio" name="paymentMethod" value="card" checked class="mr-2">
+                            <i class="fas fa-credit-card mr-2"></i>신용카드
+                        </label>
+                        <label class="border-2 border-gray-300 rounded-lg p-4 cursor-pointer hover:border-red-500 transition">
+                            <input type="radio" name="paymentMethod" value="bank" class="mr-2">
+                            <i class="fas fa-university mr-2"></i>계좌이체
+                        </label>
+                        <label class="border-2 border-gray-300 rounded-lg p-4 cursor-pointer hover:border-red-500 transition">
+                            <input type="radio" name="paymentMethod" value="phone" class="mr-2">
+                            <i class="fas fa-mobile-alt mr-2"></i>휴대폰
+                        </label>
+                        <label class="border-2 border-gray-300 rounded-lg p-4 cursor-pointer hover:border-red-500 transition">
+                            <input type="radio" name="paymentMethod" value="kakao" class="mr-2">
+                            <i class="fas fa-comment mr-2"></i>카카오페이
+                        </label>
+                    </div>
+                </div>
+
+                <div class="bg-gray-100 rounded-lg p-6 mb-8">
+                    <div class="flex justify-between items-center text-2xl font-bold">
+                        <span>최종 결제 금액</span>
+                        <span id="finalTotal" class="gradient-text">0원</span>
+                    </div>
+                </div>
+
+                <div class="flex space-x-4">
+                    <button onclick="showPage('cart')" class="flex-1 bg-gray-500 text-white py-4 rounded-lg font-semibold hover:bg-gray-600 transition">
+                        이전
+                    </button>
+                    <button onclick="processPayment()" class="flex-1 gradient-bg text-white py-4 rounded-lg font-semibold hover:opacity-90 transition">
+                        <i class="fas fa-check mr-2"></i>결제 완료
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Tickets Page -->
+        <div id="myTicketsPage" style="display: none;">
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <h2 class="text-3xl font-bold mb-6 gradient-text">
+                    <i class="fas fa-ticket mr-2"></i>내 티켓
+                </h2>
+                <div id="myTicketsList" class="space-y-6"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Seat Selection Modal -->
+    <div id="seatModal" class="modal">
+        <div class="bg-white rounded-xl shadow-2xl max-w-5xl w-full m-4 p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold gradient-text" id="modalEventTitle"></h3>
+                <button onclick="closeSeatModal()" class="text-gray-500 hover:text-gray-700 text-3xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2">
+                    <div class="mb-6">
+                        <h4 class="text-xl font-bold mb-4">날짜 선택</h4>
+                        <div id="dateSelection" class="grid grid-cols-7 gap-2"></div>
+                    </div>
+
+                    <div class="mb-6">
+                        <h4 class="text-xl font-bold mb-4">좌석 등급</h4>
+                        <div id="seatGrades" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+                    </div>
+
+                    <div class="mb-6">
+                        <div class="bg-gradient-to-b from-yellow-400 to-yellow-600 text-center py-3 rounded-t-lg text-white font-bold text-lg">
+                            STAGE
+                        </div>
+                        <div class="border-2 border-gray-300 rounded-b-lg p-6">
+                            <div class="flex items-center justify-center mb-4 space-x-4 text-sm">
+                                <div class="flex items-center">
+                                    <div class="w-6 h-6 bg-gray-200 border-2 border-gray-400 rounded mr-2"></div>
+                                    <span>선택 가능</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="w-6 h-6 bg-red-600 border-2 border-red-800 rounded mr-2"></div>
+                                    <span>선택됨</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="w-6 h-6 bg-gray-700 border-2 border-gray-900 rounded mr-2 opacity-50"></div>
+                                    <span>매진</span>
+                                </div>
+                            </div>
+                            <div id="seatMap" class="flex flex-wrap justify-center"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-1">
+                    <div class="bg-gray-50 rounded-lg p-6 sticky top-4">
+                        <h4 class="text-xl font-bold mb-4">선택 정보</h4>
+                        <div id="selectedInfo" class="space-y-3 text-sm mb-6"></div>
+                        <div class="border-t-2 border-gray-300 pt-4 mb-6">
+                            <div class="flex justify-between text-lg font-bold">
+                                <span>총 금액</span>
+                                <span id="totalPrice" class="gradient-text">0원</span>
+                            </div>
+                        </div>
+                        <button onclick="addToCart()" class="w-full gradient-bg text-white py-4 rounded-lg font-semibold hover:opacity-90 transition">
+                            <i class="fas fa-cart-plus mr-2"></i>장바구니 담기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Event Data
+        const events = [
+            {
+                id: 1,
+                rank: 1,
+                title: "BTS WORLD TOUR",
+                category: "콘서트",
+                location: "서울",
+                venue: "잠실 올림픽 주경기장",
+                date: "2025-11-15",
+                time: "19:00",
+                price: { VIP: 150000, R석: 120000, S석: 90000, A석: 60000 },
+                available: true,
+                icon: "fa-music"
+            },
+            {
+                id: 2,
+                rank: 2,
+                title: "블랙핑크 콘서트",
+                category: "콘서트",
+                location: "서울",
+                venue: "KSPO DOME",
+                date: "2025-11-20",
+                time: "19:00",
+                price: { VIP: 145000, R석: 115000, S석: 85000, A석: 55000 },
+                available: true,
+                icon: "fa-music"
+            },
+            {
+                id: 3,
+                rank: 3,
+                title: "아이유 콘서트 'HEREH'",
+                category: "콘서트",
+                location: "서울",
+                venue: "올림픽공원 체조경기장",
+                date: "2025-11-25",
+                time: "18:00",
+                price: { VIP: 132000, R석: 110000, S석: 77000, A석: 55000 },
+                available: true,
+                icon: "fa-music"
+            },
+            {
+                id: 4,
+                rank: 4,
+                title: "레미제라블",
+                category: "뮤지컬",
+                location: "서울",
+                venue: "블루스퀘어 신한카드홀",
+                date: "2025-11-18",
+                time: "19:30",
+                price: { VIP: 150000, R석: 120000, S석: 90000, A석: 60000 },
+                available: true,
+                icon: "fa-theater-masks"
+            },
+            {
+                id: 5,
+                rank: 5,
+                title: "위키드",
+                category: "뮤지컬",
+                location: "서울",
+                venue: "샤롯데씨어터",
+                date: "2025-11-22",
+                time: "20:00",
+                price: { VIP: 140000, R석: 110000, S석: 80000, A석: 50000 },
+                available: true,
+                icon: "fa-theater-masks"
+            },
+            {
+                id: 6,
+                rank: 6,
+                title: "NCT DREAM 콘서트",
+                category: "콘서트",
+                location: "서울",
+                venue: "고척스카이돔",
+                date: "2025-12-01",
+                time: "18:00",
+                price: { VIP: 132000, R석: 110000, S석: 88000, A석: 66000 },
+                available: true,
+                icon: "fa-music"
+            },
+            {
+                id: 7,
+                rank: 7,
+                title: "오페라의 유령",
+                category: "뮤지컬",
+                location: "서울",
+                venue: "샬롯데씨어터",
+                date: "2025-11-28",
+                time: "19:30",
+                price: { VIP: 150000, R석: 120000, S석: 90000, A석: 60000 },
+                available: true,
+                icon: "fa-theater-masks"
+            },
+            {
+                id: 8,
+                rank: 8,
+                title: "세븐틴 콘서트",
+                category: "콘서트",
+                location: "경기",
+                venue: "고양 종합운동장",
+                date: "2025-12-05",
+                time: "19:00",
+                price: { VIP: 143000, R석: 121000, S석: 99000, A석: 77000 },
+                available: true,
+                icon: "fa-music"
+            },
+            {
+                id: 9,
+                rank: 9,
+                title: "KBO 한국시리즈",
+                category: "스포츠",
+                location: "서울",
+                venue: "잠실야구장",
+                date: "2025-11-10",
+                time: "18:30",
+                price: { VIP: 80000, R석: 60000, S석: 40000, A석: 25000 },
+                available: true,
+                icon: "fa-baseball-ball"
+            },
+            {
+                id: 10,
+                rank: 10,
+                title: "프리마돈나",
+                category: "뮤지컬",
+                location: "서울",
+                venue: "예술의전당 오페라극장",
+                date: "2025-11-30",
+                time: "19:30",
+                price: { VIP: 130000, R석: 100000, S석: 70000, A석: 50000 },
+                available: true,
+                icon: "fa-theater-masks"
+            },
+            {
+                id: 11,
+                rank: 11,
+                title: "트와이스 콘서트",
+                category: "콘서트",
+                location: "서울",
+                venue: "잠실실내체육관",
+                date: "2025-12-10",
+                time: "18:00",
+                price: { VIP: 138000, R석: 115000, S석: 92000, A석: 69000 },
+                available: true,
+                icon: "fa-music"
+            },
+            {
+                id: 12,
+                rank: 12,
+                title: "시카고",
+                category: "뮤지컬",
+                location: "서울",
+                venue: "디큐브아트센터",
+                date: "2025-12-03",
+                time: "20:00",
+                price: { VIP: 140000, R석: 110000, S석: 80000, A석: 50000 },
+                available: true,
+                icon: "fa-theater-masks"
+            },
+            {
+                id: 13,
+                rank: 13,
+                title: "반 고흐 인사이드",
+                category: "전시",
+                location: "서울",
+                venue: "더현대 서울",
+                date: "2025-11-12",
+                time: "10:00",
+                price: { VIP: 35000, R석: 28000, S석: 22000, A석: 18000 },
+                available: true,
+                icon: "fa-palette"
+            },
+            {
+                id: 14,
+                rank: 14,
+                title: "맘마미아",
+                category: "뮤지컬",
+                location: "서울",
+                venue: "블루스퀘어",
+                date: "2025-12-08",
+                time: "19:00",
+                price: { VIP: 130000, R석: 100000, S석: 70000, A석: 50000 },
+                available: true,
+                icon: "fa-theater-masks"
+            },
+            {
+                id: 15,
+                rank: 15,
+                title: "K리그 결승전",
+                category: "스포츠",
+                location: "서울",
+                venue: "서울월드컵경기장",
+                date: "2025-11-24",
+                time: "16:00",
+                price: { VIP: 70000, R석: 50000, S석: 35000, A석: 20000 },
+                available: true,
+                icon: "fa-futbol"
+            },
+            {
+                id: 16,
+                rank: 16,
+                title: "스트레이 키즈 콘서트",
+                category: "콘서트",
+                location: "경기",
+                venue: "킨텍스",
+                date: "2025-12-15",
+                time: "18:00",
+                price: { VIP: 143000, R석: 121000, S석: 99000, A석: 77000 },
+                available: true,
+                icon: "fa-music"
+            },
+            {
+                id: 17,
+                rank: 17,
+                title: "베르테르",
+                category: "클래식",
+                location: "서울",
+                venue: "예술의전당 콘서트홀",
+                date: "2025-11-27",
+                time: "19:30",
+                price: { VIP: 120000, R석: 90000, S석: 60000, A석: 40000 },
+                available: true,
+                icon: "fa-violin"
+            },
+            {
+                id: 18,
+                rank: 18,
+                title: "햄릿",
+                category: "연극",
+                location: "서울",
+                venue: "세종문화회관",
+                date: "2025-11-19",
+                time: "19:30",
+                price: { VIP: 80000, R석: 60000, S석: 45000, A석: 30000 },
+                available: true,
+                icon: "fa-masks-theater"
+            },
+            {
+                id: 19,
+                rank: 19,
+                title: "프로농구 개막전",
+                category: "스포츠",
+                location: "서울",
+                venue: "잠실학생체육관",
+                date: "2025-11-14",
+                time: "19:00",
+                price: { VIP: 60000, R석: 45000, S석: 30000, A석: 20000 },
+                available: true,
+                icon: "fa-basketball-ball"
+            },
+            {
+                id: 20,
+                rank: 20,
+                title: "뉴진스 팬미팅",
+                category: "콘서트",
+                location: "경기",
+                venue: "고양 체육관",
+                date: "2025-12-20",
+                time: "18:00",
+                price: { VIP: 132000, R석: 110000, S석: 88000, A석: 66000 },
+                available: true,
+                icon: "fa-music"
+            },
+            {
+                id: 21,
+                rank: 21,
+                title: "노트르담 드 파리",
+                category: "뮤지컬",
+                location: "서울",
+                venue: "LG아트센터",
+                date: "2025-12-12",
+                time: "19:30",
+                price: { VIP: 150000, R석: 120000, S석: 90000, A석: 60000 },
+                available: true,
+                icon: "fa-theater-masks"
+            },
+            {
+                id: 22,
+                rank: 22,
+                title: "에스파 콘서트",
+                category: "콘서트",
+                location: "서울",
+                venue: "올림픽공원 체조경기장",
+                date: "2025-12-25",
+                time: "18:00",
+                price: { VIP: 138000, R석: 115000, S석: 92000, A석: 69000 },
+                available: true,
+                icon: "fa-music"
+            },
+            {
+                id: 23,
+                rank: 23,
+                title: "인상파 걸작전",
+                category: "전시",
+                location: "서울",
+                venue: "국립중앙박물관",
+                date: "2025-11-16",
+                time: "09:00",
+                price: { VIP: 30000, R석: 25000, S석: 20000, A석: 15000 },
+                available: true,
+                icon: "fa-palette"
+            },
+            {
+                id: 24,
+                rank: 24,
+                title: "베토벤 교향곡 전곡",
+                category: "클래식",
+                location: "서울",
+                venue: "롯데콘서트홀",
+                date: "2025-12-02",
+                time: "19:30",
+                price: { VIP: 110000, R석: 85000, S석: 60000, A석: 40000 },
+                available: true,
+                icon: "fa-violin"
+            },
+            {
+                id: 25,
+                rank: 25,
+                title: "웃는 남자",
+                category: "뮤지컬",
+                location: "경기",
+                venue: "성남아트센터",
+                date: "2025-12-18",
+                time: "19:30",
+                price: { VIP: 135000, R석: 105000, S석: 75000, A석: 50000 },
+                available: true,
+                icon: "fa-theater-masks"
+            },
+            {
+                id: 26,
+                rank: 26,
+                title: "킹키부츠",
+                category: "뮤지컬",
+                location: "서울",
+                venue: "충무아트센터",
+                date: "2025-11-29",
+                time: "19:00",
+                price: { VIP: 130000, R석: 100000, S석: 70000, A석: 50000 },
+                available: false,
+                icon: "fa-theater-masks"
+            },
+            {
+                id: 27,
+                rank: 27,
+                title: "빅뱅 콘서트",
+                category: "콘서트",
+                location: "지방",
+                venue: "부산 아시아드 주경기장",
+                date: "2025-12-30",
+                time: "19:00",
+                price: { VIP: 150000, R석: 120000, S석: 90000, A석: 60000 },
+                available: true,
+                icon: "fa-music"
+            },
+            {
+                id: 28,
+                rank: 28,
+                title: "모차르트 레퀴엠",
+                category: "클래식",
+                location: "서울",
+                venue: "세종문화회관 대극장",
+                date: "2025-12-07",
+                time: "19:30",
+                price: { VIP: 100000, R석: 75000, S석: 50000, A석: 35000 },
+                available: true,
+                icon: "fa-violin"
+            },
+            {
+                id: 29,
+                rank: 29,
+                title: "피카소와 20세기 미술",
+                category: "전시",
+                location: "서울",
+                venue: "서울시립미술관",
+                date: "2025-11-21",
+                time: "10:00",
+                price: { VIP: 28000, R석: 22000, S석: 18000, A석: 14000 },
+                available: true,
+                icon: "fa-palette"
+            },
+            {
+                id: 30,
+                rank: 30,
+                title: "대학로 연극 페스티벌",
+                category: "연극",
+                location: "서울",
+                venue: "대학로 예술극장",
+                date: "2025-11-26",
+                time: "19:00",
+                price: { VIP: 60000, R석: 45000, S석: 35000, A석: 25000 },
+                available: true,
+                icon: "fa-masks-theater"
+            }
+        ];
+
+        // State
+        let cart = JSON.parse(localStorage.getItem('cart')) || [];
+        let bookings = JSON.parse(localStorage.getItem('bookings')) || [];
+        let currentEvent = null;
+        let selectedDate = null;
+        let selectedGrade = null;
+        let selectedSeats = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadEvents();
+            updateCartBadge();
+        });
+
+        // Load Events
+        function loadEvents() {
+            const grid = document.getElementById('eventsGrid');
+            const filteredEvents = getFilteredEvents();
+
+            grid.innerHTML = filteredEvents.map(event => `
+                <div class="event-card bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer relative" onclick="openSeatModal(${event.id})">
+                    <div class="badge-rank">${event.rank}위</div>
+                    <div class="poster">
+                        <i class="fas ${event.icon}"></i>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg mb-2 truncate">${event.title}</h3>
+                        <p class="text-sm text-gray-600 mb-1">
+                            <i class="fas fa-map-marker-alt mr-1"></i>${event.venue}
+                        </p>
+                        <p class="text-sm text-gray-600 mb-2">
+                            <i class="fas fa-calendar mr-1"></i>${formatDate(event.date)} ${event.time}
+                        </p>
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold gradient-text">${formatPrice(Math.min(...Object.values(event.price)))}원~</span>
+                            <span class="status-badge ${event.available ? 'status-available' : 'status-soldout'}">
+                                ${event.available ? '예매 가능' : '매진'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Filter Functions
+        function filterCategory(category) {
+            document.getElementById('categoryFilter').value = category === 'all' ? 'all' : category;
+            applyFilters();
+        }
+
+        function getFilteredEvents() {
+            const category = document.getElementById('categoryFilter').value;
+            const location = document.getElementById('locationFilter').value;
+            const sort = document.getElementById('sortFilter').value;
+            const date = document.getElementById('dateFilter').value;
+
+            let filtered = [...events];
+
+            if (category !== 'all') {
+                filtered = filtered.filter(e => e.category === category);
+            }
+
+            if (location !== 'all') {
+                filtered = filtered.filter(e => e.location === location);
+            }
+
+            if (date) {
+                filtered = filtered.filter(e => e.date === date);
+            }
+
+            // Sort
+            switch(sort) {
+                case 'rank':
+                    filtered.sort((a, b) => a.rank - b.rank);
+                    break;
+                case 'date':
+                    filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+                    break;
+                case 'price-low':
+                    filtered.sort((a, b) => Math.min(...Object.values(a.price)) - Math.min(...Object.values(b.price)));
+                    break;
+                case 'price-high':
+                    filtered.sort((a, b) => Math.min(...Object.values(b.price)) - Math.min(...Object.values(a.price)));
+                    break;
+            }
+
+            return filtered;
+        }
+
+        function applyFilters() {
+            loadEvents();
+        }
+
+        // Seat Modal
+        function openSeatModal(eventId) {
+            currentEvent = events.find(e => e.id === eventId);
+            if (!currentEvent || !currentEvent.available) {
+                alert('현재 예매가 불가능한 공연입니다.');
+                return;
+            }
+
+            selectedDate = null;
+            selectedGrade = null;
+            selectedSeats = [];
+
+            document.getElementById('modalEventTitle').textContent = currentEvent.title;
+            generateDateSelection();
+            generateSeatGrades();
+            document.getElementById('seatModal').classList.add('active');
+        }
+
+        function closeSeatModal() {
+            document.getElementById('seatModal').classList.remove('active');
+            currentEvent = null;
+            selectedDate = null;
+            selectedGrade = null;
+            selectedSeats = [];
+        }
+
+        function generateDateSelection() {
+            const container = document.getElementById('dateSelection');
+            const dates = [];
+            const baseDate = new Date(currentEvent.date);
+
+            for (let i = -3; i <= 3; i++) {
+                const date = new Date(baseDate);
+                date.setDate(date.getDate() + i);
+                dates.push(date);
+            }
+
+            container.innerHTML = dates.map(date => {
+                const dateStr = date.toISOString().split('T')[0];
+                return `
+                    <div class="calendar-day ${selectedDate === dateStr ? 'selected' : ''}" onclick="selectDate('${dateStr}')">
+                        <div class="text-xs text-gray-500">${['일','월','화','수','목','금','토'][date.getDay()]}</div>
+                        <div class="font-bold">${date.getDate()}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectDate(date) {
+            selectedDate = date;
+            generateDateSelection();
+            updateSelectedInfo();
+        }
+
+        function generateSeatGrades() {
+            const container = document.getElementById('seatGrades');
+            const grades = Object.keys(currentEvent.price);
+
+            container.innerHTML = grades.map(grade => `
+                <button onclick="selectGrade('${grade}')" class="px-4 py-3 rounded-lg border-2 ${selectedGrade === grade ? 'gradient-bg text-white border-red-600' : 'border-gray-300 hover:border-red-500'} transition">
+                    <div class="font-bold">${grade}</div>
+                    <div class="text-sm">${formatPrice(currentEvent.price[grade])}원</div>
+                </button>
+            `).join('');
+        }
+
+        function selectGrade(grade) {
+            selectedGrade = grade;
+            selectedSeats = [];
+            generateSeatGrades();
+            generateSeatMap();
+            updateSelectedInfo();
+        }
+
+        function generateSeatMap() {
+            if (!selectedGrade) {
+                document.getElementById('seatMap').innerHTML = '<p class="text-gray-500 text-center w-full py-8">좌석 등급을 먼저 선택해주세요</p>';
+                return;
+            }
+
+            const rows = 10;
+            const cols = 15;
+            let html = '';
+
+            for (let i = 0; i < rows; i++) {
+                const rowLetter = String.fromCharCode(65 + i);
+                for (let j = 1; j <= cols; j++) {
+                    const seatId = `${rowLetter}${j}`;
+                    const isSold = Math.random() < 0.3; // 30% sold randomly
+                    const isSelected = selectedSeats.includes(seatId);
+
+                    html += `
+                        <div class="seat ${isSold ? 'sold' : isSelected ? 'selected' : 'available'}"
+                             onclick="toggleSeat('${seatId}', ${isSold})"
+                             title="좌석 ${seatId}">
+                            <div class="text-xs">${seatId}</div>
+                        </div>
+                    `;
+                }
+                html += '<div class="w-full h-2"></div>';
+            }
+
+            document.getElementById('seatMap').innerHTML = html;
+        }
+
+        function toggleSeat(seatId, isSold) {
+            if (isSold) return;
+
+            const index = selectedSeats.indexOf(seatId);
+            if (index > -1) {
+                selectedSeats.splice(index, 1);
+            } else {
+                if (selectedSeats.length >= 4) {
+                    alert('최대 4매까지 선택 가능합니다.');
+                    return;
+                }
+                selectedSeats.push(seatId);
+            }
+
+            generateSeatMap();
+            updateSelectedInfo();
+        }
+
+        function updateSelectedInfo() {
+            const container = document.getElementById('selectedInfo');
+            const totalPrice = selectedSeats.length * (selectedGrade ? currentEvent.price[selectedGrade] : 0);
+
+            container.innerHTML = `
+                <div><strong>공연명:</strong> ${currentEvent.title}</div>
+                ${selectedDate ? `<div><strong>날짜:</strong> ${formatDate(selectedDate)} ${currentEvent.time}</div>` : ''}
+                ${selectedGrade ? `<div><strong>등급:</strong> ${selectedGrade}</div>` : ''}
+                <div><strong>선택 좌석:</strong> ${selectedSeats.length > 0 ? selectedSeats.join(', ') : '없음'}</div>
+                ${selectedGrade ? `<div><strong>매당 가격:</strong> ${formatPrice(currentEvent.price[selectedGrade])}원</div>` : ''}
+            `;
+
+            document.getElementById('totalPrice').textContent = formatPrice(totalPrice) + '원';
+        }
+
+        // Cart Functions
+        function addToCart() {
+            if (!selectedDate) {
+                alert('날짜를 선택해주세요.');
+                return;
+            }
+            if (!selectedGrade) {
+                alert('좌석 등급을 선택해주세요.');
+                return;
+            }
+            if (selectedSeats.length === 0) {
+                alert('좌석을 선택해주세요.');
+                return;
+            }
+
+            const cartItem = {
+                id: Date.now(),
+                eventId: currentEvent.id,
+                eventTitle: currentEvent.title,
+                venue: currentEvent.venue,
+                date: selectedDate,
+                time: currentEvent.time,
+                grade: selectedGrade,
+                seats: [...selectedSeats],
+                price: currentEvent.price[selectedGrade],
+                total: currentEvent.price[selectedGrade] * selectedSeats.length
+            };
+
+            cart.push(cartItem);
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartBadge();
+            closeSeatModal();
+            alert('장바구니에 추가되었습니다!');
+        }
+
+        function updateCartBadge() {
+            document.getElementById('cartBadge').textContent = cart.length;
+        }
+
+        function showPage(page) {
+            document.getElementById('homePage').style.display = 'none';
+            document.getElementById('cartPage').style.display = 'none';
+            document.getElementById('paymentPage').style.display = 'none';
+            document.getElementById('myTicketsPage').style.display = 'none';
+
+            switch(page) {
+                case 'home':
+                    document.getElementById('homePage').style.display = 'block';
+                    break;
+                case 'cart':
+                    document.getElementById('cartPage').style.display = 'block';
+                    displayCart();
+                    break;
+                case 'payment':
+                    if (cart.length === 0) {
+                        alert('장바구니가 비어있습니다.');
+                        showPage('cart');
+                        return;
+                    }
+                    document.getElementById('paymentPage').style.display = 'block';
+                    displayPayment();
+                    break;
+                case 'mytickets':
+                    document.getElementById('myTicketsPage').style.display = 'block';
+                    displayMyTickets();
+                    break;
+            }
+        }
+
+        function displayCart() {
+            const container = document.getElementById('cartItems');
+            const total = cart.reduce((sum, item) => sum + item.total, 0);
+
+            if (cart.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 py-12">장바구니가 비어있습니다.</p>';
+            } else {
+                container.innerHTML = cart.map((item, index) => `
+                    <div class="border-2 border-gray-200 rounded-lg p-6 mb-4">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex-1">
+                                <h3 class="text-xl font-bold mb-2">${item.eventTitle}</h3>
+                                <p class="text-gray-600"><i class="fas fa-map-marker-alt mr-2"></i>${item.venue}</p>
+                                <p class="text-gray-600"><i class="fas fa-calendar mr-2"></i>${formatDate(item.date)} ${item.time}</p>
+                                <p class="text-gray-600"><i class="fas fa-chair mr-2"></i>${item.grade} / ${item.seats.join(', ')}</p>
+                            </div>
+                            <button onclick="removeFromCart(${index})" class="text-red-600 hover:text-red-800">
+                                <i class="fas fa-trash text-xl"></i>
+                            </button>
+                        </div>
+                        <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+                            <span class="text-gray-600">${item.seats.length}매 × ${formatPrice(item.price)}원</span>
+                            <span class="text-2xl font-bold gradient-text">${formatPrice(item.total)}원</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('cartTotal').textContent = formatPrice(total) + '원';
+        }
+
+        function removeFromCart(index) {
+            if (confirm('장바구니에서 삭제하시겠습니까?')) {
+                cart.splice(index, 1);
+                localStorage.setItem('cart', JSON.stringify(cart));
+                updateCartBadge();
+                displayCart();
+            }
+        }
+
+        function displayPayment() {
+            const container = document.getElementById('paymentItems');
+            const total = cart.reduce((sum, item) => sum + item.total, 0);
+
+            container.innerHTML = cart.map(item => `
+                <div class="border-2 border-gray-200 rounded-lg p-4">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h4 class="font-bold">${item.eventTitle}</h4>
+                            <p class="text-sm text-gray-600">${formatDate(item.date)} ${item.time} / ${item.grade}</p>
+                        </div>
+                        <span class="font-bold gradient-text">${formatPrice(item.total)}원</span>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('finalTotal').textContent = formatPrice(total) + '원';
+        }
+
+        function processPayment() {
+            const name = document.getElementById('buyerName').value;
+            const phone = document.getElementById('buyerPhone').value;
+            const email = document.getElementById('buyerEmail').value;
+
+            if (!name || !phone || !email) {
+                alert('예매자 정보를 모두 입력해주세요.');
+                return;
+            }
+
+            const booking = {
+                id: Date.now(),
+                date: new Date().toISOString(),
+                buyer: { name, phone, email },
+                items: [...cart],
+                total: cart.reduce((sum, item) => sum + item.total, 0),
+                status: '예매완료'
+            };
+
+            bookings.push(booking);
+            localStorage.setItem('bookings', JSON.stringify(bookings));
+
+            cart = [];
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartBadge();
+
+            alert('결제가 완료되었습니다!\n티켓은 "내 티켓"에서 확인하실 수 있습니다.');
+            showPage('mytickets');
+        }
+
+        function displayMyTickets() {
+            const container = document.getElementById('myTicketsList');
+
+            if (bookings.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 py-12">예매 내역이 없습니다.</p>';
+                return;
+            }
+
+            container.innerHTML = bookings.reverse().map(booking => `
+                <div class="border-2 border-gray-200 rounded-lg p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <span class="status-badge status-available">${booking.status}</span>
+                            <p class="text-sm text-gray-600 mt-2">예매일: ${formatDateTime(booking.date)}</p>
+                        </div>
+                        <span class="text-2xl font-bold gradient-text">${formatPrice(booking.total)}원</span>
+                    </div>
+                    <div class="space-y-4">
+                        ${booking.items.map(item => `
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-bold text-lg mb-2">${item.eventTitle}</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+                                    <p><i class="fas fa-map-marker-alt mr-2"></i>${item.venue}</p>
+                                    <p><i class="fas fa-calendar mr-2"></i>${formatDate(item.date)} ${item.time}</p>
+                                    <p><i class="fas fa-chair mr-2"></i>${item.grade} / ${item.seats.join(', ')}</p>
+                                    <p><i class="fas fa-users mr-2"></i>${item.seats.length}명</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <p class="text-sm text-gray-600">
+                            <strong>예매자:</strong> ${booking.buyer.name} / ${booking.buyer.phone}
+                        </p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Utility Functions
+        function formatPrice(price) {
+            return price.toLocaleString();
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+        }
+
+        function formatDateTime(dateString) {
+            const date = new Date(dateString);
+            return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>올리브영 - K-뷰티의 모든 것</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background: linear-gradient(135deg, #fff5f7 0%, #f8e8ff 100%);
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            transition: all 0.3s;
+        }
+        .olive-btn {
+            background: linear-gradient(135deg, #ff4d8c 0%, #ff8ba7 100%);
+            color: white;
+        }
+        .olive-btn:hover {
+            background: linear-gradient(135deg, #ff3d7c 0%, #ff7b97 100%);
+        }
+        .deal-badge {
+            background: linear-gradient(135deg, #ff4d8c 0%, #ff8ba7 100%);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="max-w-6xl mx-auto bg-white min-h-screen">
+        <!-- Header -->
+        <div class="olive-btn p-4 sticky top-0 z-50">
+            <div class="flex items-center justify-between">
+                <button onclick="window.location.href='../'" class="text-2xl text-white">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1 class="text-2xl font-bold text-white">OLIVE YOUNG</h1>
+                <div class="flex space-x-4 text-white">
+                    <button onclick="toggleCart()" class="relative">
+                        <i class="fas fa-shopping-bag text-xl"></i>
+                        <span id="cartCount" class="absolute -top-2 -right-2 bg-white text-pink-500 text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">0</span>
+                    </button>
+                    <button onclick="toggleWishlist()">
+                        <i class="fas fa-heart text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="p-4 bg-gradient-to-r from-pink-50 to-purple-50">
+            <div class="flex items-center bg-white rounded-full px-4 py-3 shadow-sm">
+                <i class="fas fa-search text-pink-400 mr-3"></i>
+                <input type="text" placeholder="어떤 제품을 찾으시나요?" class="flex-1 outline-none" id="searchInput" oninput="filterProducts()">
+            </div>
+        </div>
+
+        <!-- Special Deals Banner -->
+        <div class="p-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-center">
+            <p class="text-sm font-bold">🎉 오늘만 특가 1+1 행사 🎉</p>
+            <p class="text-xs mt-1">선착순 한정 수량! 지금 바로 확인하세요</p>
+        </div>
+
+        <!-- Categories -->
+        <div class="overflow-x-auto border-b bg-white">
+            <div class="flex p-4 space-x-2 whitespace-nowrap">
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-pink-500 bg-pink-500 text-white font-bold" onclick="filterCategory('전체')">전체</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-pink-300 text-pink-500 font-bold" onclick="filterCategory('스킨케어')">스킨케어</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-pink-300 text-pink-500 font-bold" onclick="filterCategory('메이크업')">메이크업</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-pink-300 text-pink-500 font-bold" onclick="filterCategory('헤어')">헤어</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-pink-300 text-pink-500 font-bold" onclick="filterCategory('바디')">바디</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-pink-300 text-pink-500 font-bold" onclick="filterCategory('향수')">향수</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-pink-300 text-pink-500 font-bold" onclick="filterCategory('남성')">남성</button>
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div id="productsContainer" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+            <!-- Products will be populated here -->
+        </div>
+
+        <!-- Cart Modal -->
+        <div id="cartModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+            <div class="absolute right-0 top-0 bottom-0 w-full md:w-96 bg-white">
+                <div class="olive-btn p-4 flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-white">장바구니</h2>
+                    <button onclick="toggleCart()" class="text-2xl text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="cartItems" class="overflow-y-auto p-4" style="height: calc(100vh - 180px);">
+                    <!-- Cart items will be populated here -->
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
+                    <div class="flex justify-between mb-3">
+                        <span class="font-bold">총 금액</span>
+                        <span id="totalPrice" class="font-bold text-xl text-pink-600">0원</span>
+                    </div>
+                    <button class="w-full olive-btn py-4 rounded-lg font-bold">
+                        구매하기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wishlist Modal -->
+        <div id="wishlistModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+            <div class="absolute right-0 top-0 bottom-0 w-full md:w-96 bg-white">
+                <div class="olive-btn p-4 flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-white">찜 목록</h2>
+                    <button onclick="toggleWishlist()" class="text-2xl text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="wishlistItems" class="overflow-y-auto p-4" style="height: calc(100vh - 80px);">
+                    <!-- Wishlist items will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Detail Modal -->
+        <div id="productModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
+            <div class="min-h-screen flex items-center justify-center p-4">
+                <div class="bg-white rounded-lg max-w-2xl w-full max-h-screen overflow-y-auto">
+                    <div class="olive-btn p-4 flex justify-between items-center sticky top-0">
+                        <h2 class="text-xl font-bold text-white">상품 상세</h2>
+                        <button onclick="closeProductModal()" class="text-2xl text-white">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="productDetail" class="p-6">
+                        <!-- Product detail will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const products = [
+            { id: 1, brand: '에뛰드하우스', name: '선프라이즈 마일드 퍼펙트 릴리프', category: '스킨케어', price: 15900, image: '☀️', rating: 4.8, reviews: 3456, deal: '1+1', sale: false },
+            { id: 2, brand: '이니스프리', name: '그린티 씨드 세럼', category: '스킨케어', price: 28000, image: '💚', rating: 4.7, reviews: 5234, deal: null, sale: true, originalPrice: 35000 },
+            { id: 3, brand: '토니모리', name: '원더 세라마이드 모찌 토너', category: '스킨케어', price: 18900, image: '🧴', rating: 4.6, reviews: 2345, deal: null, sale: false },
+            { id: 4, brand: '미샤', name: '비비크림 퍼펙트커버', category: '메이크업', price: 12900, image: '💄', rating: 4.8, reviews: 8765, deal: '1+1', sale: false },
+            { id: 5, brand: '더페이스샵', name: '라이스워터 브라이트 클렌징폼', category: '스킨케어', price: 7900, image: '🌾', rating: 4.5, reviews: 4321, deal: null, sale: false },
+            { id: 6, brand: '스킨푸드', name: '블랙슈가 마스크', category: '스킨케어', price: 13500, image: '🍯', rating: 4.7, reviews: 3890, deal: '1+1', sale: false },
+            { id: 7, brand: '홀리카홀리카', name: '구두밤 탄력 수분크림', category: '스킨케어', price: 19800, image: '🐌', rating: 4.6, reviews: 2567, deal: null, sale: true, originalPrice: 25000 },
+            { id: 8, brand: '클리오', name: '킬커버 파운웨어 쿠션', category: '메이크업', price: 17900, image: '💋', rating: 4.9, reviews: 6543, deal: null, sale: false },
+            { id: 9, brand: '롬앤', name: '쥬시 래스팅 틴트', category: '메이크업', price: 8900, image: '💕', rating: 4.8, reviews: 7890, deal: '2+1', sale: false },
+            { id: 10, brand: '페리페라', name: '잉크 더 벨벳', category: '메이크업', price: 7500, image: '💖', rating: 4.7, reviews: 9876, deal: null, sale: false },
+            { id: 11, brand: '라네즈', name: '워터 슬리핑 마스크', category: '스킨케어', price: 28000, image: '💙', rating: 4.9, reviews: 5678, deal: null, sale: false },
+            { id: 12, brand: '아이오페', name: '레티놀 슈퍼바이탈 세럼', category: '스킨케어', price: 52000, image: '✨', rating: 4.8, reviews: 2345, deal: null, sale: true, originalPrice: 65000 },
+            { id: 13, brand: '설화수', name: '자음생 에센스', category: '스킨케어', price: 89000, image: '🌸', rating: 4.9, reviews: 3456, deal: null, sale: false },
+            { id: 14, brand: '후', name: '천기단 화현 세럼', category: '스킨케어', price: 78000, image: '🎋', rating: 4.8, reviews: 2890, deal: null, sale: false },
+            { id: 15, brand: '헤라', name: '블랙 쿠션', category: '메이크업', price: 42000, image: '🖤', rating: 4.9, reviews: 4567, deal: null, sale: false },
+            { id: 16, brand: '메디힐', name: 'N.M.F 아쿠아링 앰플 마스크', category: '스킨케어', price: 15900, image: '😷', rating: 4.7, reviews: 8901, deal: '1+1', sale: false },
+            { id: 17, brand: '닥터자르트', name: '시카페어 크림', category: '스킨케어', price: 35000, image: '💊', rating: 4.8, reviews: 3456, deal: null, sale: false },
+            { id: 18, brand: '코스알엑스', name: 'BHA 블랙헤드 파워 리퀴드', category: '스킨케어', price: 19800, image: '🧪', rating: 4.7, reviews: 5678, deal: null, sale: true, originalPrice: 24000 },
+            { id: 19, brand: '바이오더마', name: '센시비오 H2O', category: '스킨케어', price: 22000, image: '💧', rating: 4.9, reviews: 6789, deal: null, sale: false },
+            { id: 20, brand: '세타필', name: '클렌저', category: '스킨케어', price: 16500, image: '🧼', rating: 4.6, reviews: 4321, deal: null, sale: false },
+            { id: 21, brand: '라로슈포제', name: '시카플라스트 밤 B5', category: '스킨케어', price: 28000, image: '🏥', rating: 4.8, reviews: 3890, deal: null, sale: false },
+            { id: 22, brand: '세븐틴', name: '아이 크레용', category: '메이크업', price: 5900, image: '✏️', rating: 4.5, reviews: 2345, deal: '1+1', sale: false },
+            { id: 23, brand: '미미박스', name: '퍼스트 클래스 마스카라', category: '메이크업', price: 12900, image: '👁️', rating: 4.6, reviews: 3456, deal: null, sale: false },
+            { id: 24, brand: '3CE', name: '벨벳 립 틴트', category: '메이크업', price: 15000, image: '💄', rating: 4.8, reviews: 5678, deal: null, sale: false },
+            { id: 25, brand: '키엘', name: '울트라 페이셜 크림', category: '스킨케어', price: 45000, image: '🏔️', rating: 4.9, reviews: 4567, deal: null, sale: false },
+            { id: 26, brand: '라무드', name: '트루 베이직 마스카라', category: '메이크업', price: 10900, image: '👀', rating: 4.6, reviews: 2890, deal: null, sale: false },
+            { id: 27, brand: '토니모리', name: '원더 블러 픽서', category: '메이크업', price: 13900, image: '✨', rating: 4.5, reviews: 1234, deal: null, sale: false },
+            { id: 28, brand: '려', name: '자양윤모 샴푸', category: '헤어', price: 16500, image: '💆', rating: 4.7, reviews: 3456, deal: '1+1', sale: false },
+            { id: 29, brand: '미장센', name: '퍼펙트 세럼', category: '헤어', price: 8900, image: '💇', rating: 4.8, reviews: 8765, deal: null, sale: false },
+            { id: 30, brand: '케라시스', name: '딥 데미지 헤어 마스크', category: '헤어', price: 12900, image: '🧴', rating: 4.6, reviews: 5432, deal: null, sale: true, originalPrice: 16000 },
+            { id: 31, brand: '존슨즈', name: '베이비 로션', category: '바디', price: 9900, image: '👶', rating: 4.7, reviews: 4321, deal: null, sale: false },
+            { id: 32, brand: '니베아', name: '크림 케어', category: '바디', price: 7500, image: '🤍', rating: 4.8, reviews: 6789, deal: '1+1', sale: false },
+            { id: 33, brand: '바세린', name: '인텐시브 케어 로션', category: '바디', price: 8900, image: '💙', rating: 4.7, reviews: 5678, deal: null, sale: false },
+            { id: 34, brand: '라비앙로즈', name: '퍼퓸 핸드크림', category: '바디', price: 3900, image: '🌹', rating: 4.6, reviews: 3456, deal: '2+1', sale: false },
+            { id: 35, brand: '닥터브로너스', name: '솝', category: '바디', price: 18900, image: '🧼', rating: 4.8, reviews: 2345, deal: null, sale: false },
+            { id: 36, brand: '조말론', name: '잉글리쉬 페어 앤 프리지아', category: '향수', price: 89000, image: '🍐', rating: 4.9, reviews: 1890, deal: null, sale: false },
+            { id: 37, brand: '빌리프', name: '아쿠아 밤', category: '스킨케어', price: 38000, image: '💧', rating: 4.8, reviews: 3456, deal: null, sale: false },
+            { id: 38, brand: '클렌징리서치', name: 'AHA 워시 클렌징', category: '스킨케어', price: 14900, image: '🧽', rating: 4.5, reviews: 2345, deal: null, sale: false },
+            { id: 39, brand: '랩시리즈', name: '멀티 액션 페이스 로션', category: '남성', price: 48000, image: '🧔', rating: 4.7, reviews: 1567, deal: null, sale: false },
+            { id: 40, brand: '비오템', name: '옴므 아쿠아파워', category: '남성', price: 42000, image: '🌊', rating: 4.8, reviews: 1890, deal: null, sale: false },
+            { id: 41, brand: '불독', name: '오리지널 모이스처라이저', category: '남성', price: 18900, image: '🐶', rating: 4.6, reviews: 2345, deal: null, sale: false },
+            { id: 42, brand: '클레어스', name: '프레시리 쥬시드 비타민 드롭', category: '스킨케어', price: 22000, image: '🍊', rating: 4.7, reviews: 4567, deal: null, sale: false },
+        ];
+
+        let cart = JSON.parse(localStorage.getItem('oliveyoungCart') || '[]');
+        let wishlist = JSON.parse(localStorage.getItem('oliveyoungWishlist') || '[]');
+        let currentCategory = '전체';
+
+        function init() {
+            renderProducts();
+            updateCartCount();
+        }
+
+        function renderProducts() {
+            const container = document.getElementById('productsContainer');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            const filtered = products.filter(p => {
+                const matchCategory = currentCategory === '전체' || p.category === currentCategory;
+                const matchSearch = p.name.toLowerCase().includes(searchTerm) ||
+                                  p.brand.toLowerCase().includes(searchTerm);
+                return matchCategory && matchSearch;
+            });
+
+            container.innerHTML = filtered.map(product => `
+                <div class="product-card bg-white rounded-lg overflow-hidden shadow-md cursor-pointer" onclick="showProductDetail(${product.id})">
+                    ${product.deal ? `<div class="deal-badge text-white text-xs font-bold px-2 py-1 absolute m-2">${product.deal}</div>` : ''}
+                    ${product.sale ? `<div class="bg-red-500 text-white text-xs font-bold px-2 py-1 absolute m-2">SALE</div>` : ''}
+                    <div class="aspect-square bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center text-6xl">
+                        ${product.image}
+                    </div>
+                    <div class="p-3">
+                        <p class="text-xs text-pink-500 font-bold">${product.brand}</p>
+                        <p class="text-sm mt-1 line-clamp-2 font-semibold">${product.name}</p>
+                        <div class="flex items-center mt-2 text-xs text-gray-500">
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <span class="ml-1">${product.rating}</span>
+                            <span class="ml-2">(${product.reviews})</span>
+                        </div>
+                        <div class="mt-2">
+                            ${product.sale ? `
+                                <p class="text-xs text-gray-400 line-through">${product.originalPrice.toLocaleString()}원</p>
+                                <p class="text-lg font-bold text-pink-600">${product.price.toLocaleString()}원</p>
+                            ` : `
+                                <p class="text-lg font-bold text-pink-600">${product.price.toLocaleString()}원</p>
+                            `}
+                        </div>
+                        <button onclick="addToCart(${product.id}); event.stopPropagation();"
+                                class="w-full mt-2 olive-btn py-2 rounded text-sm font-bold">
+                            담기
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showProductDetail(productId) {
+            const product = products.find(p => p.id === productId);
+            const isWishlisted = wishlist.includes(productId);
+
+            document.getElementById('productDetail').innerHTML = `
+                <div class="aspect-square bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center text-9xl mb-6 relative">
+                    ${product.deal ? `<div class="deal-badge text-white text-sm font-bold px-3 py-2 absolute top-4 left-4">${product.deal}</div>` : ''}
+                    ${product.sale ? `<div class="bg-red-500 text-white text-sm font-bold px-3 py-2 absolute top-4 left-4">SALE</div>` : ''}
+                    ${product.image}
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <p class="text-sm text-pink-500 font-bold">${product.brand}</p>
+                        <h3 class="text-2xl font-bold mt-1">${product.name}</h3>
+                    </div>
+                    <div class="flex items-center text-sm">
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <span class="ml-1 font-bold">${product.rating}</span>
+                        <span class="ml-2 text-gray-500">리뷰 ${product.reviews}개</span>
+                    </div>
+                    <div>
+                        ${product.sale ? `
+                            <p class="text-lg text-gray-400 line-through">${product.originalPrice.toLocaleString()}원</p>
+                            <div class="flex items-center">
+                                <span class="text-red-500 font-bold text-xl mr-2">${Math.round((1 - product.price/product.originalPrice) * 100)}%</span>
+                                <span class="text-3xl font-bold text-pink-600">${product.price.toLocaleString()}원</span>
+                            </div>
+                        ` : `
+                            <p class="text-3xl font-bold text-pink-600">${product.price.toLocaleString()}원</p>
+                        `}
+                    </div>
+                    ${product.deal ? `
+                        <div class="bg-pink-50 p-3 rounded-lg border-2 border-pink-200">
+                            <p class="text-pink-600 font-bold">🎁 특별 혜택: ${product.deal} 행사 진행중!</p>
+                        </div>
+                    ` : ''}
+                    <div class="flex space-x-2">
+                        <button onclick="toggleWishlistItem(${product.id})"
+                                class="flex-1 border-2 ${isWishlisted ? 'border-pink-500 text-pink-500' : 'border-gray-300'} py-3 rounded-lg font-bold">
+                            <i class="fas fa-heart"></i> 찜
+                        </button>
+                        <button onclick="addToCart(${product.id})"
+                                class="flex-1 olive-btn py-3 rounded-lg font-bold">
+                            장바구니
+                        </button>
+                    </div>
+                    <div class="border-t pt-4 space-y-3">
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <p class="font-bold mb-2">💡 뷰티 TIP</p>
+                            <p class="text-sm text-gray-600">아침, 저녁으로 적당량을 덜어 얼굴 전체에 골고루 펴 발라주세요. 꾸준한 사용이 중요합니다!</p>
+                        </div>
+                        <div class="space-y-2 text-sm">
+                            <p><strong>배송:</strong> 무료배송 (2만원 이상)</p>
+                            <p><strong>배송기간:</strong> 오늘출발 상품 (오후 2시 이전 주문)</p>
+                            <p><strong>반품/교환:</strong> 뷰티 제품 특성상 개봉 후 반품 불가</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.add('hidden');
+        }
+
+        function filterCategory(category) {
+            currentCategory = category;
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('border-pink-500', 'bg-pink-500', 'text-white');
+                btn.classList.add('border-pink-300', 'text-pink-500');
+            });
+            event.target.classList.add('border-pink-500', 'bg-pink-500', 'text-white');
+            event.target.classList.remove('border-pink-300', 'text-pink-500');
+            renderProducts();
+        }
+
+        function filterProducts() {
+            renderProducts();
+        }
+
+        function addToCart(productId) {
+            const existingItem = cart.find(item => item.id === productId);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ id: productId, quantity: 1 });
+            }
+            localStorage.setItem('oliveyoungCart', JSON.stringify(cart));
+            updateCartCount();
+            renderCart();
+        }
+
+        function toggleCart() {
+            document.getElementById('cartModal').classList.toggle('hidden');
+            renderCart();
+        }
+
+        function toggleWishlist() {
+            document.getElementById('wishlistModal').classList.toggle('hidden');
+            renderWishlist();
+        }
+
+        function toggleWishlistItem(productId) {
+            const index = wishlist.indexOf(productId);
+            if (index > -1) {
+                wishlist.splice(index, 1);
+            } else {
+                wishlist.push(productId);
+            }
+            localStorage.setItem('oliveyoungWishlist', JSON.stringify(wishlist));
+            showProductDetail(productId);
+            renderWishlist();
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cartItems');
+            if (cart.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 py-10">장바구니가 비어있습니다</p>';
+                document.getElementById('totalPrice').textContent = '0원';
+                return;
+            }
+
+            let total = 0;
+            container.innerHTML = cart.map(item => {
+                const product = products.find(p => p.id === item.id);
+                total += product.price * item.quantity;
+                return `
+                    <div class="border-b pb-4 mb-4">
+                        <div class="flex items-center">
+                            <div class="w-20 h-20 bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center text-3xl mr-3 rounded">
+                                ${product.image}
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-xs text-pink-500 font-bold">${product.brand}</p>
+                                <p class="text-sm font-semibold">${product.name}</p>
+                                ${product.deal ? `<p class="text-xs text-pink-500 font-bold">${product.deal}</p>` : ''}
+                                <p class="text-sm font-bold mt-1 text-pink-600">${product.price.toLocaleString()}원</p>
+                                <div class="flex items-center mt-2">
+                                    <button onclick="updateCartQuantity(${product.id}, -1)" class="border px-2 py-1 text-sm rounded">-</button>
+                                    <span class="px-3 font-bold">${item.quantity}</span>
+                                    <button onclick="updateCartQuantity(${product.id}, 1)" class="border px-2 py-1 text-sm rounded">+</button>
+                                    <button onclick="removeFromCart(${product.id})" class="ml-auto text-pink-500 text-sm">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('totalPrice').textContent = total.toLocaleString() + '원';
+        }
+
+        function renderWishlist() {
+            const container = document.getElementById('wishlistItems');
+            if (wishlist.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 py-10">찜한 상품이 없습니다</p>';
+                return;
+            }
+
+            container.innerHTML = wishlist.map(productId => {
+                const product = products.find(p => p.id === productId);
+                return `
+                    <div class="border-b pb-4 mb-4">
+                        <div class="flex items-center cursor-pointer" onclick="showProductDetail(${product.id}); toggleWishlist();">
+                            <div class="w-20 h-20 bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center text-3xl mr-3 rounded">
+                                ${product.image}
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-xs text-pink-500 font-bold">${product.brand}</p>
+                                <p class="text-sm font-semibold">${product.name}</p>
+                                <p class="text-sm font-bold mt-1 text-pink-600">${product.price.toLocaleString()}원</p>
+                            </div>
+                            <button onclick="toggleWishlistItem(${product.id}); event.stopPropagation();" class="text-pink-500">
+                                <i class="fas fa-heart"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateCartQuantity(productId, change) {
+            const item = cart.find(i => i.id === productId);
+            if (item) {
+                item.quantity += change;
+                if (item.quantity <= 0) {
+                    removeFromCart(productId);
+                } else {
+                    localStorage.setItem('oliveyoungCart', JSON.stringify(cart));
+                    updateCartCount();
+                    renderCart();
+                }
+            }
+        }
+
+        function removeFromCart(productId) {
+            cart = cart.filter(item => item.id !== productId);
+            localStorage.setItem('oliveyoungCart', JSON.stringify(cart));
+            updateCartCount();
+            renderCart();
+        }
+
+        function updateCartCount() {
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cartCount').textContent = count;
+        }
+
+        init();
+    </script>
+</body>
+</html>

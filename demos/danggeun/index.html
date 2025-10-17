@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>당근마켓 - 우리 동네 중고거래</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+        * {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        .carrot-gradient {
+            background: linear-gradient(135deg, #ff6f0f 0%, #ff8f3f 100%);
+        }
+
+        .carrot-gradient-light {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+        }
+
+        .product-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(255, 111, 15, 0.15);
+        }
+
+        .category-chip {
+            transition: all 0.2s;
+        }
+
+        .category-chip:hover {
+            background: #ff6f0f;
+            color: white;
+        }
+
+        .category-chip.active {
+            background: #ff6f0f;
+            color: white;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.2s;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .bump-badge {
+            background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .neighborhood-post {
+            border-left: 3px solid #ff6f0f;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            background: #ff6f0f;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            background: #ff6f0f;
+        }
+
+        .chat-button {
+            background: linear-gradient(135deg, #ff6f0f 0%, #ff8f3f 100%);
+            transition: all 0.3s;
+        }
+
+        .chat-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(255, 111, 15, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="carrot-gradient text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-carrot text-3xl"></i>
+                    <h1 class="text-2xl font-bold">당근마켓</h1>
+                </div>
+
+                <div class="flex items-center space-x-6">
+                    <button id="locationBtn" class="flex items-center space-x-2 bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span id="currentLocation">강남구 역삼동</span>
+                        <i class="fas fa-chevron-down text-sm"></i>
+                    </button>
+
+                    <button class="relative">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+
+                    <button id="uploadBtn" class="bg-white text-orange-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition">
+                        <i class="fas fa-plus mr-2"></i>글쓰기
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="mt-4 relative">
+                <input type="text" id="searchInput" placeholder="동네 이웃과 가깝고 따뜻한 거래를 시작하세요"
+                    class="w-full px-4 py-3 rounded-lg text-gray-800 pl-12 focus:outline-none focus:ring-2 focus:ring-orange-300">
+                <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="bg-white shadow-sm sticky top-[140px] z-40">
+        <div class="container mx-auto px-4">
+            <div class="flex space-x-8 overflow-x-auto">
+                <button class="nav-tab py-4 px-2 font-semibold text-orange-600 border-b-2 border-orange-600 whitespace-nowrap">
+                    중고거래
+                </button>
+                <button class="nav-tab py-4 px-2 font-semibold text-gray-600 hover:text-orange-600 whitespace-nowrap">
+                    동네생활
+                </button>
+                <button class="nav-tab py-4 px-2 font-semibold text-gray-600 hover:text-orange-600 whitespace-nowrap">
+                    나의 당근
+                </button>
+                <button class="nav-tab py-4 px-2 font-semibold text-gray-600 hover:text-orange-600 whitespace-nowrap">
+                    채팅
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- Sidebar Filters -->
+            <aside class="lg:w-64 space-y-4">
+                <!-- Categories -->
+                <div class="bg-white rounded-lg shadow-sm p-4">
+                    <h3 class="font-bold text-lg mb-3 flex items-center">
+                        <i class="fas fa-th-large mr-2 text-orange-600"></i>
+                        카테고리
+                    </h3>
+                    <div class="space-y-2">
+                        <button class="category-chip active w-full text-left px-3 py-2 rounded-lg text-sm bg-gray-100" data-category="all">
+                            전체
+                        </button>
+                        <button class="category-chip w-full text-left px-3 py-2 rounded-lg text-sm bg-gray-100" data-category="디지털기기">
+                            디지털기기
+                        </button>
+                        <button class="category-chip w-full text-left px-3 py-2 rounded-lg text-sm bg-gray-100" data-category="가구/인테리어">
+                            가구/인테리어
+                        </button>
+                        <button class="category-chip w-full text-left px-3 py-2 rounded-lg text-sm bg-gray-100" data-category="유아동">
+                            유아동
+                        </button>
+                        <button class="category-chip w-full text-left px-3 py-2 rounded-lg text-sm bg-gray-100" data-category="생활가전">
+                            생활가전
+                        </button>
+                        <button class="category-chip w-full text-left px-3 py-2 rounded-lg text-sm bg-gray-100" data-category="여성의류">
+                            여성의류
+                        </button>
+                        <button class="category-chip w-full text-left px-3 py-2 rounded-lg text-sm bg-gray-100" data-category="남성의류">
+                            남성의류
+                        </button>
+                        <button class="category-chip w-full text-left px-3 py-2 rounded-lg text-sm bg-gray-100" data-category="스포츠/레저">
+                            스포츠/레저
+                        </button>
+                        <button class="category-chip w-full text-left px-3 py-2 rounded-lg text-sm bg-gray-100" data-category="도서">
+                            도서
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Price Filter -->
+                <div class="bg-white rounded-lg shadow-sm p-4">
+                    <h3 class="font-bold text-lg mb-3 flex items-center">
+                        <i class="fas fa-won-sign mr-2 text-orange-600"></i>
+                        가격 범위
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-sm text-gray-600">최소 가격</label>
+                            <input type="range" id="minPrice" min="0" max="1000000" step="10000" value="0"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            <div class="text-sm font-semibold text-orange-600 mt-1"><span id="minPriceValue">0</span>원</div>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-600">최대 가격</label>
+                            <input type="range" id="maxPrice" min="0" max="1000000" step="10000" value="1000000"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            <div class="text-sm font-semibold text-orange-600 mt-1"><span id="maxPriceValue">1,000,000</span>원</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Neighborhood Posts -->
+                <div class="bg-white rounded-lg shadow-sm p-4">
+                    <h3 class="font-bold text-lg mb-3 flex items-center">
+                        <i class="fas fa-comments mr-2 text-orange-600"></i>
+                        동네생활
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="neighborhood-post pl-3 py-2">
+                            <div class="text-sm font-semibold">우리 동네 맛집 추천해요</div>
+                            <div class="text-xs text-gray-500 mt-1">역삼동 • 5분 전</div>
+                        </div>
+                        <div class="neighborhood-post pl-3 py-2">
+                            <div class="text-sm font-semibold">분실물 찾습니다</div>
+                            <div class="text-xs text-gray-500 mt-1">역삼동 • 23분 전</div>
+                        </div>
+                        <div class="neighborhood-post pl-3 py-2">
+                            <div class="text-sm font-semibold">같이 운동하실 분</div>
+                            <div class="text-xs text-gray-500 mt-1">역삼동 • 1시간 전</div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Product Grid -->
+            <div class="flex-1">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold">중고거래 <span class="text-orange-600" id="productCount">35</span>개</h2>
+                    <select id="sortSelect" class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300">
+                        <option value="recent">최신순</option>
+                        <option value="price-low">가격 낮은순</option>
+                        <option value="price-high">가격 높은순</option>
+                        <option value="popular">인기순</option>
+                    </select>
+                </div>
+
+                <div id="productGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Products will be rendered here by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Location Modal -->
+    <div id="locationModal" class="modal">
+        <div class="modal-content bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold">내 동네 설정</h3>
+                <button class="close-modal text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="space-y-2 max-h-96 overflow-y-auto">
+                <button class="location-option w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 transition">강남구 역삼동</button>
+                <button class="location-option w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 transition">강남구 삼성동</button>
+                <button class="location-option w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 transition">서초구 서초동</button>
+                <button class="location-option w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 transition">서초구 반포동</button>
+                <button class="location-option w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 transition">송파구 잠실동</button>
+                <button class="location-option w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 transition">송파구 가락동</button>
+                <button class="location-option w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 transition">마포구 상암동</button>
+                <button class="location-option w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 transition">마포구 합정동</button>
+                <button class="location-option w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 transition">용산구 이촌동</button>
+                <button class="location-option w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 transition">성동구 성수동</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="modal">
+        <div class="modal-content bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold">중고거래 글쓰기</h3>
+                <button class="close-modal text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <form id="uploadForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-2">상품명</label>
+                    <input type="text" id="productName" required
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300"
+                        placeholder="상품명을 입력하세요">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold mb-2">카테고리</label>
+                    <select id="productCategory" required
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300">
+                        <option value="">카테고리 선택</option>
+                        <option value="디지털기기">디지털기기</option>
+                        <option value="가구/인테리어">가구/인테리어</option>
+                        <option value="유아동">유아동</option>
+                        <option value="생활가전">생활가전</option>
+                        <option value="여성의류">여성의류</option>
+                        <option value="남성의류">남성의류</option>
+                        <option value="스포츠/레저">스포츠/레저</option>
+                        <option value="도서">도서</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold mb-2">가격</label>
+                    <input type="number" id="productPrice" required
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300"
+                        placeholder="가격을 입력하세요" min="0">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold mb-2">상품 상태</label>
+                    <select id="productCondition" required
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300">
+                        <option value="거의 새것">거의 새것</option>
+                        <option value="사용감 있음">사용감 있음</option>
+                        <option value="사용감 많음">사용감 많음</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold mb-2">설명</label>
+                    <textarea id="productDescription" required rows="4"
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300"
+                        placeholder="상품 설명을 입력하세요"></textarea>
+                </div>
+
+                <div class="flex space-x-3 pt-4">
+                    <button type="submit" class="flex-1 carrot-gradient text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                        등록하기
+                    </button>
+                    <button type="button" class="close-modal px-6 py-3 border rounded-lg font-semibold hover:bg-gray-50 transition">
+                        취소
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Product Data
+        const products = [
+            {
+                id: 1,
+                name: "아이폰 14 Pro 256GB 스페이스블랙",
+                category: "디지털기기",
+                price: 950000,
+                condition: "거의 새것",
+                location: "강남구 역삼동",
+                uploadTime: "방금",
+                views: 45,
+                favorites: 12,
+                description: "9월에 구매한 아이폰 14 프로입니다. 케이스 끼고 사용해서 깨끗합니다. 액정보호필름 붙어있습니다.",
+                image: "https://images.unsplash.com/photo-1678685888221-cda773a3dcdb?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 2,
+                name: "LG 그램 17인치 노트북 2023년형",
+                category: "디지털기기",
+                price: 1200000,
+                condition: "거의 새것",
+                location: "강남구 삼성동",
+                uploadTime: "1분 전",
+                views: 128,
+                favorites: 23,
+                description: "대학 졸업하고 회사에서 노트북 지급받아서 팝니다. 거의 사용 안했습니다.",
+                image: "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=400&h=400&fit=crop",
+                bumped: true
+            },
+            {
+                id: 3,
+                name: "삼성 갤럭시 버즈2 프로 화이트",
+                category: "디지털기기",
+                price: 120000,
+                condition: "사용감 있음",
+                location: "서초구 서초동",
+                uploadTime: "5분 전",
+                views: 67,
+                favorites: 8,
+                description: "2개월 사용했습니다. 노이즈캔슬링 잘 됩니다. 케이스와 충전케이블 함께 드립니다.",
+                image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 4,
+                name: "이케아 3인용 소파 베이지",
+                category: "가구/인테리어",
+                price: 150000,
+                condition: "사용감 있음",
+                location: "송파구 잠실동",
+                uploadTime: "10분 전",
+                views: 234,
+                favorites: 45,
+                description: "이사가면서 새로 구매 예정이라 팝니다. 편하고 좋은데 공간이 작아서요. 직거래만 가능합니다.",
+                image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 5,
+                name: "원목 식탁 세트 (의자 4개 포함)",
+                category: "가구/인테리어",
+                price: 280000,
+                condition: "사용감 있음",
+                location: "서초구 반포동",
+                uploadTime: "15분 전",
+                views: 156,
+                favorites: 31,
+                description: "5년 사용한 원목 식탁입니다. 튼튼하고 상태 좋습니다. 의자 4개 포함입니다.",
+                image: "https://images.unsplash.com/photo-1617806118233-18e1de247200?w=400&h=400&fit=crop",
+                bumped: true
+            },
+            {
+                id: 6,
+                name: "북유럽 스타일 스탠드 조명",
+                category: "가구/인테리어",
+                price: 45000,
+                condition: "거의 새것",
+                location: "강남구 역삼동",
+                uploadTime: "30분 전",
+                views: 89,
+                favorites: 19,
+                description: "분위기 있는 스탠드 조명입니다. 방 꾸미기 좋아요. 전구 포함입니다.",
+                image: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 7,
+                name: "유아용 책상 의자 세트 (3-7세)",
+                category: "유아동",
+                price: 65000,
+                condition: "거의 새것",
+                location: "송파구 가락동",
+                uploadTime: "45분 전",
+                views: 142,
+                favorites: 27,
+                description: "아이가 커서 안 써서 팝니다. 높이 조절 가능하고 상태 좋습니다.",
+                image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 8,
+                name: "레고 크리에이터 시리즈 (미개봉)",
+                category: "유아동",
+                price: 85000,
+                condition: "거의 새것",
+                location: "마포구 상암동",
+                uploadTime: "1시간 전",
+                views: 203,
+                favorites: 52,
+                description: "선물받았는데 중복되어서 판매합니다. 완전 미개봉 새상품입니다.",
+                image: "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=400&h=400&fit=crop",
+                bumped: true
+            },
+            {
+                id: 9,
+                name: "유모차 (콤비 메치야 S)",
+                category: "유아동",
+                price: 180000,
+                condition: "사용감 있음",
+                location: "강남구 역삼동",
+                uploadTime: "1시간 전",
+                views: 178,
+                favorites: 34,
+                description: "1년 정도 사용한 유모차입니다. 세척해서 깨끗합니다. 레인커버 포함입니다.",
+                image: "https://images.unsplash.com/photo-1601288496920-b6154fe3626a?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 10,
+                name: "다이슨 무선청소기 V11",
+                category: "생활가전",
+                price: 320000,
+                condition: "사용감 있음",
+                location: "서초구 서초동",
+                uploadTime: "2시간 전",
+                views: 445,
+                favorites: 89,
+                description: "2년 사용했습니다. 흡입력 좋고 배터리 문제 없습니다. 필터 새것으로 교체해드립니다.",
+                image: "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=400&h=400&fit=crop",
+                bumped: true
+            },
+            {
+                id: 11,
+                name: "삼성 비스포크 에어프라이어",
+                category: "생활가전",
+                price: 180000,
+                condition: "거의 새것",
+                location: "송파구 잠실동",
+                uploadTime: "2시간 전",
+                views: 312,
+                favorites: 67,
+                description: "3개월 사용한 에어프라이어입니다. 대용량이고 상태 최상입니다.",
+                image: "https://images.unsplash.com/photo-1585515320310-259814833e62?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 12,
+                name: "캡슐 커피머신 네스프레소",
+                category: "생활가전",
+                price: 95000,
+                condition: "거의 새것",
+                location: "마포구 합정동",
+                uploadTime: "3시간 전",
+                views: 267,
+                favorites: 43,
+                description: "선물받았는데 집에 커피머신이 있어서 팝니다. 박스 포함 완전 새것입니다.",
+                image: "https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 13,
+                name: "자라 롱패딩 블랙 (S사이즈)",
+                category: "여성의류",
+                price: 75000,
+                condition: "거의 새것",
+                location: "강남구 삼성동",
+                uploadTime: "3시간 전",
+                views: 189,
+                favorites: 38,
+                description: "작년 겨울 구매했는데 한두번 입었습니다. 세탁소 드라이클리닝 완료했습니다.",
+                image: "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 14,
+                name: "나이키 운동화 에어맥스 270 (250mm)",
+                category: "여성의류",
+                price: 68000,
+                condition: "사용감 있음",
+                location: "용산구 이촌동",
+                uploadTime: "4시간 전",
+                views: 221,
+                favorites: 41,
+                description: "6개월 신었습니다. 사이즈가 안 맞아서 판매합니다. 깔창 새것으로 교체했습니다.",
+                image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop",
+                bumped: true
+            },
+            {
+                id: 15,
+                name: "명품 핸드백 (마이클코어스)",
+                category: "여성의류",
+                price: 150000,
+                condition: "거의 새것",
+                location: "강남구 역삼동",
+                uploadTime: "5시간 전",
+                views: 356,
+                favorites: 72,
+                description: "정품이고 거의 새것입니다. 영수증 있습니다. 먼지백 포함입니다.",
+                image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 16,
+                name: "유니클로 맨투맨 5장 세트 (L)",
+                category: "남성의류",
+                price: 35000,
+                condition: "사용감 있음",
+                location: "서초구 서초동",
+                uploadTime: "6시간 전",
+                views: 145,
+                favorites: 28,
+                description: "다양한 색상 5장 세트로 판매합니다. 깨끗하게 세탁했습니다.",
+                image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 17,
+                name: "노스페이스 바람막이 점퍼 (95)",
+                category: "남성의류",
+                price: 85000,
+                condition: "거의 새것",
+                location: "송파구 잠실동",
+                uploadTime: "7시간 전",
+                views: 198,
+                favorites: 36,
+                description: "올해 구매한 바람막이입니다. 사이즈가 커서 판매합니다. 상태 좋습니다.",
+                image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 18,
+                name: "정장 구두 (270mm) 블랙",
+                category: "남성의류",
+                price: 45000,
+                condition: "거의 새것",
+                location: "마포구 상암동",
+                uploadTime: "8시간 전",
+                views: 167,
+                favorites: 22,
+                description: "면접용으로 한번 신었습니다. 거의 새것이고 정장 구두 박스 포함입니다.",
+                image: "https://images.unsplash.com/photo-1614252369475-531eba835eb1?w=400&h=400&fit=crop",
+                bumped: true
+            },
+            {
+                id: 19,
+                name: "자전거 MTB 26인치 (시마노 21단)",
+                category: "스포츠/레저",
+                price: 220000,
+                condition: "사용감 있음",
+                location: "성동구 성수동",
+                uploadTime: "10시간 전",
+                views: 289,
+                favorites: 54,
+                description: "2년 사용한 MTB입니다. 정비 완료했고 잘 달립니다. 자물쇠 포함입니다.",
+                image: "https://images.unsplash.com/photo-1576435728678-68d0fbf94e91?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 20,
+                name: "캠핑용 텐트 4인용 (코베아)",
+                category: "스포츠/레저",
+                price: 180000,
+                condition: "거의 새것",
+                location: "강남구 삼성동",
+                uploadTime: "12시간 전",
+                views: 334,
+                favorites: 68,
+                description: "작년에 구매해서 3번 사용했습니다. 보관 잘 되어있고 상태 좋습니다.",
+                image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 21,
+                name: "요가매트 + 폼롤러 세트",
+                category: "스포츠/레저",
+                price: 25000,
+                condition: "거의 새것",
+                location: "서초구 반포동",
+                uploadTime: "1일 전",
+                views: 112,
+                favorites: 19,
+                description: "홈트용으로 구매했는데 헬스장 등록해서 판매합니다. 거의 새것입니다.",
+                image: "https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 22,
+                name: "해리포터 전집 (7권 세트)",
+                category: "도서",
+                price: 45000,
+                condition: "사용감 있음",
+                location: "용산구 이촌동",
+                uploadTime: "1일 전",
+                views: 178,
+                favorites: 32,
+                description: "중학교 때 읽었던 해리포터 전집입니다. 보관 상태 좋습니다.",
+                image: "https://images.unsplash.com/photo-1621351183012-e2f9972dd9bf?w=400&h=400&fit=crop",
+                bumped: true
+            },
+            {
+                id: 23,
+                name: "자기계발서 30권 일괄",
+                category: "도서",
+                price: 80000,
+                condition: "거의 새것",
+                location: "마포구 합정동",
+                uploadTime: "1일 전",
+                views: 245,
+                favorites: 47,
+                description: "베스트셀러 자기계발서 30권 일괄 판매합니다. 대부분 한두번 읽었습니다.",
+                image: "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 24,
+                name: "토익 교재 세트 (RC+LC)",
+                category: "도서",
+                price: 15000,
+                condition: "사용감 있음",
+                location: "송파구 잠실동",
+                uploadTime: "2일 전",
+                views: 134,
+                favorites: 21,
+                description: "토익 990점 달성한 교재입니다. 필기 되어있지만 깨끗합니다.",
+                image: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 25,
+                name: "애플워치 SE 2세대 (44mm)",
+                category: "디지털기기",
+                price: 280000,
+                condition: "거의 새것",
+                location: "강남구 역삼동",
+                uploadTime: "2일 전",
+                views: 456,
+                favorites: 91,
+                description: "3개월 사용한 애플워치입니다. 스포츠밴드 2개 포함합니다.",
+                image: "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=400&h=400&fit=crop",
+                bumped: true
+            },
+            {
+                id: 26,
+                name: "아이패드 에어 5세대 (256GB)",
+                category: "디지털기기",
+                price: 680000,
+                condition: "거의 새것",
+                location: "서초구 서초동",
+                uploadTime: "2일 전",
+                views: 523,
+                favorites: 102,
+                description: "올해 초에 구매했습니다. 애플펜슬 2세대 포함입니다. 케이스 2개 드립니다.",
+                image: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 27,
+                name: "소니 WH-1000XM5 헤드폰",
+                category: "디지털기기",
+                price: 320000,
+                condition: "거의 새것",
+                location: "마포구 상암동",
+                uploadTime: "3일 전",
+                views: 389,
+                favorites: 76,
+                description: "최신 노이즈캔슬링 헤드폰입니다. 정품이고 박스 포함입니다.",
+                image: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 28,
+                name: "침대 퀸사이즈 매트리스 포함",
+                category: "가구/인테리어",
+                price: 250000,
+                condition: "사용감 있음",
+                location: "송파구 가락동",
+                uploadTime: "3일 전",
+                views: 412,
+                favorites: 83,
+                description: "이사가면서 급하게 판매합니다. 매트리스 상태 좋고 편안합니다. 직거래만 가능합니다.",
+                image: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 29,
+                name: "책장 (5단 화이트)",
+                category: "가구/인테리어",
+                price: 35000,
+                condition: "사용감 있음",
+                location: "성동구 성수동",
+                uploadTime: "3일 전",
+                views: 156,
+                favorites: 29,
+                description: "튼튼한 5단 책장입니다. 화이트 색상이고 깨끗합니다.",
+                image: "https://images.unsplash.com/photo-1594620302200-9a762244a156?w=400&h=400&fit=crop",
+                bumped: true
+            },
+            {
+                id: 30,
+                name: "아기 옷 100일~돌 일괄 (50벌)",
+                category: "유아동",
+                price: 120000,
+                condition: "거의 새것",
+                location: "서초구 반포동",
+                uploadTime: "4일 전",
+                views: 267,
+                favorites: 52,
+                description: "아기 옷 50벌 일괄 판매합니다. 브랜드 위주로 구성되어 있습니다.",
+                image: "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 31,
+                name: "에어컨 벽걸이형 (삼성 11평형)",
+                category: "생활가전",
+                price: 350000,
+                condition: "사용감 있음",
+                location: "강남구 삼성동",
+                uploadTime: "4일 전",
+                views: 478,
+                favorites: 94,
+                description: "3년 사용한 에어컨입니다. 관리 잘 했고 작동 이상 없습니다. 탈거비 별도입니다.",
+                image: "https://images.unsplash.com/photo-1585513801347-78ba5f557c95?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 32,
+                name: "골프채 풀세트 (캘러웨이)",
+                category: "스포츠/레저",
+                price: 580000,
+                condition: "거의 새것",
+                location: "용산구 이촌동",
+                uploadTime: "5일 전",
+                views: 512,
+                favorites: 98,
+                description: "작년에 구매한 캘러웨이 풀세트입니다. 골프백 포함입니다. 거의 안 쓰고 보관만 했습니다.",
+                image: "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=400&h=400&fit=crop",
+                bumped: true
+            },
+            {
+                id: 33,
+                name: "코딩 관련 서적 15권 세트",
+                category: "도서",
+                price: 95000,
+                condition: "거의 새것",
+                location: "마포구 합정동",
+                uploadTime: "5일 전",
+                views: 289,
+                favorites: 61,
+                description: "파이썬, 자바스크립트, 알고리즘 관련 서적입니다. 대부분 한번 읽었습니다.",
+                image: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 34,
+                name: "버버리 트렌치코트 (88 사이즈)",
+                category: "여성의류",
+                price: 380000,
+                condition: "거의 새것",
+                location: "강남구 역삼동",
+                uploadTime: "6일 전",
+                views: 623,
+                favorites: 127,
+                description: "정품 버버리 트렌치코트입니다. 작년에 백화점에서 구매했고 두번 입었습니다.",
+                image: "https://images.unsplash.com/photo-1539533113208-f6df8cc8b543?w=400&h=400&fit=crop",
+                bumped: false
+            },
+            {
+                id: 35,
+                name: "캐논 EOS 200D 카메라 + 렌즈",
+                category: "디지털기기",
+                price: 450000,
+                condition: "사용감 있음",
+                location: "송파구 잠실동",
+                uploadTime: "1주일 전",
+                views: 734,
+                favorites: 145,
+                description: "입문용으로 좋은 카메라입니다. 18-55mm 렌즈 포함입니다. 가방과 메모리카드 포함합니다.",
+                image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400&h=400&fit=crop",
+                bumped: true
+            }
+        ];
+
+        // State Management
+        let currentLocation = "강남구 역삼동";
+        let currentCategory = "all";
+        let minPrice = 0;
+        let maxPrice = 1000000;
+        let searchQuery = "";
+        let sortBy = "recent";
+        let myProducts = JSON.parse(localStorage.getItem('myProducts')) || [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            renderProducts();
+            setupEventListeners();
+            updatePriceDisplay();
+        });
+
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Location
+            document.getElementById('locationBtn').addEventListener('click', () => openModal('locationModal'));
+            document.querySelectorAll('.location-option').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentLocation = this.textContent;
+                    document.getElementById('currentLocation').textContent = currentLocation;
+                    closeModal('locationModal');
+                    renderProducts();
+                });
+            });
+
+            // Category
+            document.querySelectorAll('.category-chip').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.category-chip').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentCategory = this.dataset.category;
+                    renderProducts();
+                });
+            });
+
+            // Price Filter
+            document.getElementById('minPrice').addEventListener('input', function() {
+                minPrice = parseInt(this.value);
+                updatePriceDisplay();
+                renderProducts();
+            });
+
+            document.getElementById('maxPrice').addEventListener('input', function() {
+                maxPrice = parseInt(this.value);
+                updatePriceDisplay();
+                renderProducts();
+            });
+
+            // Search
+            document.getElementById('searchInput').addEventListener('input', function() {
+                searchQuery = this.value.toLowerCase();
+                renderProducts();
+            });
+
+            // Sort
+            document.getElementById('sortSelect').addEventListener('change', function() {
+                sortBy = this.value;
+                renderProducts();
+            });
+
+            // Upload
+            document.getElementById('uploadBtn').addEventListener('click', () => openModal('uploadModal'));
+            document.getElementById('uploadForm').addEventListener('submit', handleUpload);
+
+            // Modal Close
+            document.querySelectorAll('.close-modal').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    closeModal('locationModal');
+                    closeModal('uploadModal');
+                });
+            });
+
+            // Click outside modal to close
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.classList.remove('active');
+                    }
+                });
+            });
+        }
+
+        // Price Display
+        function updatePriceDisplay() {
+            document.getElementById('minPriceValue').textContent = minPrice.toLocaleString();
+            document.getElementById('maxPriceValue').textContent = maxPrice.toLocaleString();
+        }
+
+        // Modal Functions
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Filter and Sort Products
+        function getFilteredProducts() {
+            let filtered = [...products, ...myProducts];
+
+            // Location filter
+            filtered = filtered.filter(p => p.location === currentLocation);
+
+            // Category filter
+            if (currentCategory !== 'all') {
+                filtered = filtered.filter(p => p.category === currentCategory);
+            }
+
+            // Price filter
+            filtered = filtered.filter(p => p.price >= minPrice && p.price <= maxPrice);
+
+            // Search filter
+            if (searchQuery) {
+                filtered = filtered.filter(p =>
+                    p.name.toLowerCase().includes(searchQuery) ||
+                    p.description.toLowerCase().includes(searchQuery) ||
+                    p.category.toLowerCase().includes(searchQuery)
+                );
+            }
+
+            // Sort
+            switch(sortBy) {
+                case 'recent':
+                    // Already in order
+                    break;
+                case 'price-low':
+                    filtered.sort((a, b) => a.price - b.price);
+                    break;
+                case 'price-high':
+                    filtered.sort((a, b) => b.price - a.price);
+                    break;
+                case 'popular':
+                    filtered.sort((a, b) => b.favorites - a.favorites);
+                    break;
+            }
+
+            return filtered;
+        }
+
+        // Render Products
+        function renderProducts() {
+            const filtered = getFilteredProducts();
+            const grid = document.getElementById('productGrid');
+            document.getElementById('productCount').textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-20">
+                        <i class="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500 text-lg">검색 결과가 없습니다</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(product => `
+                <div class="product-card bg-white rounded-lg shadow-sm overflow-hidden cursor-pointer">
+                    <div class="relative">
+                        <img src="${product.image}" alt="${product.name}" class="w-full h-48 object-cover">
+                        ${product.bumped ? '<div class="bump-badge absolute top-2 right-2 text-white text-xs px-2 py-1 rounded-full font-semibold">끌올</div>' : ''}
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-semibold text-lg mb-2 line-clamp-2">${product.name}</h3>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xl font-bold text-orange-600">${product.price.toLocaleString()}원</span>
+                            <span class="text-xs text-gray-500">${product.condition}</span>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-600 mb-3">
+                            <i class="fas fa-map-marker-alt mr-1 text-orange-500"></i>
+                            <span>${product.location}</span>
+                            <span class="mx-2">•</span>
+                            <span>${product.uploadTime}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm text-gray-500 mb-3">
+                            <span><i class="far fa-eye mr-1"></i>${product.views}</span>
+                            <span><i class="far fa-heart mr-1"></i>${product.favorites}</span>
+                            <span class="text-xs px-2 py-1 bg-gray-100 rounded">${product.category}</span>
+                        </div>
+                        <button class="chat-button w-full text-white py-2 rounded-lg font-semibold">
+                            <i class="fas fa-comment-dots mr-2"></i>채팅하기
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click event to chat buttons
+            document.querySelectorAll('.chat-button').forEach((btn, index) => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const product = filtered[index];
+                    alert(`${product.name} 판매자와 채팅을 시작합니다!`);
+                });
+            });
+        }
+
+        // Handle Upload
+        function handleUpload(e) {
+            e.preventDefault();
+
+            const newProduct = {
+                id: Date.now(),
+                name: document.getElementById('productName').value,
+                category: document.getElementById('productCategory').value,
+                price: parseInt(document.getElementById('productPrice').value),
+                condition: document.getElementById('productCondition').value,
+                description: document.getElementById('productDescription').value,
+                location: currentLocation,
+                uploadTime: "방금",
+                views: 0,
+                favorites: 0,
+                image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop",
+                bumped: false
+            };
+
+            myProducts.unshift(newProduct);
+            localStorage.setItem('myProducts', JSON.stringify(myProducts));
+
+            // Reset form
+            document.getElementById('uploadForm').reset();
+            closeModal('uploadModal');
+            renderProducts();
+
+            // Show success message
+            alert('상품이 등록되었습니다!');
+        }
+
+        // Format number to Korean currency
+        function formatPrice(price) {
+            if (price >= 10000) {
+                const man = Math.floor(price / 10000);
+                const rest = price % 10000;
+                if (rest === 0) {
+                    return `${man}만원`;
+                } else {
+                    return `${man}만 ${(rest / 1000).toFixed(0)}천원`;
+                }
+            } else {
+                return `${(price / 1000).toFixed(0)}천원`;
+            }
+        }
+    </script>
+</body>
+</html>

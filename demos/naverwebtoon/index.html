@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>네이버 웹툰 - 매일매일 새로운 재미</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --naver-green: #00DC64;
+            --naver-dark-green: #00B451;
+            --naver-light-green: #E8FFF3;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        }
+
+        .gradient-green {
+            background: linear-gradient(135deg, #00DC64 0%, #00B451 100%);
+        }
+
+        .gradient-green-soft {
+            background: linear-gradient(135deg, #E8FFF3 0%, #D0FFE8 100%);
+        }
+
+        .webtoon-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .webtoon-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .webtoon-thumbnail {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .tab-button {
+            transition: all 0.2s ease;
+        }
+
+        .tab-button:hover {
+            background-color: var(--naver-light-green);
+        }
+
+        .tab-button.active {
+            background-color: var(--naver-green);
+            color: white;
+            font-weight: bold;
+        }
+
+        .genre-badge {
+            transition: all 0.2s ease;
+        }
+
+        .genre-badge:hover {
+            background-color: var(--naver-green);
+            color: white;
+        }
+
+        .genre-badge.active {
+            background-color: var(--naver-dark-green);
+            color: white;
+        }
+
+        .star-rating {
+            color: #FFD700;
+        }
+
+        .like-button {
+            transition: all 0.2s ease;
+        }
+
+        .like-button.liked {
+            color: #FF4444;
+        }
+
+        .episode-item {
+            transition: all 0.2s ease;
+        }
+
+        .episode-item:hover {
+            background-color: #F9FAFB;
+        }
+
+        .thumbnail-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .comment-input {
+            border: 2px solid #E5E7EB;
+            transition: border-color 0.2s ease;
+        }
+
+        .comment-input:focus {
+            border-color: var(--naver-green);
+            outline: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="gradient-green text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-8">
+                    <h1 class="text-3xl font-bold cursor-pointer" onclick="app.showHome()">
+                        <i class="fas fa-book-open mr-2"></i>네이버 웹툰
+                    </h1>
+                    <nav class="hidden md:flex space-x-6">
+                        <button onclick="app.filterByTab('요일별')" class="hover:text-green-100 transition font-semibold">요일별</button>
+                        <button onclick="app.filterByTab('장르별')" class="hover:text-green-100 transition font-semibold">장르별</button>
+                        <button onclick="app.filterByTab('완결')" class="hover:text-green-100 transition font-semibold">완결</button>
+                        <button onclick="app.filterByTab('베스트도전')" class="hover:text-green-100 transition font-semibold">베스트도전</button>
+                    </nav>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="app.showFavorites()" class="hover:text-green-100 transition">
+                        <i class="fas fa-heart text-xl"></i>
+                        <span class="ml-1 hidden md:inline">관심웹툰</span>
+                    </button>
+                    <button class="hover:text-green-100 transition">
+                        <i class="fas fa-search text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Day Tabs -->
+        <div id="dayTabs" class="mb-8">
+            <div class="flex flex-wrap gap-2 justify-center">
+                <button onclick="app.filterByDay('all')" class="tab-button active px-6 py-3 rounded-full bg-white border-2 border-green-500">
+                    전체
+                </button>
+                <button onclick="app.filterByDay('월')" class="tab-button px-6 py-3 rounded-full bg-white border-2 border-gray-200">
+                    월요일
+                </button>
+                <button onclick="app.filterByDay('화')" class="tab-button px-6 py-3 rounded-full bg-white border-2 border-gray-200">
+                    화요일
+                </button>
+                <button onclick="app.filterByDay('수')" class="tab-button px-6 py-3 rounded-full bg-white border-2 border-gray-200">
+                    수요일
+                </button>
+                <button onclick="app.filterByDay('목')" class="tab-button px-6 py-3 rounded-full bg-white border-2 border-gray-200">
+                    목요일
+                </button>
+                <button onclick="app.filterByDay('금')" class="tab-button px-6 py-3 rounded-full bg-white border-2 border-gray-200">
+                    금요일
+                </button>
+                <button onclick="app.filterByDay('토')" class="tab-button px-6 py-3 rounded-full bg-white border-2 border-gray-200">
+                    토요일
+                </button>
+                <button onclick="app.filterByDay('일')" class="tab-button px-6 py-3 rounded-full bg-white border-2 border-gray-200">
+                    일요일
+                </button>
+                <button onclick="app.filterByDay('완결')" class="tab-button px-6 py-3 rounded-full bg-white border-2 border-gray-200">
+                    완결
+                </button>
+            </div>
+        </div>
+
+        <!-- Genre Filter -->
+        <div id="genreFilter" class="mb-8">
+            <div class="flex flex-wrap gap-2 justify-center">
+                <button onclick="app.filterByGenre('all')" class="genre-badge active px-5 py-2 rounded-full bg-gray-200 text-sm font-semibold">
+                    전체
+                </button>
+                <button onclick="app.filterByGenre('로맨스')" class="genre-badge px-5 py-2 rounded-full bg-gray-200 text-sm font-semibold">
+                    로맨스
+                </button>
+                <button onclick="app.filterByGenre('액션')" class="genre-badge px-5 py-2 rounded-full bg-gray-200 text-sm font-semibold">
+                    액션
+                </button>
+                <button onclick="app.filterByGenre('판타지')" class="genre-badge px-5 py-2 rounded-full bg-gray-200 text-sm font-semibold">
+                    판타지
+                </button>
+                <button onclick="app.filterByGenre('일상')" class="genre-badge px-5 py-2 rounded-full bg-gray-200 text-sm font-semibold">
+                    일상
+                </button>
+                <button onclick="app.filterByGenre('스릴러')" class="genre-badge px-5 py-2 rounded-full bg-gray-200 text-sm font-semibold">
+                    스릴러
+                </button>
+                <button onclick="app.filterByGenre('개그')" class="genre-badge px-5 py-2 rounded-full bg-gray-200 text-sm font-semibold">
+                    개그
+                </button>
+            </div>
+        </div>
+
+        <!-- Webtoon Grid -->
+        <div id="webtoonGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            <!-- Webtoons will be rendered here -->
+        </div>
+    </main>
+
+    <!-- Webtoon Detail Modal -->
+    <div id="webtoonModal" class="modal">
+        <div class="bg-white rounded-lg shadow-2xl max-w-4xl w-full mx-4 my-8">
+            <div id="modalContent">
+                <!-- Modal content will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Episode Detail Modal -->
+    <div id="episodeModal" class="modal">
+        <div class="bg-white rounded-lg shadow-2xl max-w-4xl w-full mx-4 my-8">
+            <div id="episodeModalContent">
+                <!-- Episode content will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Webtoon Data
+        const webtoonsData = [
+            {
+                id: 1,
+                title: "외모지상주의",
+                author: "박태준",
+                genre: "드라마",
+                rating: 9.8,
+                day: "금",
+                color: "#FF6B6B",
+                completed: false,
+                description: "못생긴 외모 때문에 괴롭힘을 당하던 박형석. 어느 날 눈을 떠보니 완벽한 외모를 가진 또 다른 몸을 갖게 되는데...",
+                views: "15억",
+                episodes: [
+                    { id: 1, title: "외모지상주의 (1화)", views: "1,245만", date: "2024-10-10", comments: [] },
+                    { id: 2, title: "외모지상주의 (2화)", views: "1,198만", date: "2024-10-03", comments: [] },
+                    { id: 3, title: "외모지상주의 (3화)", views: "1,156만", date: "2024-09-26", comments: [] },
+                    { id: 4, title: "외모지상주의 (4화)", views: "1,089만", date: "2024-09-19", comments: [] },
+                    { id: 5, title: "외모지상주의 (5화)", views: "1,034만", date: "2024-09-12", comments: [] },
+                    { id: 6, title: "외모지상주의 (6화)", views: "998만", date: "2024-09-05", comments: [] },
+                    { id: 7, title: "외모지상주의 (7화)", views: "967만", date: "2024-08-29", comments: [] },
+                    { id: 8, title: "외모지상주의 (8화)", views: "934만", date: "2024-08-22", comments: [] },
+                    { id: 9, title: "외모지상주의 (9화)", views: "901만", date: "2024-08-15", comments: [] },
+                    { id: 10, title: "외모지상주의 (10화)", views: "876만", date: "2024-08-08", comments: [] },
+                    { id: 11, title: "외모지상주의 (11화)", views: "854만", date: "2024-08-01", comments: [] },
+                    { id: 12, title: "외모지상주의 (12화)", views: "831만", date: "2024-07-25", comments: [] }
+                ]
+            },
+            {
+                id: 2,
+                title: "참교육",
+                author: "채용택 / 한가람",
+                genre: "액션",
+                rating: 9.9,
+                day: "목",
+                color: "#4ECDC4",
+                completed: false,
+                description: "무너진 교권을 지키기 위해 나선 나화진의 진짜 교육이 시작된다!",
+                views: "12억",
+                episodes: [
+                    { id: 1, title: "1화 - 교권침해 신고센터", views: "1,567만", date: "2024-10-10", comments: [] },
+                    { id: 2, title: "2화 - 첫 번째 의뢰", views: "1,489만", date: "2024-10-03", comments: [] },
+                    { id: 3, title: "3화 - 학교폭력의 진실", views: "1,423만", date: "2024-09-26", comments: [] },
+                    { id: 4, title: "4화 - 무너진 교실", views: "1,378만", date: "2024-09-19", comments: [] },
+                    { id: 5, title: "5화 - 진짜 교육", views: "1,312만", date: "2024-09-12", comments: [] },
+                    { id: 6, title: "6화 - 학부모의 민낯", views: "1,267만", date: "2024-09-05", comments: [] },
+                    { id: 7, title: "7화 - 교권의 의미", views: "1,234만", date: "2024-08-29", comments: [] },
+                    { id: 8, title: "8화 - 두 번째 의뢰", views: "1,189만", date: "2024-08-22", comments: [] },
+                    { id: 9, title: "9화 - 특별한 학생", views: "1,156만", date: "2024-08-15", comments: [] },
+                    { id: 10, title: "10화 - 참교육의 시작", views: "1,123만", date: "2024-08-08", comments: [] }
+                ]
+            },
+            {
+                id: 3,
+                title: "나 혼자만 레벨업",
+                author: "추공 / 장성락",
+                genre: "판타지",
+                rating: 9.9,
+                day: "완결",
+                color: "#9B59B6",
+                completed: true,
+                description: "10년 전, 세계와 이공간을 연결하는 '게이트'가 열리고 각성한 사람들이 나타났다. 최하위 헌터 성진우, 그에게 기회가 찾아왔다.",
+                views: "25억",
+                episodes: [
+                    { id: 1, title: "프롤로그", views: "2,345만", date: "2023-12-25", comments: [] },
+                    { id: 2, title: "1화 - E급 헌터", views: "2,298만", date: "2023-12-18", comments: [] },
+                    { id: 3, title: "2화 - 이중 던전", views: "2,267만", date: "2023-12-11", comments: [] },
+                    { id: 4, title: "3화 - 죽음의 문턱", views: "2,234만", date: "2023-12-04", comments: [] },
+                    { id: 5, title: "4화 - 플레이어", views: "2,189만", date: "2023-11-27", comments: [] },
+                    { id: 6, title: "5화 - 첫 번째 퀘스트", views: "2,156만", date: "2023-11-20", comments: [] },
+                    { id: 7, title: "6화 - 레벨업", views: "2,123만", date: "2023-11-13", comments: [] },
+                    { id: 8, title: "7화 - 숨겨진 던전", views: "2,098만", date: "2023-11-06", comments: [] },
+                    { id: 9, title: "8화 - 그림자 병사", views: "2,067만", date: "2023-10-30", comments: [] },
+                    { id: 10, title: "9화 - 성장", views: "2,034만", date: "2023-10-23", comments: [] },
+                    { id: 11, title: "10화 - 레드 게이트", views: "2,001만", date: "2023-10-16", comments: [] },
+                    { id: 12, title: "완결 - 그 후", views: "1,987만", date: "2023-10-09", comments: [] }
+                ]
+            },
+            {
+                id: 4,
+                title: "신의 탑",
+                author: "SIU",
+                genre: "판타지",
+                rating: 9.7,
+                day: "일",
+                color: "#F39C12",
+                completed: false,
+                description: "탑에 오르면 모든 것을 이룰 수 있다. 꼭대기에서는 무엇이 기다리고 있을까?",
+                views: "18억",
+                episodes: [
+                    { id: 1, title: "시즌3 112화", views: "987만", date: "2024-10-13", comments: [] },
+                    { id: 2, title: "시즌3 111화", views: "956만", date: "2024-10-06", comments: [] },
+                    { id: 3, title: "시즌3 110화", views: "923만", date: "2024-09-29", comments: [] },
+                    { id: 4, title: "시즌3 109화", views: "898만", date: "2024-09-22", comments: [] },
+                    { id: 5, title: "시즌3 108화", views: "876만", date: "2024-09-15", comments: [] },
+                    { id: 6, title: "시즌3 107화", views: "854만", date: "2024-09-08", comments: [] },
+                    { id: 7, title: "시즌3 106화", views: "832만", date: "2024-09-01", comments: [] },
+                    { id: 8, title: "시즌3 105화", views: "812만", date: "2024-08-25", comments: [] },
+                    { id: 9, title: "시즌3 104화", views: "798만", date: "2024-08-18", comments: [] },
+                    { id: 10, title: "시즌3 103화", views: "776만", date: "2024-08-11", comments: [] }
+                ]
+            },
+            {
+                id: 5,
+                title: "윈드브레이커",
+                author: "조용석",
+                genre: "스포츠",
+                rating: 9.6,
+                day: "목",
+                color: "#3498DB",
+                completed: false,
+                description: "자전거로 바람을 가르는 청춘들의 질주! 속도를 넘어선 우정과 성장의 이야기.",
+                views: "8억",
+                episodes: [
+                    { id: 1, title: "시즌2 78화", views: "756만", date: "2024-10-10", comments: [] },
+                    { id: 2, title: "시즌2 77화", views: "734만", date: "2024-10-03", comments: [] },
+                    { id: 3, title: "시즌2 76화", views: "712만", date: "2024-09-26", comments: [] },
+                    { id: 4, title: "시즌2 75화", views: "698만", date: "2024-09-19", comments: [] },
+                    { id: 5, title: "시즌2 74화", views: "676만", date: "2024-09-12", comments: [] },
+                    { id: 6, title: "시즌2 73화", views: "654만", date: "2024-09-05", comments: [] },
+                    { id: 7, title: "시즌2 72화", views: "632만", date: "2024-08-29", comments: [] },
+                    { id: 8, title: "시즌2 71화", views: "618만", date: "2024-08-22", comments: [] },
+                    { id: 9, title: "시즌2 70화", views: "601만", date: "2024-08-15", comments: [] },
+                    { id: 10, title: "시즌2 69화", views: "589만", date: "2024-08-08", comments: [] }
+                ]
+            },
+            {
+                id: 6,
+                title: "퀘스티즘",
+                author: "강지영",
+                genre: "판타지",
+                rating: 9.8,
+                day: "수",
+                color: "#E74C3C",
+                completed: false,
+                description: "현실이 RPG 게임이 되어버렸다! 평범한 고등학생 김진우의 레벨업 서바이벌.",
+                views: "11억",
+                episodes: [
+                    { id: 1, title: "92화 - 숨겨진 퀘스트", views: "1,123만", date: "2024-10-09", comments: [] },
+                    { id: 2, title: "91화 - 새로운 스킬", views: "1,098만", date: "2024-10-02", comments: [] },
+                    { id: 3, title: "90화 - 보스전", views: "1,067만", date: "2024-09-25", comments: [] },
+                    { id: 4, title: "89화 - 파티 결성", views: "1,045만", date: "2024-09-18", comments: [] },
+                    { id: 5, title: "88화 - 던전 탐색", views: "1,023만", date: "2024-09-11", comments: [] },
+                    { id: 6, title: "87화 - 레벨업", views: "998만", date: "2024-09-04", comments: [] },
+                    { id: 7, title: "86화 - 위기", views: "976만", date: "2024-08-28", comments: [] },
+                    { id: 8, title: "85화 - 아이템 획득", views: "954만", date: "2024-08-21", comments: [] },
+                    { id: 9, title: "84화 - 강해지는 법", views: "932만", date: "2024-08-14", comments: [] },
+                    { id: 10, title: "83화 - 전투 시작", views: "912만", date: "2024-08-07", comments: [] }
+                ]
+            },
+            {
+                id: 7,
+                title: "언니가 간다",
+                author: "임인태",
+                genre: "일상",
+                rating: 9.5,
+                day: "화",
+                color: "#FF69B4",
+                completed: false,
+                description: "막내로 살다 갑자기 언니가 된 여고생의 좌충우돌 성장 드라마!",
+                views: "6억",
+                episodes: [
+                    { id: 1, title: "65화 - 언니의 고민", views: "634만", date: "2024-10-08", comments: [] },
+                    { id: 2, title: "64화 - 동생들", views: "612만", date: "2024-10-01", comments: [] },
+                    { id: 3, title: "63화 - 가족의 의미", views: "598만", date: "2024-09-24", comments: [] },
+                    { id: 4, title: "62화 - 첫째의 책임", views: "576만", date: "2024-09-17", comments: [] },
+                    { id: 5, title: "61화 - 학교생활", views: "554만", date: "2024-09-10", comments: [] },
+                    { id: 6, title: "60화 - 친구들", views: "532만", date: "2024-09-03", comments: [] },
+                    { id: 7, title: "59화 - 새로운 일상", views: "518만", date: "2024-08-27", comments: [] },
+                    { id: 8, title: "58화 - 언니의 선택", views: "501만", date: "2024-08-20", comments: [] },
+                    { id: 9, title: "57화 - 성장통", views: "487만", date: "2024-08-13", comments: [] },
+                    { id: 10, title: "56화 - 함께하는 시간", views: "471만", date: "2024-08-06", comments: [] }
+                ]
+            },
+            {
+                id: 8,
+                title: "열혈강호",
+                author: "전극진 / 양재현",
+                genre: "액션",
+                rating: 9.4,
+                day: "완결",
+                color: "#FF4500",
+                completed: true,
+                description: "무림의 전설이 된 한비광과 담화린의 이야기. 20년간 사랑받은 무협 웹툰의 완결!",
+                views: "20억",
+                episodes: [
+                    { id: 1, title: "에필로그", views: "1,876만", date: "2024-05-20", comments: [] },
+                    { id: 2, title: "최종화 - 열혈의 끝", views: "1,845만", date: "2024-05-13", comments: [] },
+                    { id: 3, title: "599화 - 최후의 결전", views: "1,812만", date: "2024-05-06", comments: [] },
+                    { id: 4, title: "598화 - 무림의 미래", views: "1,789만", date: "2024-04-29", comments: [] },
+                    { id: 5, title: "597화 - 진정한 강자", views: "1,756만", date: "2024-04-22", comments: [] },
+                    { id: 6, title: "596화 - 운명의 대결", views: "1,734만", date: "2024-04-15", comments: [] },
+                    { id: 7, title: "595화 - 절정의 순간", views: "1,712만", date: "2024-04-08", comments: [] },
+                    { id: 8, title: "594화 - 힘의 극한", views: "1,698만", date: "2024-04-01", comments: [] },
+                    { id: 9, title: "593화 - 무림맹주", views: "1,676만", date: "2024-03-25", comments: [] },
+                    { id: 10, title: "592화 - 강호의 전설", views: "1,654만", date: "2024-03-18", comments: [] }
+                ]
+            },
+            {
+                id: 9,
+                title: "소녀의 세계",
+                author: "모랑지",
+                genre: "드라마",
+                rating: 9.7,
+                day: "완결",
+                color: "#FFB6C1",
+                completed: true,
+                description: "여중생들의 우정과 갈등을 섬세하게 그려낸 감성 드라마.",
+                views: "9억",
+                episodes: [
+                    { id: 1, title: "완결 - 그 후의 이야기", views: "1,234만", date: "2024-03-15", comments: [] },
+                    { id: 2, title: "120화 - 졸업", views: "1,212만", date: "2024-03-08", comments: [] },
+                    { id: 3, title: "119화 - 마지막 겨울", views: "1,189만", date: "2024-03-01", comments: [] },
+                    { id: 4, title: "118화 - 화해", views: "1,167만", date: "2024-02-23", comments: [] },
+                    { id: 5, title: "117화 - 진심", views: "1,145만", date: "2024-02-16", comments: [] },
+                    { id: 6, title: "116화 - 우정의 의미", views: "1,123만", date: "2024-02-09", comments: [] },
+                    { id: 7, title: "115화 - 소녀들", views: "1,101만", date: "2024-02-02", comments: [] },
+                    { id: 8, title: "114화 - 세계", views: "1,087만", date: "2024-01-26", comments: [] },
+                    { id: 9, title: "113화 - 변화", views: "1,065만", date: "2024-01-19", comments: [] },
+                    { id: 10, title: "112화 - 성장", views: "1,043만", date: "2024-01-12", comments: [] }
+                ]
+            },
+            {
+                id: 10,
+                title: "하루 3컷",
+                author: "지온",
+                genre: "개그",
+                rating: 9.3,
+                day: "월",
+                color: "#FFD700",
+                completed: false,
+                description: "매일매일 웃음을 선사하는 일상 개그 웹툰! 오늘도 유쾌한 하루를!",
+                views: "7억",
+                episodes: [
+                    { id: 1, title: "1045화 - 월요병 극복법", views: "543만", date: "2024-10-14", comments: [] },
+                    { id: 2, title: "1044화 - 주말의 추억", views: "521만", date: "2024-10-07", comments: [] },
+                    { id: 3, title: "1043화 - 날씨 이야기", views: "512만", date: "2024-09-30", comments: [] },
+                    { id: 4, title: "1042화 - 커피 한 잔", views: "498만", date: "2024-09-23", comments: [] },
+                    { id: 5, title: "1041화 - 운동의 계절", views: "487만", date: "2024-09-16", comments: [] },
+                    { id: 6, title: "1040화 - 다이어트", views: "476만", date: "2024-09-09", comments: [] },
+                    { id: 7, title: "1039화 - 취미생활", views: "465만", date: "2024-09-02", comments: [] },
+                    { id: 8, title: "1038화 - 친구 만나기", views: "454만", date: "2024-08-26", comments: [] },
+                    { id: 9, title: "1037화 - 집순이 집돌이", views: "443만", date: "2024-08-19", comments: [] },
+                    { id: 10, title: "1036화 - 배달 음식", views: "432만", date: "2024-08-12", comments: [] }
+                ]
+            },
+            {
+                id: 11,
+                title: "프리드로우",
+                author: "전선욱",
+                genre: "스포츠",
+                rating: 9.6,
+                day: "토",
+                color: "#FF8C00",
+                completed: false,
+                description: "농구로 하나되는 청춘들! 스트리트 농구의 열정과 우정.",
+                views: "5억",
+                episodes: [
+                    { id: 1, title: "시즌3 45화", views: "612만", date: "2024-10-12", comments: [] },
+                    { id: 2, title: "시즌3 44화", views: "598만", date: "2024-10-05", comments: [] },
+                    { id: 3, title: "시즌3 43화", views: "584万", date: "2024-09-28", comments: [] },
+                    { id: 4, title: "시즌3 42화", views: "571만", date: "2024-09-21", comments: [] },
+                    { id: 5, title: "시즌3 41화", views: "558만", date: "2024-09-14", comments: [] },
+                    { id: 6, title: "시즌3 40화", views: "545만", date: "2024-09-07", comments: [] },
+                    { id: 7, title: "시즌3 39화", views: "532만", date: "2024-08-31", comments: [] },
+                    { id: 8, title: "시즌3 38화", views: "519만", date: "2024-08-24", comments: [] },
+                    { id: 9, title: "시즌3 37화", views: "506만", date: "2024-08-17", comments: [] },
+                    { id: 10, title: "시즌3 36화", views: "493만", date: "2024-08-10", comments: [] }
+                ]
+            },
+            {
+                id: 12,
+                title: "대학일기",
+                author: "자까",
+                genre: "일상",
+                rating: 9.4,
+                day: "화",
+                color: "#87CEEB",
+                completed: false,
+                description: "대학생들의 현실 공감 일상! 오늘도 과제와 과음 사이에서...",
+                views: "4억",
+                episodes: [
+                    { id: 1, title: "234화 - 중간고사 D-7", views: "478만", date: "2024-10-08", comments: [] },
+                    { id: 2, title: "233화 - 조모임", views: "465만", date: "2024-10-01", comments: [] },
+                    { id: 3, title: "232화 - 학점의 중요성", views: "452만", date: "2024-09-24", comments: [] },
+                    { id: 4, title: "231화 - 수강신청 전쟁", views: "439만", date: "2024-09-17", comments: [] },
+                    { id: 5, title: "230화 - 새 학기", views: "426만", date: "2024-09-10", comments: [] },
+                    { id: 6, title: "229화 - 방학의 끝", views: "413만", date: "2024-09-03", comments: [] },
+                    { id: 7, title: "228화 - 여름 휴가", views: "401만", date: "2024-08-27", comments: [] },
+                    { id: 8, title: "227화 - 계절학기", views: "388만", date: "2024-08-20", comments: [] },
+                    { id: 9, title: "226화 - 아르바이트", views: "375만", date: "2024-08-13", comments: [] },
+                    { id: 10, title: "225화 - 기말고사 후", views: "362만", date: "2024-08-06", comments: [] }
+                ]
+            },
+            {
+                id: 13,
+                title: "김부장",
+                author: "박만사",
+                genre: "개그",
+                rating: 9.2,
+                day: "금",
+                color: "#708090",
+                completed: false,
+                description: "회사원의 애환과 웃음! 오늘도 열일하는 김부장의 직장 생활기.",
+                views: "5.5억",
+                episodes: [
+                    { id: 1, title: "456화 - 연말정산", views: "523만", date: "2024-10-11", comments: [] },
+                    { id: 2, title: "455화 - 회식 2차", views: "512만", date: "2024-10-04", comments: [] },
+                    { id: 3, title: "454화 - 상사의 부탁", views: "501만", date: "2024-09-27", comments: [] },
+                    { id: 4, title: "453화 - 점심 메뉴", views: "489만", date: "2024-09-20", comments: [] },
+                    { id: 5, title: "452화 - 야근의 밤", views: "478만", date: "2024-09-13", comments: [] },
+                    { id: 6, title: "451화 - 신입사원", views: "467만", date: "2024-09-06", comments: [] },
+                    { id: 7, title: "450화 - 프로젝트", views: "456만", date: "2024-08-30", comments: [] },
+                    { id: 8, title: "449화 - 회의 시간", views: "445만", date: "2024-08-23", comments: [] },
+                    { id: 9, title: "448화 - 승진 심사", views: "434만", date: "2024-08-16", comments: [] },
+                    { id: 10, title: "447화 - 휴가 신청", views: "423만", date: "2024-08-09", comments: [] }
+                ]
+            },
+            {
+                id: 14,
+                title: "여신강림",
+                author: "야옹이",
+                genre: "로맨스",
+                rating: 9.5,
+                day: "월",
+                color: "#FFB6D9",
+                completed: false,
+                description: "화장으로 완벽하게 변신한 주경의 학교생활! 로맨스와 우정 사이에서.",
+                views: "10억",
+                episodes: [
+                    { id: 1, title: "234화 - 새로운 시작", views: "1,087만", date: "2024-10-14", comments: [] },
+                    { id: 2, title: "233화 - 선택의 순간", views: "1,065만", date: "2024-10-07", comments: [] },
+                    { id: 3, title: "232화 - 진심", views: "1,043만", date: "2024-09-30", comments: [] },
+                    { id: 4, title: "231화 - 고백", views: "1,021만", date: "2024-09-23", comments: [] },
+                    { id: 5, title: "230화 - 오해", views: "998만", date: "2024-09-16", comments: [] },
+                    { id: 6, title: "229화 - 삼각관계", views: "976만", date: "2024-09-09", comments: [] },
+                    { id: 7, title: "228화 - 질투", views: "954만", date: "2024-09-02", comments: [] },
+                    { id: 8, title: "227화 - 데이트", views: "932만", date: "2024-08-26", comments: [] },
+                    { id: 9, title: "226화 - 마음", views: "912만", date: "2024-08-19", comments: [] },
+                    { id: 10, title: "225화 - 설렘", views: "891만", date: "2024-08-12", comments: [] }
+                ]
+            },
+            {
+                id: 15,
+                title: "뷰티풀 군바리",
+                author: "설이",
+                genre: "일상",
+                rating: 9.6,
+                day: "수",
+                color: "#556B2F",
+                completed: false,
+                description: "여군의 군대 생활 리얼 일상툰! 웃픔 가득한 군생활 이야기.",
+                views: "6억",
+                episodes: [
+                    { id: 1, title: "178화 - 전역 D-100", views: "687만", date: "2024-10-09", comments: [] },
+                    { id: 2, title: "177화 - 부대 축제", views: "671만", date: "2024-10-02", comments: [] },
+                    { id: 3, title: "176화 - 외출의 기쁨", views: "656만", date: "2024-09-25", comments: [] },
+                    { id: 4, title: "175화 - 훈련소 추억", views: "641만", date: "2024-09-18", comments: [] },
+                    { id: 5, title: "174화 - 선임과 후임", views: "626만", date: "2024-09-11", comments: [] },
+                    { id: 6, title: "173화 - 야간 근무", views: "612만", date: "2024-09-04", comments: [] },
+                    { id: 7, title: "172화 - 급식의 날", views: "598만", date: "2024-08-28", comments: [] },
+                    { id: 8, title: "171화 - 휴가 신청", views: "584만", date: "2024-08-21", comments: [] },
+                    { id: 9, title: "170화 - 부대 생활", views: "571만", date: "2024-08-14", comments: [] },
+                    { id: 10, title: "169화 - 아침 점호", views: "558만", date: "2024-08-07", comments: [] }
+                ]
+            },
+            {
+                id: 16,
+                title: "악역의 엔딩은 죽음뿐",
+                author: "권겨을 / SUOL",
+                genre: "로맨스",
+                rating: 9.8,
+                day: "목",
+                color: "#8B008B",
+                completed: false,
+                description: "악역 공주로 빙의했다! 죽음을 피하기 위한 페넬로페의 생존 로맨스.",
+                views: "9억",
+                episodes: [
+                    { id: 1, title: "시즌3 12화", views: "934만", date: "2024-10-10", comments: [] },
+                    { id: 2, title: "시즌3 11화", views: "912만", date: "2024-10-03", comments: [] },
+                    { id: 3, title: "시즌3 10화", views: "891만", date: "2024-09-26", comments: [] },
+                    { id: 4, title: "시즌3 9화", views: "871만", date: "2024-09-19", comments: [] },
+                    { id: 5, title: "시즌3 8화", views: "852만", date: "2024-09-12", comments: [] },
+                    { id: 6, title: "시즌3 7화", views: "834만", date: "2024-09-05", comments: [] },
+                    { id: 7, title: "시즌3 6화", views: "816만", date: "2024-08-29", comments: [] },
+                    { id: 8, title: "시즌3 5화", views: "798만", date: "2024-08-22", comments: [] },
+                    { id: 9, title: "시즌3 4화", views: "781만", date: "2024-08-15", comments: [] },
+                    { id: 10, title: "시즌3 3화", views: "765만", date: "2024-08-08", comments: [] }
+                ]
+            },
+            {
+                id: 17,
+                title: "싸움독학",
+                author: "박태준",
+                genre: "액션",
+                rating: 9.7,
+                day: "토",
+                color: "#DC143C",
+                completed: false,
+                description: "유튜브로 배운다! 학교폭력에 맞서는 지훈의 독학 격투기.",
+                views: "8억",
+                episodes: [
+                    { id: 1, title: "156화 - 최강자", views: "823만", date: "2024-10-12", comments: [] },
+                    { id: 2, title: "155화 - 실전 테스트", views: "807만", date: "2024-10-05", comments: [] },
+                    { id: 3, title: "154화 - 새로운 기술", views: "791만", date: "2024-09-28", comments: [] },
+                    { id: 4, title: "153화 - 라이벌", views: "776만", date: "2024-09-21", comments: [] },
+                    { id: 5, title: "152화 - 특훈", views: "761만", date: "2024-09-14", comments: [] },
+                    { id: 6, title: "151화 - 대결", views: "746만", date: "2024-09-07", comments: [] },
+                    { id: 7, title: "150화 - 성장", views: "732만", date: "2024-08-31", comments: [] },
+                    { id: 8, title: "149화 - 복수", views: "718만", date: "2024-08-24", comments: [] },
+                    { id: 9, title: "148화 - 각성", views: "704만", date: "2024-08-17", comments: [] },
+                    { id: 10, title: "147화 - 한계 돌파", views: "691만", date: "2024-08-10", comments: [] }
+                ]
+            },
+            {
+                id: 18,
+                title: "연애혁명",
+                author: "232",
+                genre: "로맨스",
+                rating: 9.4,
+                day: "일",
+                color: "#FF1493",
+                completed: false,
+                description: "왕자림과 친구들의 청춘 로맨스! 설렘 가득한 학교 생활.",
+                views: "7억",
+                episodes: [
+                    { id: 1, title: "345화 - 졸업식", views: "721만", date: "2024-10-13", comments: [] },
+                    { id: 2, title: "344화 - 마지막 축제", views: "706만", date: "2024-10-06", comments: [] },
+                    { id: 3, title: "343화 - 고백 타이밍", views: "692만", date: "2024-09-29", comments: [] },
+                    { id: 4, title: "342화 - 크리스마스", views: "678만", date: "2024-09-22", comments: [] },
+                    { id: 5, title: "341화 - 겨울방학", views: "665만", date: "2024-09-15", comments: [] },
+                    { id: 6, title: "340화 - 수능 이후", views: "651만", date: "2024-09-08", comments: [] },
+                    { id: 7, title: "339화 - 응원", views: "638만", date: "2024-09-01", comments: [] },
+                    { id: 8, title: "338화 - 시험 기간", views: "625万", date: "2024-08-25", comments: [] },
+                    { id: 9, title: "337화 - 연애 상담", views: "612万", date: "2024-08-18", comments: [] },
+                    { id: 10, title: "336화 - 커플 매칭", views: "599만", date: "2024-08-11", comments: [] }
+                ]
+            },
+            {
+                id: 19,
+                title: "고수",
+                author: "류기운 / 문정후",
+                genre: "액션",
+                rating: 9.8,
+                day: "금",
+                color: "#2F4F4F",
+                completed: false,
+                description: "전생의 기억을 가진 강윤! 다시 시작하는 무림 최강 고수의 이야기.",
+                views: "13억",
+                episodes: [
+                    { id: 1, title: "189화 - 천하제일", views: "1,265만", date: "2024-10-11", comments: [] },
+                    { id: 2, title: "188화 - 절정의 대결", views: "1,243만", date: "2024-10-04", comments: [] },
+                    { id: 3, title: "187화 - 비전 습득", views: "1,221만", date: "2024-09-27", comments: [] },
+                    { id: 4, title: "186화 - 무림맹", views: "1,199만", date: "2024-09-20", comments: [] },
+                    { id: 5, title: "185화 - 숨겨진 힘", views: "1,178만", date: "2024-09-13", comments: [] },
+                    { id: 6, title: "184화 - 과거의 기억", views: "1,156만", date: "2024-09-06", comments: [] },
+                    { id: 7, title: "183화 - 강적 출현", views: "1,135만", date: "2024-08-30", comments: [] },
+                    { id: 8, title: "182화 - 수련", views: "1,114만", date: "2024-08-23", comments: [] },
+                    { id: 9, title: "181화 - 복수의 시작", views: "1,093만", date: "2024-08-16", comments: [] },
+                    { id: 10, title: "180화 - 재회", views: "1,073만", date: "2024-08-09", comments: [] }
+                ]
+            },
+            {
+                id: 20,
+                title: "나쁜사람",
+                author: "김진",
+                genre: "스릴러",
+                rating: 9.6,
+                day: "수",
+                color: "#191970",
+                completed: false,
+                description: "복수를 위해 악인이 된 남자. 정의와 복수 사이의 경계를 넘나든다.",
+                views: "6.5억",
+                episodes: [
+                    { id: 1, title: "145화 - 계획의 완성", views: "712만", date: "2024-10-09", comments: [] },
+                    { id: 2, title: "144화 - 진실 폭로", views: "698만", date: "2024-10-02", comments: [] },
+                    { id: 3, title: "143화 - 위험한 거래", views: "684만", date: "2024-09-25", comments: [] },
+                    { id: 4, title: "142화 - 배신자", views: "671만", date: "2024-09-18", comments: [] },
+                    { id: 5, title: "141화 - 숨겨진 과거", views: "658만", date: "2024-09-11", comments: [] },
+                    { id: 6, title: "140화 - 복수의 칼날", views: "645만", date: "2024-09-04", comments: [] },
+                    { id: 7, title: "139화 - 함정", views: "632만", date: "2024-08-28", comments: [] },
+                    { id: 8, title: "138화 - 추적", views: "619만", date: "2024-08-21", comments: [] },
+                    { id: 9, title: "137화 - 단서", views: "607만", date: "2024-08-14", comments: [] },
+                    { id: 10, title: "136화 - 대면", views: "594만", date: "2024-08-07", comments: [] }
+                ]
+            },
+            {
+                id: 21,
+                title: "재혼 황후",
+                author: "알파타르트 / 숨풀",
+                genre: "로맨스",
+                rating: 9.7,
+                day: "일",
+                color: "#DAA520",
+                completed: false,
+                description: "완벽한 황후 나비에, 황제의 배신 후 새로운 사랑을 만나다.",
+                views: "11억",
+                episodes: [
+                    { id: 1, title: "시즌2 98화", views: "1,045만", date: "2024-10-13", comments: [] },
+                    { id: 2, title: "시즌2 97화", views: "1,023만", date: "2024-10-06", comments: [] },
+                    { id: 3, title: "시즌2 96화", views: "1,001만", date: "2024-09-29", comments: [] },
+                    { id: 4, title: "시즌2 95화", views: "981만", date: "2024-09-22", comments: [] },
+                    { id: 5, title: "시즌2 94화", views: "961만", date: "2024-09-15", comments: [] },
+                    { id: 6, title: "시즌2 93화", views: "942만", date: "2024-09-08", comments: [] },
+                    { id: 7, title: "시즌2 92화", views: "923만", date: "2024-09-01", comments: [] },
+                    { id: 8, title: "시즌2 91화", views: "905만", date: "2024-08-25", comments: [] },
+                    { id: 9, title: "시즌2 90화", views: "887만", date: "2024-08-18", comments: [] },
+                    { id: 10, title: "시즌2 89화", views: "869만", date: "2024-08-11", comments: [] }
+                ]
+            },
+            {
+                id: 22,
+                title: "겟백",
+                author: "댄비",
+                genre: "액션",
+                rating: 9.5,
+                day: "토",
+                color: "#8B0000",
+                completed: false,
+                description: "복수를 위해 돌아온 남자. 잃어버린 것을 되찾기 위한 치열한 싸움!",
+                views: "5.8억",
+                episodes: [
+                    { id: 1, title: "67화 - 최종 결전", views: "643만", date: "2024-10-12", comments: [] },
+                    { id: 2, title: "66화 - 진실의 순간", views: "628만", date: "2024-10-05", comments: [] },
+                    { id: 3, title: "65화 - 동맹", views: "614만", date: "2024-09-28", comments: [] },
+                    { id: 4, title: "64화 - 역습", views: "601만", date: "2024-09-21", comments: [] },
+                    { id: 5, title: "63화 - 위기", views: "588만", date: "2024-09-14", comments: [] },
+                    { id: 6, title: "62화 - 반격의 시작", views: "575만", date: "2024-09-07", comments: [] },
+                    { id: 7, title: "61화 - 각오", views: "562만", date: "2024-08-31", comments: [] },
+                    { id: 8, title: "60화 - 과거 회상", views: "549만", date: "2024-08-24", comments: [] },
+                    { id: 9, title: "59화 - 준비", views: "537만", date: "2024-08-17", comments: [] },
+                    { id: 10, title: "58화 - 귀환", views: "525만", date: "2024-08-10", comments: [] }
+                ]
+            },
+            {
+                id: 23,
+                title: "마루는 강쥐",
+                author: "모죠",
+                genre: "일상",
+                rating: 9.3,
+                day: "화",
+                color: "#DEB887",
+                completed: false,
+                description: "귀여운 강아지 마루와 집사의 따뜻한 일상 이야기!",
+                views: "4.5억",
+                episodes: [
+                    { id: 1, title: "267화 - 산책 가자!", views: "456만", date: "2024-10-08", comments: [] },
+                    { id: 2, title: "266화 - 간식 시간", views: "443만", date: "2024-10-01", comments: [] },
+                    { id: 3, title: "265화 - 목욕의 날", views: "431만", date: "2024-09-24", comments: [] },
+                    { id: 4, title: "264화 - 새 장난감", views: "419만", date: "2024-09-17", comments: [] },
+                    { id: 5, title: "263화 - 동물병원", views: "407만", date: "2024-09-10", comments: [] },
+                    { id: 6, title: "262화 - 친구 만나기", views: "396만", date: "2024-09-03", comments: [] },
+                    { id: 7, title: "261화 - 낮잠", views: "385만", date: "2024-08-27", comments: [] },
+                    { id: 8, title: "260화 - 놀이터", views: "374만", date: "2024-08-20", comments: [] },
+                    { id: 9, title: "259화 - 간식 도둑", views: "363만", date: "2024-08-13", comments: [] },
+                    { id: 10, title: "258화 - 애교 대작전", views: "352만", date: "2024-08-06", comments: [] }
+                ]
+            },
+            {
+                id: 24,
+                title: "전지적 독자 시점",
+                author: "싱숑 / UMI",
+                genre: "판타지",
+                rating: 9.9,
+                day: "월",
+                color: "#4B0082",
+                completed: false,
+                description: "소설 속 세계가 현실이 되었다! 유일한 독자 김독자의 생존 이야기.",
+                views: "14억",
+                episodes: [
+                    { id: 1, title: "178화 - 시나리오의 끝", views: "1,456만", date: "2024-10-14", comments: [] },
+                    { id: 2, title: "177화 - 최종 성좌", views: "1,432만", date: "2024-10-07", comments: [] },
+                    { id: 3, title: "176화 - 독자의 권능", views: "1,408만", date: "2024-09-30", comments: [] },
+                    { id: 4, title: "175화 - 성좌들의 전쟁", views: "1,385만", date: "2024-09-23", comments: [] },
+                    { id: 5, title: "174화 - 숨겨진 시나리오", views: "1,361만", date: "2024-09-16", comments: [] },
+                    { id: 6, title: "173화 - 동료들", views: "1,338만", date: "2024-09-09", comments: [] },
+                    { id: 7, title: "172화 - 새로운 스킬", views: "1,315만", date: "2024-09-02", comments: [] },
+                    { id: 8, title: "171화 - 생존 전략", views: "1,293만", date: "2024-08-26", comments: [] },
+                    { id: 9, title: "170화 - 재회", views: "1,271만", date: "2024-08-19", comments: [] },
+                    { id: 10, title: "169화 - 과거의 기억", views: "1,249만", date: "2024-08-12", comments: [] }
+                ]
+            },
+            {
+                id: 25,
+                title: "환생했더니 슬라임이었던 건에 대하여",
+                author: "후세 / 카와카미 타이키",
+                genre: "판타지",
+                rating: 9.4,
+                day: "목",
+                color: "#00CED1",
+                completed: false,
+                description: "슬라임으로 환생한 리무루의 이세계 모험! 최강 마왕으로 거듭난다.",
+                views: "7.5억",
+                episodes: [
+                    { id: 1, title: "123화 - 마왕의 각성", views: "789만", date: "2024-10-10", comments: [] },
+                    { id: 2, title: "122화 - 새로운 동료", views: "771만", date: "2024-10-03", comments: [] },
+                    { id: 3, title: "121화 - 전쟁 준비", views: "754만", date: "2024-09-26", comments: [] },
+                    { id: 4, title: "120화 - 마국 건설", views: "737만", date: "2024-09-19", comments: [] },
+                    { id: 5, title: "119화 - 진화", views: "721만", date: "2024-09-12", comments: [] },
+                    { id: 6, title: "118화 - 스킬 습득", views: "705만", date: "2024-09-05", comments: [] },
+                    { id: 7, title: "117화 - 마물들", views: "689만", date: "2024-08-29", comments: [] },
+                    { id: 8, title: "116화 - 이름 짓기", views: "674만", date: "2024-08-22", comments: [] },
+                    { id: 9, title: "115화 - 동굴 탐험", views: "659만", date: "2024-08-15", comments: [] },
+                    { id: 10, title: "114화 - 슬라임 생활", views: "644만", date: "2024-08-08", comments: [] }
+                ]
+            }
+        ];
+
+        // Application State
+        const app = {
+            webtoons: webtoonsData,
+            currentDay: 'all',
+            currentGenre: 'all',
+            favorites: JSON.parse(localStorage.getItem('favorites') || '[]'),
+
+            init() {
+                this.renderWebtoons();
+                this.loadFavorites();
+            },
+
+            filterByDay(day) {
+                this.currentDay = day;
+                this.updateDayTabs(day);
+                this.renderWebtoons();
+            },
+
+            filterByGenre(genre) {
+                this.currentGenre = genre;
+                this.updateGenreBadges(genre);
+                this.renderWebtoons();
+            },
+
+            filterByTab(tab) {
+                if (tab === '완결') {
+                    this.filterByDay('완결');
+                } else if (tab === '장르별') {
+                    // Show all genres
+                    this.currentDay = 'all';
+                    this.currentGenre = 'all';
+                    this.renderWebtoons();
+                } else {
+                    this.currentDay = 'all';
+                    this.currentGenre = 'all';
+                    this.renderWebtoons();
+                }
+            },
+
+            updateDayTabs(day) {
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                event.target.classList.add('active');
+            },
+
+            updateGenreBadges(genre) {
+                document.querySelectorAll('.genre-badge').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                event.target.classList.add('active');
+            },
+
+            renderWebtoons() {
+                const grid = document.getElementById('webtoonGrid');
+                let filtered = this.webtoons;
+
+                // Filter by day
+                if (this.currentDay !== 'all') {
+                    filtered = filtered.filter(w => w.day === this.currentDay || (this.currentDay === '완결' && w.completed));
+                }
+
+                // Filter by genre
+                if (this.currentGenre !== 'all') {
+                    filtered = filtered.filter(w => w.genre.includes(this.currentGenre));
+                }
+
+                grid.innerHTML = filtered.map(webtoon => `
+                    <div class="webtoon-card bg-white rounded-lg shadow-md overflow-hidden" onclick="app.showWebtoonDetail(${webtoon.id})">
+                        <div class="webtoon-thumbnail thumbnail-placeholder" style="background: linear-gradient(135deg, ${webtoon.color} 0%, ${this.adjustColor(webtoon.color, -20)} 100%);">
+                            ${webtoon.title.charAt(0)}
+                        </div>
+                        <div class="p-4">
+                            <h3 class="font-bold text-lg mb-1 truncate">${webtoon.title}</h3>
+                            <p class="text-gray-600 text-sm mb-2">${webtoon.author}</p>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <span class="star-rating mr-1">★</span>
+                                    <span class="text-sm font-semibold">${webtoon.rating}</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    ${webtoon.completed ?
+                                        '<span class="text-xs bg-gray-200 px-2 py-1 rounded">완결</span>' :
+                                        `<span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">${webtoon.day}요일</span>`
+                                    }
+                                    <button onclick="event.stopPropagation(); app.toggleFavorite(${webtoon.id})" class="text-xl ${this.isFavorite(webtoon.id) ? 'text-red-500' : 'text-gray-300'}">
+                                        <i class="fas fa-heart"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            showWebtoonDetail(id) {
+                const webtoon = this.webtoons.find(w => w.id === id);
+                const modal = document.getElementById('webtoonModal');
+                const content = document.getElementById('modalContent');
+
+                content.innerHTML = `
+                    <div class="gradient-green text-white p-6 rounded-t-lg">
+                        <button onclick="app.closeModal('webtoonModal')" class="float-right text-2xl">&times;</button>
+                        <div class="flex items-start space-x-6">
+                            <div class="webtoon-thumbnail thumbnail-placeholder flex-shrink-0" style="width: 150px; height: 200px; background: linear-gradient(135deg, ${webtoon.color} 0%, ${this.adjustColor(webtoon.color, -20)} 100%);">
+                                ${webtoon.title.charAt(0)}
+                            </div>
+                            <div class="flex-1">
+                                <h2 class="text-3xl font-bold mb-2">${webtoon.title}</h2>
+                                <p class="text-lg mb-2">${webtoon.author}</p>
+                                <div class="flex items-center space-x-4 mb-3">
+                                    <div class="flex items-center">
+                                        <span class="star-rating mr-2 text-2xl">★</span>
+                                        <span class="text-xl font-bold">${webtoon.rating}</span>
+                                    </div>
+                                    <span class="bg-white/20 px-3 py-1 rounded">${webtoon.genre}</span>
+                                    ${webtoon.completed ?
+                                        '<span class="bg-white/20 px-3 py-1 rounded">완결</span>' :
+                                        `<span class="bg-white/20 px-3 py-1 rounded">${webtoon.day}요일 연재</span>`
+                                    }
+                                </div>
+                                <p class="text-sm mb-3">${webtoon.description}</p>
+                                <div class="flex items-center space-x-4">
+                                    <span><i class="fas fa-eye mr-2"></i>조회수 ${webtoon.views}</span>
+                                    <button onclick="app.toggleFavorite(${webtoon.id}); app.showWebtoonDetail(${webtoon.id})" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded transition">
+                                        <i class="fas fa-heart mr-2 ${this.isFavorite(webtoon.id) ? 'text-red-300' : ''}"></i>
+                                        ${this.isFavorite(webtoon.id) ? '관심웹툰 해제' : '관심웹툰 등록'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6 max-h-96 overflow-y-auto">
+                        <h3 class="text-xl font-bold mb-4">에피소드 목록</h3>
+                        <div class="space-y-2">
+                            ${webtoon.episodes.map(episode => `
+                                <div class="episode-item p-4 border rounded-lg cursor-pointer hover:bg-gray-50" onclick="app.showEpisodeDetail(${webtoon.id}, ${episode.id})">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex-1">
+                                            <h4 class="font-semibold mb-1">${episode.title}</h4>
+                                            <p class="text-sm text-gray-500">${episode.date}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-sm text-gray-600"><i class="fas fa-eye mr-1"></i>${episode.views}</p>
+                                            <div class="flex items-center justify-end mt-1">
+                                                <i class="fas fa-comment mr-1 text-gray-400"></i>
+                                                <span class="text-sm text-gray-500">${episode.comments.length}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+
+                modal.classList.add('active');
+            },
+
+            showEpisodeDetail(webtoonId, episodeId) {
+                const webtoon = this.webtoons.find(w => w.id === webtoonId);
+                const episode = webtoon.episodes.find(e => e.id === episodeId);
+                const modal = document.getElementById('episodeModal');
+                const content = document.getElementById('episodeModalContent');
+
+                content.innerHTML = `
+                    <div class="gradient-green text-white p-6 rounded-t-lg">
+                        <button onclick="app.closeModal('episodeModal')" class="float-right text-2xl">&times;</button>
+                        <h2 class="text-2xl font-bold mb-2">${webtoon.title}</h2>
+                        <h3 class="text-xl">${episode.title}</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="mb-6">
+                            <div class="bg-gray-200 rounded-lg p-8 text-center mb-4" style="min-height: 400px; background: linear-gradient(135deg, ${webtoon.color} 0%, ${this.adjustColor(webtoon.color, -20)} 100%);">
+                                <div class="text-white text-6xl font-bold">${episode.title}</div>
+                                <div class="text-white text-2xl mt-4">웹툰 내용이 표시됩니다</div>
+                            </div>
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-4">
+                                    <span class="text-gray-600"><i class="fas fa-eye mr-2"></i>${episode.views}</span>
+                                    <span class="text-gray-600">${episode.date}</span>
+                                </div>
+                                <button onclick="app.likeEpisode(${webtoonId}, ${episodeId})" class="like-button ${episode.liked ? 'liked' : ''} px-6 py-2 bg-red-50 hover:bg-red-100 rounded-full transition">
+                                    <i class="fas fa-heart mr-2"></i>
+                                    <span>좋아요 ${episode.likes || 0}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="border-t pt-6">
+                            <h4 class="text-xl font-bold mb-4">댓글 <span class="text-green-600">${episode.comments.length}</span></h4>
+
+                            <div class="mb-4">
+                                <textarea id="commentInput_${episodeId}" class="comment-input w-full p-4 rounded-lg resize-none" rows="3" placeholder="댓글을 입력하세요..."></textarea>
+                                <button onclick="app.addComment(${webtoonId}, ${episodeId})" class="mt-2 gradient-green text-white px-6 py-2 rounded-lg hover:opacity-90 transition">
+                                    댓글 등록
+                                </button>
+                            </div>
+
+                            <div id="commentsList_${episodeId}" class="space-y-4">
+                                ${episode.comments.length === 0 ?
+                                    '<p class="text-gray-500 text-center py-8">첫 번째 댓글을 남겨보세요!</p>' :
+                                    episode.comments.map((comment, idx) => `
+                                        <div class="bg-gray-50 p-4 rounded-lg">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="font-semibold">${comment.author}</span>
+                                                <span class="text-sm text-gray-500">${comment.date}</span>
+                                            </div>
+                                            <p class="text-gray-700">${comment.text}</p>
+                                        </div>
+                                    `).join('')
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                modal.classList.add('active');
+            },
+
+            addComment(webtoonId, episodeId) {
+                const webtoon = this.webtoons.find(w => w.id === webtoonId);
+                const episode = webtoon.episodes.find(e => e.id === episodeId);
+                const input = document.getElementById(`commentInput_${episodeId}`);
+                const text = input.value.trim();
+
+                if (!text) {
+                    alert('댓글 내용을 입력해주세요.');
+                    return;
+                }
+
+                const comment = {
+                    author: '독자' + Math.floor(Math.random() * 10000),
+                    text: text,
+                    date: new Date().toLocaleString('ko-KR')
+                };
+
+                episode.comments.unshift(comment);
+                input.value = '';
+
+                // Refresh episode detail
+                this.showEpisodeDetail(webtoonId, episodeId);
+            },
+
+            likeEpisode(webtoonId, episodeId) {
+                const webtoon = this.webtoons.find(w => w.id === webtoonId);
+                const episode = webtoon.episodes.find(e => e.id === episodeId);
+
+                if (!episode.likes) episode.likes = 0;
+                if (!episode.liked) {
+                    episode.likes++;
+                    episode.liked = true;
+                } else {
+                    episode.likes--;
+                    episode.liked = false;
+                }
+
+                this.showEpisodeDetail(webtoonId, episodeId);
+            },
+
+            toggleFavorite(id) {
+                const index = this.favorites.indexOf(id);
+                if (index > -1) {
+                    this.favorites.splice(index, 1);
+                } else {
+                    this.favorites.push(id);
+                }
+                localStorage.setItem('favorites', JSON.stringify(this.favorites));
+                this.renderWebtoons();
+            },
+
+            isFavorite(id) {
+                return this.favorites.includes(id);
+            },
+
+            loadFavorites() {
+                this.favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+            },
+
+            showFavorites() {
+                this.currentDay = 'all';
+                this.currentGenre = 'all';
+                const grid = document.getElementById('webtoonGrid');
+                const favoriteWebtoons = this.webtoons.filter(w => this.isFavorite(w.id));
+
+                if (favoriteWebtoons.length === 0) {
+                    grid.innerHTML = `
+                        <div class="col-span-full text-center py-20">
+                            <i class="fas fa-heart text-6xl text-gray-300 mb-4"></i>
+                            <p class="text-xl text-gray-500">관심웹툰이 없습니다.</p>
+                            <p class="text-gray-400 mt-2">마음에 드는 웹툰을 관심웹툰에 추가해보세요!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                grid.innerHTML = favoriteWebtoons.map(webtoon => `
+                    <div class="webtoon-card bg-white rounded-lg shadow-md overflow-hidden" onclick="app.showWebtoonDetail(${webtoon.id})">
+                        <div class="webtoon-thumbnail thumbnail-placeholder" style="background: linear-gradient(135deg, ${webtoon.color} 0%, ${this.adjustColor(webtoon.color, -20)} 100%);">
+                            ${webtoon.title.charAt(0)}
+                        </div>
+                        <div class="p-4">
+                            <h3 class="font-bold text-lg mb-1 truncate">${webtoon.title}</h3>
+                            <p class="text-gray-600 text-sm mb-2">${webtoon.author}</p>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <span class="star-rating mr-1">★</span>
+                                    <span class="text-sm font-semibold">${webtoon.rating}</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    ${webtoon.completed ?
+                                        '<span class="text-xs bg-gray-200 px-2 py-1 rounded">완결</span>' :
+                                        `<span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">${webtoon.day}요일</span>`
+                                    }
+                                    <button onclick="event.stopPropagation(); app.toggleFavorite(${webtoon.id}); app.showFavorites()" class="text-xl text-red-500">
+                                        <i class="fas fa-heart"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            showHome() {
+                this.currentDay = 'all';
+                this.currentGenre = 'all';
+
+                // Reset tabs
+                document.querySelectorAll('.tab-button').forEach((btn, idx) => {
+                    btn.classList.remove('active');
+                    if (idx === 0) btn.classList.add('active');
+                });
+
+                document.querySelectorAll('.genre-badge').forEach((btn, idx) => {
+                    btn.classList.remove('active');
+                    if (idx === 0) btn.classList.add('active');
+                });
+
+                this.renderWebtoons();
+            },
+
+            closeModal(modalId) {
+                document.getElementById(modalId).classList.remove('active');
+            },
+
+            adjustColor(color, percent) {
+                const num = parseInt(color.replace('#', ''), 16);
+                const amt = Math.round(2.55 * percent);
+                const R = (num >> 16) + amt;
+                const G = (num >> 8 & 0x00FF) + amt;
+                const B = (num & 0x0000FF) + amt;
+                return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+                    (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+                    (B < 255 ? B < 1 ? 0 : B : 255))
+                    .toString(16).slice(1);
+            }
+        };
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+
+        // Close modals when clicking outside
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>

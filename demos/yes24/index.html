@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YES24 - 대한민국 대표 인터넷 서점</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+        }
+        .yes24-blue {
+            background-color: #0066CC;
+        }
+        .yes24-btn {
+            background-color: #0066CC;
+            color: white;
+        }
+        .yes24-btn:hover {
+            background-color: #0052A3;
+        }
+        .book-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            transition: all 0.3s;
+        }
+        .bestseller-badge {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="max-w-6xl mx-auto bg-white min-h-screen">
+        <!-- Header -->
+        <div class="yes24-blue text-white p-4 sticky top-0 z-50">
+            <div class="flex items-center justify-between">
+                <button onclick="window.location.href='../'" class="text-2xl">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1 class="text-2xl font-bold">YES24</h1>
+                <div class="flex space-x-4">
+                    <button onclick="toggleCart()" class="relative">
+                        <i class="fas fa-shopping-cart text-xl"></i>
+                        <span id="cartCount" class="absolute -top-2 -right-2 bg-white text-blue-700 text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">0</span>
+                    </button>
+                    <button>
+                        <i class="fas fa-user text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="p-4 bg-white border-b">
+            <div class="flex items-center bg-gray-100 rounded-lg px-4 py-3">
+                <i class="fas fa-search text-blue-600 mr-3"></i>
+                <input type="text" placeholder="책 제목, 저자를 검색해보세요" class="bg-transparent flex-1 outline-none" id="searchInput" oninput="filterBooks()">
+            </div>
+        </div>
+
+        <!-- Bestseller Banner -->
+        <div class="bestseller-badge text-white p-4 text-center">
+            <p class="text-lg font-bold">📚 베스트셀러 📚</p>
+            <p class="text-sm">지금 가장 많이 읽히는 책을 만나보세요</p>
+        </div>
+
+        <!-- Categories -->
+        <div class="overflow-x-auto border-b bg-white">
+            <div class="flex p-4 space-x-2 whitespace-nowrap">
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-blue-600 bg-blue-600 text-white font-bold" onclick="filterCategory('전체')">전체</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-blue-300 text-blue-600 font-bold" onclick="filterCategory('소설')">소설</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-blue-300 text-blue-600 font-bold" onclick="filterCategory('에세이')">에세이</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-blue-300 text-blue-600 font-bold" onclick="filterCategory('자기계발')">자기계발</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-blue-300 text-blue-600 font-bold" onclick="filterCategory('경제경영')">경제경영</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-blue-300 text-blue-600 font-bold" onclick="filterCategory('만화')">만화</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-blue-300 text-blue-600 font-bold" onclick="filterCategory('아동')">아동</button>
+            </div>
+        </div>
+
+        <!-- Books Grid -->
+        <div id="booksContainer" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-4 bg-gray-50">
+            <!-- Books will be populated here -->
+        </div>
+
+        <!-- Cart Modal -->
+        <div id="cartModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+            <div class="absolute right-0 top-0 bottom-0 w-full md:w-96 bg-white">
+                <div class="yes24-blue p-4 flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-white">장바구니</h2>
+                    <button onclick="toggleCart()" class="text-2xl text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="cartItems" class="overflow-y-auto p-4" style="height: calc(100vh - 180px);">
+                    <!-- Cart items will be populated here -->
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
+                    <div class="flex justify-between mb-3">
+                        <span class="font-bold">총 금액</span>
+                        <span id="totalPrice" class="font-bold text-xl text-blue-600">0원</span>
+                    </div>
+                    <button class="w-full yes24-btn py-4 rounded-lg font-bold">
+                        구매하기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Book Detail Modal -->
+        <div id="bookModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
+            <div class="min-h-screen flex items-center justify-center p-4">
+                <div class="bg-white rounded-lg max-w-3xl w-full max-h-screen overflow-y-auto">
+                    <div class="yes24-blue p-4 flex justify-between items-center sticky top-0">
+                        <h2 class="text-xl font-bold text-white">도서 상세</h2>
+                        <button onclick="closeBookModal()" class="text-2xl text-white">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="bookDetail" class="p-6">
+                        <!-- Book detail will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const books = [
+            { id: 1, title: '불편한 편의점', author: '김호연', category: '소설', price: 13500, image: '📖', rating: 4.9, reviews: 12345, bestseller: true, rank: 1, ebook: true, pages: 352, publisher: '나무옆의자' },
+            { id: 2, title: '달러구트 꿈 백화점', author: '이미예', category: '소설', price: 13800, image: '📚', rating: 4.8, reviews: 8765, bestseller: true, rank: 2, ebook: true, pages: 300, publisher: '팩토리나인' },
+            { id: 3, title: '흔한남매 15', author: '흔한남매', category: '만화', price: 11500, image: '📕', rating: 4.9, reviews: 23456, bestseller: true, rank: 3, ebook: false, pages: 180, publisher: '미래엔' },
+            { id: 4, title: '트렌드 코리아 2025', author: '김난도', category: '경제경영', price: 18000, image: '📘', rating: 4.7, reviews: 5678, bestseller: true, rank: 5, ebook: true, pages: 456, publisher: '미래의창' },
+            { id: 5, title: '2025 큰별쌤 최태성 한국사', author: '최태성', category: '자기계발', price: 32000, image: '📙', rating: 4.9, reviews: 9876, bestseller: false, rank: null, ebook: false, pages: 678, publisher: '이투스북' },
+            { id: 6, title: '나는 나로 살기로 했다', author: '김수현', category: '에세이', price: 14400, image: '📔', rating: 4.8, reviews: 15678, bestseller: true, rank: 8, ebook: true, pages: 268, publisher: '마음의숲' },
+            { id: 7, title: '원씽 THE ONE THING', author: '게리 켈러', category: '자기계발', price: 13500, image: '📗', rating: 4.8, reviews: 11234, bestseller: false, rank: null, ebook: true, pages: 264, publisher: '비즈니스북스' },
+            { id: 8, title: '세이노의 가르침', author: '세이노', category: '자기계발', price: 9900, image: '📕', rating: 4.9, reviews: 34567, bestseller: true, rank: 4, ebook: false, pages: 558, publisher: '데이원' },
+            { id: 9, title: '파친코', author: '이민진', category: '소설', price: 16200, image: '📖', rating: 4.7, reviews: 8901, bestseller: false, rank: null, ebook: true, pages: 656, publisher: '인플루엔셜' },
+            { id: 10, title: '채식주의자', author: '한강', category: '소설', price: 12600, image: '📚', rating: 4.6, reviews: 7890, bestseller: false, rank: null, ebook: true, pages: 188, publisher: '창비' },
+            { id: 11, title: '김미경의 리부트', author: '김미경', category: '자기계발', price: 16200, image: '📘', rating: 4.7, reviews: 4567, bestseller: false, rank: null, ebook: true, pages: 316, publisher: '웅진지식하우스' },
+            { id: 12, title: '주식투자 무작정 따라하기', author: '윤재수', category: '경제경영', price: 18000, image: '📗', rating: 4.6, reviews: 6789, bestseller: false, rank: null, ebook: true, pages: 512, publisher: '길벗' },
+            { id: 13, title: '하얼빈', author: '김훈', category: '소설', price: 14400, image: '📕', rating: 4.8, reviews: 3456, bestseller: true, rank: 6, ebook: true, pages: 280, publisher: '문학동네' },
+            { id: 14, title: '아주 작은 습관의 힘', author: '제임스 클리어', category: '자기계발', price: 16200, image: '📙', rating: 4.8, reviews: 18901, bestseller: true, rank: 7, ebook: true, pages: 384, publisher: '비즈니스북스' },
+            { id: 15, title: '설민석의 한국사 대모험', author: '설민석', category: '아동', price: 11700, image: '📔', rating: 4.9, reviews: 12345, bestseller: false, rank: null, ebook: false, pages: 168, publisher: '아이휴먼' },
+            { id: 16, title: '코스모스', author: '칼 세이건', category: '소설', price: 18000, image: '📖', rating: 4.9, reviews: 5678, bestseller: false, rank: null, ebook: true, pages: 544, publisher: '사이언스북스' },
+            { id: 17, title: '시대예보: 핵개인의 시대', author: '송길영', category: '경제경영', price: 17100, image: '📚', rating: 4.7, reviews: 3890, bestseller: false, rank: null, ebook: true, pages: 352, publisher: '교보문고' },
+            { id: 18, title: '총 균 쇠', author: '재레드 다이아몬드', category: '소설', price: 23400, image: '📘', rating: 4.8, reviews: 8901, bestseller: false, rank: null, ebook: true, pages: 752, publisher: '문학사상' },
+            { id: 19, title: '완전한 행복', author: '정유정', category: '소설', price: 15300, image: '📗', rating: 4.6, reviews: 4567, bestseller: false, rank: null, ebook: true, pages: 428, publisher: '은행나무' },
+            { id: 20, title: '지적 대화를 위한 넓고 얕은 지식', author: '채사장', category: '자기계발', price: 16200, image: '📕', rating: 4.7, reviews: 23456, bestseller: false, rank: null, ebook: true, pages: 432, publisher: '한빛비즈' },
+            { id: 21, title: '이토록 공부가 재미있었던가', author: '박재희', category: '자기계발', price: 15300, image: '📙', rating: 4.6, reviews: 3456, bestseller: false, rank: null, ebook: true, pages: 312, publisher: '다산북스' },
+            { id: 22, title: '돈의 심리학', author: '모건 하우절', category: '경제경영', price: 18000, image: '📔', rating: 4.8, reviews: 7890, bestseller: true, rank: 9, ebook: true, pages: 360, publisher: '인플루엔셜' },
+            { id: 23, title: '작별인사', author: '김영하', category: '소설', price: 13500, image: '📖', rating: 4.7, reviews: 5678, bestseller: false, rank: null, ebook: true, pages: 264, publisher: '복복서가' },
+            { id: 24, title: '마흔에 읽는 쇼펜하우어', author: '강용수', category: '에세이', price: 15300, imageimage: '📚', rating: 4.6, reviews: 2345, bestseller: false, rank: null, ebook: true, pages: 312, publisher: '유노북스' },
+            { id: 25, title: '살인자의 기억법', author: '김영하', category: '소설', price: 12600, image: '📘', rating: 4.8, reviews: 6789, bestseller: false, rank: null, ebook: true, pages: 232, publisher: '문학동네' },
+            { id: 26, title: '나미야 잡화점의 기적', author: '히가시노 게이고', category: '소설', price: 13500, image: '📗', rating: 4.9, reviews: 19876, bestseller: false, rank: null, ebook: true, pages: 352, publisher: '현대문학' },
+            { id: 27, title: '미움받을 용기', author: '기시미 이치로', category: '자기계발', price: 14900, image: '📕', rating: 4.7, reviews: 28901, bestseller: true, rank: 10, ebook: true, pages: 336, publisher: '인플루엔셜' },
+            { id: 28, title: '흐르는 강물처럼', author: '파울로 코엘료', category: '에세이', price: 13500, image: '📙', rating: 4.8, reviews: 7890, bestseller: false, rank: null, ebook: true, pages: 288, publisher: '문학동네' },
+            { id: 29, title: '90년생이 온다', author: '임홍택', category: '경제경영', price: 14400, image: '📔', rating: 4.6, reviews: 11234, bestseller: false, rank: null, ebook: true, pages: 240, publisher: '웨일북' },
+            { id: 30, title: '부의 추월차선', author: 'MJ 드마코', category: '경제경영', price: 16200, image: '📖', rating: 4.8, reviews: 15678, bestseller: false, rank: null, ebook: true, pages: 532, publisher: '토트' },
+            { id: 31, title: '해리포터와 마법사의 돌', author: 'J.K. 롤링', category: '소설', price: 11700, image: '📚', rating: 4.9, reviews: 34567, bestseller: false, rank: null, ebook: true, pages: 328, publisher: '문학수첩' },
+            { id: 32, title: '드래곤볼 완전판 1', author: '토리야마 아키라', category: '만화', price: 9900, image: '📘', rating: 4.9, reviews: 23456, bestseller: false, rank: null, ebook: false, pages: 224, publisher: '서울문화사' },
+            { id: 33, title: '원피스 107', author: '오다 에이이치로', category: '만화', price: 4500, image: '📗', rating: 4.9, reviews: 45678, bestseller: false, rank: null, ebook: false, pages: 200, publisher: '대원씨아이' },
+            { id: 34, title: '아몬드', author: '손원평', category: '소설', price: 13500, image: '📕', rating: 4.8, reviews: 18901, bestseller: false, rank: null, ebook: true, pages: 268, publisher: '창비' },
+            { id: 35, title: '데일 카네기 인간관계론', author: '데일 카네기', category: '자기계발', price: 13500, image: '📙', rating: 4.7, reviews: 12345, bestseller: false, rank: null, ebook: true, pages: 416, publisher: '현대지성' },
+            { id: 36, title: '멈추지 마, 다시 꿈부터 써봐', author: '신용하', category: '자기계발', price: 14400, image: '📔', rating: 4.6, reviews: 8901, bestseller: false, rank: null, ebook: true, pages: 264, publisher: '다산북스' },
+            { id: 37, title: '언젠가 우리가 같은 별을 바라본다면', author: '차인표', category: '에세이', price: 15300, image: '📖', rating: 4.7, reviews: 5678, bestseller: false, rank: null, ebook: true, pages: 292, publisher: '위즈덤하우스' },
+            { id: 38, title: '어린 왕자', author: '생텍쥐페리', category: '소설', price: 10800, image: '📚', rating: 4.9, reviews: 34567, bestseller: false, rank: null, ebook: true, pages: 128, publisher: '문학동네' },
+            { id: 39, title: '돈의 속성', author: '김승호', category: '경제경영', price: 17100, image: '📘', rating: 4.8, reviews: 21234, bestseller: false, rank: null, ebook: true, pages: 408, publisher: '스노우폭스북스' },
+            { id: 40, title: '나는 매주 시체를 보러 간다', author: '유성호', category: '에세이', price: 15300, image: '📗', rating: 4.7, reviews: 6789, bestseller: false, rank: null, ebook: true, pages: 296, publisher: '21세기북스' },
+            { id: 41, title: '1984', author: '조지 오웰', category: '소설', price: 12600, image: '📕', rating: 4.8, reviews: 15678, bestseller: false, rank: null, ebook: true, pages: 416, publisher: '민음사' },
+            { id: 42, title: '죽고 싶지만 떡볶이는 먹고 싶어', author: '백세희', category: '에세이', price: 13800, image: '📙', rating: 4.7, reviews: 23456, bestseller: false, rank: null, ebook: true, pages: 264, publisher: '흔' },
+            { id: 43, title: '비폭력대화', author: '마셜 로젠버그', category: '자기계발', price: 16200, image: '📔', rating: 4.8, reviews: 11234, bestseller: false, rank: null, ebook: true, pages: 296, publisher: '한국NVC센터' },
+            { id: 44, title: '호모 데우스', author: '유발 하라리', category: '경제경영', price: 22500, image: '📖', rating: 4.7, reviews: 9876, bestseller: false, rank: null, ebook: true, pages: 616, publisher: '김영사' },
+            { id: 45, title: '데미안', author: '헤르만 헤세', category: '소설', price: 10800, image: '📚', rating: 4.8, reviews: 18901, bestseller: false, rank: null, ebook: true, pages: 208, publisher: '민음사' },
+        ];
+
+        let cart = JSON.parse(localStorage.getItem('yes24Cart') || '[]');
+        let currentCategory = '전체';
+
+        function init() {
+            renderBooks();
+            updateCartCount();
+        }
+
+        function renderBooks() {
+            const container = document.getElementById('booksContainer');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            const filtered = books.filter(b => {
+                const matchCategory = currentCategory === '전체' || b.category === currentCategory;
+                const matchSearch = b.title.toLowerCase().includes(searchTerm) ||
+                                  b.author.toLowerCase().includes(searchTerm);
+                return matchCategory && matchSearch;
+            });
+
+            container.innerHTML = filtered.map(book => `
+                <div class="book-card bg-white rounded-lg overflow-hidden shadow-md cursor-pointer" onclick="showBookDetail(${book.id})">
+                    ${book.bestseller ? `<div class="bestseller-badge text-white text-xs font-bold px-2 py-1 absolute m-2">베스트 ${book.rank}위</div>` : ''}
+                    <div class="aspect-[3/4] bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-6xl p-4">
+                        ${book.image}
+                        <div class="absolute bottom-2 right-2 text-xs bg-black bg-opacity-50 text-white px-2 py-1 rounded">
+                            ${book.pages}p
+                        </div>
+                    </div>
+                    <div class="p-3">
+                        <p class="text-sm font-bold line-clamp-2 h-10">${book.title}</p>
+                        <p class="text-xs text-gray-500 mt-1">${book.author}</p>
+                        <div class="flex items-center mt-2 text-xs text-gray-500">
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <span class="ml-1">${book.rating}</span>
+                            <span class="ml-2">(${book.reviews})</span>
+                        </div>
+                        <p class="text-lg font-bold mt-2 text-blue-600">${book.price.toLocaleString()}원</p>
+                        ${book.ebook ? '<span class="inline-block text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded mt-2">E-BOOK</span>' : ''}
+                        <button onclick="addToCart(${book.id}); event.stopPropagation();"
+                                class="w-full mt-3 yes24-btn py-2 rounded text-sm font-bold">
+                            <i class="fas fa-cart-plus"></i> 담기
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showBookDetail(bookId) {
+            const book = books.find(b => b.id === bookId);
+
+            document.getElementById('bookDetail').innerHTML = `
+                <div class="flex flex-col md:flex-row gap-6">
+                    <div class="md:w-1/3">
+                        <div class="aspect-[3/4] bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-9xl rounded-lg relative">
+                            ${book.bestseller ? `<div class="bestseller-badge text-white text-sm font-bold px-3 py-2 absolute top-4 left-4">베스트 ${book.rank}위</div>` : ''}
+                            ${book.image}
+                        </div>
+                    </div>
+                    <div class="md:w-2/3 space-y-4">
+                        <div>
+                            <h3 class="text-3xl font-bold">${book.title}</h3>
+                            <p class="text-lg text-gray-600 mt-2">${book.author} 저 | ${book.publisher}</p>
+                        </div>
+                        <div class="flex items-center text-sm">
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <span class="ml-1 font-bold">${book.rating}</span>
+                            <span class="ml-2 text-gray-500">리뷰 ${book.reviews}개</span>
+                        </div>
+                        <div class="border-t border-b py-4">
+                            <p class="text-4xl font-bold text-blue-600">${book.price.toLocaleString()}원</p>
+                            <p class="text-sm text-gray-500 mt-1">무료배송 (2만원 이상 구매시)</p>
+                        </div>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex">
+                                <span class="w-24 text-gray-600">출판사</span>
+                                <span class="font-semibold">${book.publisher}</span>
+                            </div>
+                            <div class="flex">
+                                <span class="w-24 text-gray-600">페이지</span>
+                                <span class="font-semibold">${book.pages}쪽</span>
+                            </div>
+                            <div class="flex">
+                                <span class="w-24 text-gray-600">카테고리</span>
+                                <span class="font-semibold">${book.category}</span>
+                            </div>
+                            ${book.ebook ? `
+                                <div class="flex items-center">
+                                    <span class="w-24 text-gray-600">E-BOOK</span>
+                                    <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">구매가능</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        ${book.bestseller ? `
+                            <div class="bg-yellow-50 p-4 rounded-lg border-2 border-yellow-200">
+                                <p class="text-yellow-800 font-bold">🏆 베스트셀러 ${book.rank}위</p>
+                                <p class="text-sm text-yellow-700 mt-1">지금 가장 많이 읽히는 책입니다!</p>
+                            </div>
+                        ` : ''}
+                        <div class="flex space-x-2">
+                            <button onclick="addToCart(${book.id})"
+                                    class="flex-1 yes24-btn py-4 rounded-lg font-bold text-lg">
+                                <i class="fas fa-shopping-cart"></i> 장바구니
+                            </button>
+                            <button class="flex-1 border-2 border-blue-600 text-blue-600 py-4 rounded-lg font-bold text-lg">
+                                <i class="fas fa-heart"></i> 찜하기
+                            </button>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="font-bold mb-2">📝 책 소개</h4>
+                            <p class="text-sm text-gray-700 leading-relaxed">
+                                ${getBookDescription(book.title)}
+                            </p>
+                        </div>
+                        <div class="border-t pt-4 space-y-2 text-sm text-gray-600">
+                            <p><strong>배송:</strong> 무료배송 (2만원 이상 구매시)</p>
+                            <p><strong>배송기간:</strong> 1-2일 소요 (영업일 기준)</p>
+                            <p><strong>반품/교환:</strong> 7일 이내 가능 (미개봉 상품에 한함)</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('bookModal').classList.remove('hidden');
+        }
+
+        function getBookDescription(title) {
+            const descriptions = {
+                '불편한 편의점': '독거노인과 청년이 작은 편의점에서 만나 서로의 상처를 보듬어가는 이야기. 따뜻한 감동을 전하는 베스트셀러 소설입니다.',
+                '달러구트 꿈 백화점': '꿈을 파는 신비한 백화점을 배경으로 펼쳐지는 환상적인 이야기. 독자들에게 잔잔한 위로를 선사합니다.',
+                '세이노의 가르침': '40년간 사업을 하며 얻은 인생의 지혜를 담은 책. 실질적인 조언과 깊은 통찰을 제공합니다.'
+            };
+            return descriptions[title] || '이 책은 독자들에게 깊은 감동과 영감을 전하는 작품입니다. 삶의 의미와 가치에 대해 생각해볼 수 있는 기회를 제공합니다.';
+        }
+
+        function closeBookModal() {
+            document.getElementById('bookModal').classList.add('hidden');
+        }
+
+        function filterCategory(category) {
+            currentCategory = category;
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('border-blue-600', 'bg-blue-600', 'text-white');
+                btn.classList.add('border-blue-300', 'text-blue-600');
+            });
+            event.target.classList.add('border-blue-600', 'bg-blue-600', 'text-white');
+            event.target.classList.remove('border-blue-300', 'text-blue-600');
+            renderBooks();
+        }
+
+        function filterBooks() {
+            renderBooks();
+        }
+
+        function addToCart(bookId) {
+            const existingItem = cart.find(item => item.id === bookId);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ id: bookId, quantity: 1 });
+            }
+            localStorage.setItem('yes24Cart', JSON.stringify(cart));
+            updateCartCount();
+            renderCart();
+        }
+
+        function toggleCart() {
+            document.getElementById('cartModal').classList.toggle('hidden');
+            renderCart();
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cartItems');
+            if (cart.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 py-10">장바구니가 비어있습니다</p>';
+                document.getElementById('totalPrice').textContent = '0원';
+                return;
+            }
+
+            let total = 0;
+            container.innerHTML = cart.map(item => {
+                const book = books.find(b => b.id === item.id);
+                total += book.price * item.quantity;
+                return `
+                    <div class="border-b pb-4 mb-4">
+                        <div class="flex items-start">
+                            <div class="w-16 h-20 bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-2xl mr-3 rounded">
+                                ${book.image}
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm font-bold line-clamp-2">${book.title}</p>
+                                <p class="text-xs text-gray-500">${book.author}</p>
+                                <p class="text-sm font-bold mt-1 text-blue-600">${book.price.toLocaleString()}원</p>
+                                <div class="flex items-center mt-2">
+                                    <button onclick="updateCartQuantity(${book.id}, -1)" class="border px-2 py-1 text-sm rounded">-</button>
+                                    <span class="px-3 font-bold">${item.quantity}</span>
+                                    <button onclick="updateCartQuantity(${book.id}, 1)" class="border px-2 py-1 text-sm rounded">+</button>
+                                    <button onclick="removeFromCart(${book.id})" class="ml-auto text-blue-600 text-sm">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('totalPrice').textContent = total.toLocaleString() + '원';
+        }
+
+        function updateCartQuantity(bookId, change) {
+            const item = cart.find(i => i.id === bookId);
+            if (item) {
+                item.quantity += change;
+                if (item.quantity <= 0) {
+                    removeFromCart(bookId);
+                } else {
+                    localStorage.setItem('yes24Cart', JSON.stringify(cart));
+                    updateCartCount();
+                    renderCart();
+                }
+            }
+        }
+
+        function removeFromCart(bookId) {
+            cart = cart.filter(item => item.id !== bookId);
+            localStorage.setItem('yes24Cart', JSON.stringify(cart));
+            updateCartCount();
+            renderCart();
+        }
+
+        function updateCartCount() {
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cartCount').textContent = count;
+        }
+
+        init();
+    </script>
+</body>
+</html>

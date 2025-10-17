@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마켓컬리 - 새벽배송, 전국배송</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+        }
+        .kurly-purple {
+            background-color: #5F0080;
+        }
+        .kurly-btn {
+            background-color: #5F0080;
+            color: white;
+        }
+        .kurly-btn:hover {
+            background-color: #7C1BA1;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            transition: all 0.3s;
+        }
+        .dawn-badge {
+            background: linear-gradient(135deg, #5F0080 0%, #9B59B6 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="max-w-6xl mx-auto bg-white min-h-screen">
+        <!-- Header -->
+        <div class="kurly-purple text-white p-4 sticky top-0 z-50">
+            <div class="flex items-center justify-between">
+                <button onclick="window.location.href='../'" class="text-2xl">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1 class="text-2xl font-bold">마켓컬리</h1>
+                <div class="flex space-x-4">
+                    <button onclick="toggleCart()" class="relative">
+                        <i class="fas fa-shopping-cart text-xl"></i>
+                        <span id="cartCount" class="absolute -top-2 -right-2 bg-white text-purple-700 text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">0</span>
+                    </button>
+                    <button>
+                        <i class="fas fa-user text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dawn Delivery Banner -->
+        <div class="dawn-badge text-white p-4 text-center">
+            <p class="text-lg font-bold">⏰ 샛별배송 ⏰</p>
+            <p class="text-sm">밤 11시 전 주문시 내일 아침 7시 전 도착</p>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="p-4 bg-white border-b">
+            <div class="flex items-center bg-gray-100 rounded-lg px-4 py-3">
+                <i class="fas fa-search text-gray-400 mr-3"></i>
+                <input type="text" placeholder="검색어를 입력해주세요" class="bg-transparent flex-1 outline-none" id="searchInput" oninput="filterProducts()">
+            </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="overflow-x-auto border-b bg-white">
+            <div class="flex p-4 space-x-2 whitespace-nowrap">
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-purple-700 bg-purple-700 text-white font-bold" onclick="filterCategory('전체')">전체</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-purple-300 text-purple-700 font-bold" onclick="filterCategory('채소')">채소</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-purple-300 text-purple-700 font-bold" onclick="filterCategory('과일')">과일</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-purple-300 text-purple-700 font-bold" onclick="filterCategory('육류')">육류</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-purple-300 text-purple-700 font-bold" onclick="filterCategory('해산물')">해산물</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-purple-300 text-purple-700 font-bold" onclick="filterCategory('유제품')">유제품</button>
+                <button class="category-btn px-4 py-2 rounded-full border-2 border-purple-300 text-purple-700 font-bold" onclick="filterCategory('베이커리')">베이커리</button>
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div id="productsContainer" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 bg-gray-50">
+            <!-- Products will be populated here -->
+        </div>
+
+        <!-- Cart Modal -->
+        <div id="cartModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+            <div class="absolute right-0 top-0 bottom-0 w-full md:w-96 bg-white">
+                <div class="kurly-purple p-4 flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-white">장바구니</h2>
+                    <button onclick="toggleCart()" class="text-2xl text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="cartItems" class="overflow-y-auto p-4" style="height: calc(100vh - 220px);">
+                    <!-- Cart items will be populated here -->
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
+                    <div class="mb-3 space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span>상품금액</span>
+                            <span id="subtotal">0원</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span>배송비</span>
+                            <span id="deliveryFee">3,000원</span>
+                        </div>
+                        <div class="flex justify-between font-bold text-lg border-t pt-2">
+                            <span>총 금액</span>
+                            <span id="totalPrice" class="text-purple-700">0원</span>
+                        </div>
+                    </div>
+                    <button class="w-full kurly-btn py-4 rounded-lg font-bold">
+                        주문하기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Detail Modal -->
+        <div id="productModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
+            <div class="min-h-screen flex items-center justify-center p-4">
+                <div class="bg-white rounded-lg max-w-2xl w-full max-h-screen overflow-y-auto">
+                    <div class="kurly-purple p-4 flex justify-between items-center sticky top-0">
+                        <h2 class="text-xl font-bold text-white">상품 상세</h2>
+                        <button onclick="closeProductModal()" class="text-2xl text-white">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="productDetail" class="p-6">
+                        <!-- Product detail will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const products = [
+            { id: 1, name: 'GAP 인증 유기농 샐러드', category: '채소', price: 4900, image: '🥗', rating: 4.9, reviews: 2345, fresh: true, dawn: true, origin: '국내산' },
+            { id: 2, name: '제주 무농약 감귤', category: '과일', price: 12900, image: '🍊', rating: 4.8, reviews: 5678, fresh: true, dawn: true, origin: '제주' },
+            { id: 3, name: '국내산 한우 등심 1등급', category: '육류', price: 38900, image: '🥩', rating: 4.9, reviews: 1234, fresh: true, dawn: true, origin: '국내산' },
+            { id: 4, name: '제주 활전복', category: '해산물', price: 29900, image: '🐚', rating: 4.7, reviews: 890, fresh: true, dawn: true, origin: '제주' },
+            { id: 5, name: '서울우유 1000ml', category: '유제품', price: 3200, image: '🥛', rating: 4.8, reviews: 8765, fresh: false, dawn: true, origin: '국내산' },
+            { id: 6, name: '유기농 방울토마토', category: '채소', price: 8900, image: '🍅', rating: 4.7, reviews: 3456, fresh: true, dawn: true, origin: '국내산' },
+            { id: 7, name: '친환경 청경채', category: '채소', price: 3500, image: '🥬', rating: 4.6, reviews: 1234, fresh: true, dawn: true, origin: '국내산' },
+            { id: 8, name: '애플망고 2입', category: '과일', price: 19900, image: '🥭', rating: 4.8, reviews: 2345, fresh: true, dawn: true, origin: '페루산' },
+            { id: 9, name: '국내산 돼지고기 삼겹살', category: '육류', price: 15900, image: '🥓', rating: 4.8, reviews: 4567, fresh: true, dawn: true, origin: '국내산' },
+            { id: 10, name: '손질 새우살 300g', category: '해산물', price: 12900, image: '🦐', rating: 4.6, reviews: 2890, fresh: true, dawn: true, origin: '베트남산' },
+            { id: 11, name: '상하목장 유기농 우유', category: '유제품', price: 4500, image: '🐄', rating: 4.9, reviews: 6789, fresh: false, dawn: true, origin: '국내산' },
+            { id: 12, name: '파리바게뜨 식빵', category: '베이커리', price: 4200, image: '🍞', rating: 4.7, reviews: 3456, fresh: false, dawn: true, origin: '국내산' },
+            { id: 13, name: '친환경 시금치', category: '채소', price: 2900, image: '🥬', rating: 4.5, reviews: 1890, fresh: true, dawn: true, origin: '국내산' },
+            { id: 14, name: '완숙 아보카도 3입', category: '과일', price: 8900, image: '🥑', rating: 4.7, reviews: 2345, fresh: true, dawn: true, origin: '페루산' },
+            { id: 15, name: '국내산 닭가슴살', category: '육류', price: 9900, image: '🍗', rating: 4.8, reviews: 5678, fresh: true, dawn: true, origin: '국내산' },
+            { id: 16, name: '제주 은갈치', category: '해산물', price: 32900, image: '🐟', rating: 4.9, reviews: 1234, fresh: true, dawn: true, origin: '제주' },
+            { id: 17, name: '그릭 요거트', category: '유제품', price: 5900, image: '🥣', rating: 4.8, reviews: 3456, fresh: false, dawn: true, origin: '국내산' },
+            { id: 18, name: '크루아상 4입', category: '베이커리', price: 7900, image: '🥐', rating: 4.6, reviews: 2345, fresh: false, dawn: true, origin: '국내산' },
+            { id: 19, name: 'GAP 파프리카', category: '채소', price: 6900, image: '🫑', rating: 4.7, reviews: 1567, fresh: true, dawn: true, origin: '국내산' },
+            { id: 20, name: '칠레산 블루베리', category: '과일', price: 11900, image: '🫐', rating: 4.6, reviews: 2890, fresh: true, dawn: true, origin: '칠레산' },
+            { id: 21, name: '국내산 한우 불고기용', category: '육류', price: 28900, image: '🥩', rating: 4.9, reviews: 3456, fresh: true, dawn: true, origin: '국내산' },
+            { id: 22, name: '광어회 300g', category: '해산물', price: 19900, image: '🐡', rating: 4.8, reviews: 1890, fresh: true, dawn: true, origin: '국내산' },
+            { id: 23, name: '매일유업 바나나맛 우유', category: '유제품', price: 2800, image: '🍌', rating: 4.7, reviews: 9876, fresh: false, dawn: true, origin: '국내산' },
+            { id: 24, name: '소금빵 6입', category: '베이커리', price: 8900, image: '🥖', rating: 4.8, reviews: 4567, fresh: false, dawn: true, origin: '국내산' },
+            { id: 25, name: '유기농 브로콜리', category: '채소', price: 4500, image: '🥦', rating: 4.6, reviews: 2345, fresh: true, dawn: true, origin: '국내산' },
+            { id: 26, name: '샤인머스캣', category: '과일', price: 24900, image: '🍇', rating: 4.9, reviews: 3456, fresh: true, dawn: true, origin: '국내산' },
+            { id: 27, name: '국내산 계란 30구', category: '유제품', price: 8900, image: '🥚', rating: 4.8, reviews: 7890, fresh: true, dawn: true, origin: '국내산' },
+            { id: 28, name: '베이글 모음 6입', category: '베이커리', price: 9900, image: '🥯', rating: 4.7, reviews: 2345, fresh: false, dawn: true, origin: '국내산' },
+            { id: 29, name: '친환경 당근', category: '채소', price: 3200, image: '🥕', rating: 4.5, reviews: 1234, fresh: true, dawn: true, origin: '국내산' },
+            { id: 30, name: '캠벨 포도', category: '과일', price: 9900, image: '🍇', rating: 4.6, reviews: 1890, fresh: true, dawn: true, origin: '국내산' },
+            { id: 31, name: '국내산 돼지 앞다리', category: '육류', price: 12900, image: '🥓', rating: 4.7, reviews: 2345, fresh: true, dawn: true, origin: '국내산' },
+            { id: 32, name: '생연어 회 200g', category: '해산물', price: 16900, image: '🐟', rating: 4.8, reviews: 3456, fresh: true, dawn: true, origin: '노르웨이산' },
+            { id: 33, name: '떠먹는 요거트 500g', category: '유제품', price: 4200, image: '🥛', rating: 4.7, reviews: 5678, fresh: false, dawn: true, origin: '국내산' },
+            { id: 34, name: '치아바타 빵', category: '베이커리', price: 5900, image: '🥖', rating: 4.6, reviews: 1567, fresh: false, dawn: true, origin: '국내산' },
+            { id: 35, name: '국내산 양파 3입', category: '채소', price: 4500, image: '🧅', rating: 4.5, reviews: 2890, fresh: true, dawn: true, origin: '국내산' },
+            { id: 36, name: '청송 사과', category: '과일', price: 14900, image: '🍎', rating: 4.8, reviews: 4567, fresh: true, dawn: true, origin: '국내산' },
+            { id: 37, name: '목우촌 소시지', category: '육류', price: 7900, image: '🌭', rating: 4.6, reviews: 3456, fresh: false, dawn: true, origin: '국내산' },
+            { id: 38, name: '냉동 흰다리 새우', category: '해산물', price: 18900, image: '🦐', rating: 4.7, reviews: 2345, fresh: false, dawn: true, origin: '베트남산' },
+        ];
+
+        let cart = JSON.parse(localStorage.getItem('kurlyCart') || '[]');
+        let currentCategory = '전체';
+
+        function init() {
+            renderProducts();
+            updateCartCount();
+        }
+
+        function renderProducts() {
+            const container = document.getElementById('productsContainer');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            const filtered = products.filter(p => {
+                const matchCategory = currentCategory === '전체' || p.category === currentCategory;
+                const matchSearch = p.name.toLowerCase().includes(searchTerm);
+                return matchCategory && matchSearch;
+            });
+
+            container.innerHTML = filtered.map(product => `
+                <div class="product-card bg-white rounded-lg overflow-hidden shadow-md cursor-pointer" onclick="showProductDetail(${product.id})">
+                    ${product.dawn ? '<div class="dawn-badge text-white text-xs font-bold px-2 py-1 absolute m-2">샛별배송</div>' : ''}
+                    <div class="aspect-square bg-gray-50 flex items-center justify-center text-6xl">
+                        ${product.image}
+                    </div>
+                    <div class="p-3">
+                        <p class="text-sm font-semibold line-clamp-2">${product.name}</p>
+                        <div class="flex items-center mt-2 text-xs text-gray-500">
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <span class="ml-1">${product.rating}</span>
+                            <span class="ml-2">(${product.reviews})</span>
+                        </div>
+                        <p class="text-lg font-bold mt-2">${product.price.toLocaleString()}원</p>
+                        ${product.fresh ? '<span class="inline-block text-xs bg-green-100 text-green-700 px-2 py-1 rounded mt-2">신선보장</span>' : ''}
+                        <button onclick="addToCart(${product.id}); event.stopPropagation();"
+                                class="w-full mt-3 kurly-btn py-2 rounded text-sm font-bold">
+                            <i class="fas fa-cart-plus"></i> 담기
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showProductDetail(productId) {
+            const product = products.find(p => p.id === productId);
+
+            document.getElementById('productDetail').innerHTML = `
+                <div class="aspect-square bg-gray-50 flex items-center justify-center text-9xl mb-6 relative">
+                    ${product.dawn ? '<div class="dawn-badge text-white text-sm font-bold px-3 py-2 absolute top-4 left-4">샛별배송</div>' : ''}
+                    ${product.image}
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <h3 class="text-2xl font-bold">${product.name}</h3>
+                        <p class="text-sm text-gray-500 mt-1">${product.origin}</p>
+                    </div>
+                    <div class="flex items-center text-sm">
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <span class="ml-1 font-bold">${product.rating}</span>
+                        <span class="ml-2 text-gray-500">리뷰 ${product.reviews}개</span>
+                    </div>
+                    <p class="text-3xl font-bold text-purple-700">${product.price.toLocaleString()}원</p>
+                    ${product.fresh ? `
+                        <div class="bg-green-50 p-3 rounded-lg border-2 border-green-200">
+                            <p class="text-green-700 font-bold">✓ 신선보장</p>
+                            <p class="text-sm text-green-600 mt-1">100% 신선한 상품으로 배송됩니다</p>
+                        </div>
+                    ` : ''}
+                    ${product.dawn ? `
+                        <div class="bg-purple-50 p-3 rounded-lg border-2 border-purple-200">
+                            <p class="text-purple-700 font-bold">⏰ 샛별배송 가능</p>
+                            <p class="text-sm text-purple-600 mt-1">밤 11시 전 주문시 내일 아침 7시 전 도착</p>
+                        </div>
+                    ` : ''}
+                    <div>
+                        <label class="block font-bold mb-2">수량</label>
+                        <div class="flex items-center">
+                            <button class="border px-4 py-2 rounded-l" onclick="decreaseQty()">-</button>
+                            <input type="number" id="quantity" value="1" min="1" class="border-t border-b w-16 text-center py-2" readonly>
+                            <button class="border px-4 py-2 rounded-r" onclick="increaseQty()">+</button>
+                        </div>
+                    </div>
+                    <button onclick="addToCartWithQty(${product.id})"
+                            class="w-full kurly-btn py-4 rounded-lg font-bold text-lg">
+                        장바구니 담기
+                    </button>
+                    <div class="border-t pt-4 space-y-2 text-sm">
+                        <p><strong>원산지:</strong> ${product.origin}</p>
+                        <p><strong>배송:</strong> ${product.dawn ? '샛별배송 (밤 11시 전 주문)' : '일반배송'}</p>
+                        <p><strong>배송비:</strong> 3,000원 (40,000원 이상 무료)</p>
+                        <p><strong>안내사항:</strong> 신선식품 특성상 배송 후 교환/반품 불가</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.add('hidden');
+        }
+
+        function increaseQty() {
+            const input = document.getElementById('quantity');
+            input.value = parseInt(input.value) + 1;
+        }
+
+        function decreaseQty() {
+            const input = document.getElementById('quantity');
+            if (parseInt(input.value) > 1) {
+                input.value = parseInt(input.value) - 1;
+            }
+        }
+
+        function filterCategory(category) {
+            currentCategory = category;
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('border-purple-700', 'bg-purple-700', 'text-white');
+                btn.classList.add('border-purple-300', 'text-purple-700');
+            });
+            event.target.classList.add('border-purple-700', 'bg-purple-700', 'text-white');
+            event.target.classList.remove('border-purple-300', 'text-purple-700');
+            renderProducts();
+        }
+
+        function filterProducts() {
+            renderProducts();
+        }
+
+        function addToCart(productId) {
+            const existingItem = cart.find(item => item.id === productId);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ id: productId, quantity: 1 });
+            }
+            localStorage.setItem('kurlyCart', JSON.stringify(cart));
+            updateCartCount();
+            renderCart();
+        }
+
+        function addToCartWithQty(productId) {
+            const qty = parseInt(document.getElementById('quantity').value);
+            const existingItem = cart.find(item => item.id === productId);
+            if (existingItem) {
+                existingItem.quantity += qty;
+            } else {
+                cart.push({ id: productId, quantity: qty });
+            }
+            localStorage.setItem('kurlyCart', JSON.stringify(cart));
+            updateCartCount();
+            closeProductModal();
+            alert('장바구니에 담았습니다!');
+        }
+
+        function toggleCart() {
+            document.getElementById('cartModal').classList.toggle('hidden');
+            renderCart();
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cartItems');
+            if (cart.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 py-10">장바구니가 비어있습니다</p>';
+                document.getElementById('subtotal').textContent = '0원';
+                document.getElementById('totalPrice').textContent = '0원';
+                return;
+            }
+
+            let subtotal = 0;
+            container.innerHTML = cart.map(item => {
+                const product = products.find(p => p.id === item.id);
+                subtotal += product.price * item.quantity;
+                return `
+                    <div class="border-b pb-4 mb-4">
+                        <div class="flex items-center">
+                            <div class="w-20 h-20 bg-gray-50 flex items-center justify-center text-3xl mr-3 rounded">
+                                ${product.image}
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm font-semibold">${product.name}</p>
+                                ${product.dawn ? '<p class="text-xs text-purple-600 font-bold">샛별배송</p>' : ''}
+                                <p class="text-sm font-bold mt-1 text-purple-700">${product.price.toLocaleString()}원</p>
+                                <div class="flex items-center mt-2">
+                                    <button onclick="updateCartQuantity(${product.id}, -1)" class="border px-2 py-1 text-sm rounded">-</button>
+                                    <span class="px-3 font-bold">${item.quantity}</span>
+                                    <button onclick="updateCartQuantity(${product.id}, 1)" class="border px-2 py-1 text-sm rounded">+</button>
+                                    <button onclick="removeFromCart(${product.id})" class="ml-auto text-purple-600 text-sm">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const deliveryFee = subtotal >= 40000 ? 0 : 3000;
+            const total = subtotal + deliveryFee;
+
+            document.getElementById('subtotal').textContent = subtotal.toLocaleString() + '원';
+            document.getElementById('deliveryFee').textContent = deliveryFee === 0 ? '무료' : deliveryFee.toLocaleString() + '원';
+            document.getElementById('totalPrice').textContent = total.toLocaleString() + '원';
+        }
+
+        function updateCartQuantity(productId, change) {
+            const item = cart.find(i => i.id === productId);
+            if (item) {
+                item.quantity += change;
+                if (item.quantity <= 0) {
+                    removeFromCart(productId);
+                } else {
+                    localStorage.setItem('kurlyCart', JSON.stringify(cart));
+                    updateCartCount();
+                    renderCart();
+                }
+            }
+        }
+
+        function removeFromCart(productId) {
+            cart = cart.filter(item => item.id !== productId);
+            localStorage.setItem('kurlyCart', JSON.stringify(cart));
+            updateCartCount();
+            renderCart();
+        }
+
+        function updateCartCount() {
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cartCount').textContent = count;
+        }
+
+        init();
+    </script>
+</body>
+</html>

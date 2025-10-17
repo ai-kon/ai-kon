@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>무신사 - 대한민국 No.1 패션 플랫폼</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+        }
+        .product-card:hover {
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transform: translateY(-5px);
+            transition: all 0.3s;
+        }
+        .category-btn.active {
+            background-color: #000;
+            color: #fff;
+        }
+    </style>
+</head>
+<body class="bg-white">
+    <div class="max-w-6xl mx-auto bg-white min-h-screen">
+        <!-- Header -->
+        <div class="bg-black text-white p-4 sticky top-0 z-50">
+            <div class="flex items-center justify-between">
+                <button onclick="window.location.href='../'" class="text-2xl">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1 class="text-2xl font-bold">MUSINSA</h1>
+                <div class="flex space-x-4">
+                    <button onclick="toggleCart()" class="relative">
+                        <i class="fas fa-shopping-bag text-xl"></i>
+                        <span id="cartCount" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
+                    </button>
+                    <button onclick="toggleWishlist()">
+                        <i class="fas fa-heart text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="p-4 border-b">
+            <div class="flex items-center bg-gray-100 rounded-lg px-4 py-3">
+                <i class="fas fa-search text-gray-400 mr-3"></i>
+                <input type="text" placeholder="검색어를 입력하세요" class="bg-transparent flex-1 outline-none" id="searchInput" oninput="filterProducts()">
+            </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="overflow-x-auto border-b">
+            <div class="flex p-4 space-x-2 whitespace-nowrap">
+                <button class="category-btn active px-4 py-2 rounded-full border" onclick="filterCategory('전체')">전체</button>
+                <button class="category-btn px-4 py-2 rounded-full border" onclick="filterCategory('상의')">상의</button>
+                <button class="category-btn px-4 py-2 rounded-full border" onclick="filterCategory('하의')">하의</button>
+                <button class="category-btn px-4 py-2 rounded-full border" onclick="filterCategory('아우터')">아우터</button>
+                <button class="category-btn px-4 py-2 rounded-full border" onclick="filterCategory('신발')">신발</button>
+                <button class="category-btn px-4 py-2 rounded-full border" onclick="filterCategory('가방')">가방</button>
+                <button class="category-btn px-4 py-2 rounded-full border" onclick="filterCategory('액세서리')">액세서리</button>
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div id="productsContainer" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+            <!-- Products will be populated here -->
+        </div>
+
+        <!-- Cart Modal -->
+        <div id="cartModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+            <div class="absolute right-0 top-0 bottom-0 w-full md:w-96 bg-white">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h2 class="text-xl font-bold">장바구니</h2>
+                    <button onclick="toggleCart()" class="text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="cartItems" class="overflow-y-auto p-4" style="height: calc(100vh - 180px);">
+                    <!-- Cart items will be populated here -->
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
+                    <div class="flex justify-between mb-3">
+                        <span class="font-bold">총 금액</span>
+                        <span id="totalPrice" class="font-bold text-xl">0원</span>
+                    </div>
+                    <button class="w-full bg-black text-white py-4 rounded-lg font-bold">
+                        구매하기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wishlist Modal -->
+        <div id="wishlistModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+            <div class="absolute right-0 top-0 bottom-0 w-full md:w-96 bg-white">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h2 class="text-xl font-bold">찜 목록</h2>
+                    <button onclick="toggleWishlist()" class="text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="wishlistItems" class="overflow-y-auto p-4" style="height: calc(100vh - 80px);">
+                    <!-- Wishlist items will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Detail Modal -->
+        <div id="productModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
+            <div class="min-h-screen flex items-center justify-center p-4">
+                <div class="bg-white rounded-lg max-w-2xl w-full">
+                    <div class="p-4 border-b flex justify-between items-center">
+                        <h2 class="text-xl font-bold">상품 상세</h2>
+                        <button onclick="closeProductModal()" class="text-2xl">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="productDetail" class="p-6">
+                        <!-- Product detail will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const products = [
+            { id: 1, brand: '나이키', name: '에어포스 1 화이트', category: '신발', price: 129000, image: '👟', rating: 4.8, reviews: 1523, sizes: ['250', '255', '260', '265', '270', '275', '280'] },
+            { id: 2, brand: '아디다스', name: '슈퍼스타 클래식', category: '신발', price: 119000, image: '👟', rating: 4.7, reviews: 892, sizes: ['250', '255', '260', '265', '270', '275'] },
+            { id: 3, brand: '디스커버리', name: '오버핏 후드 티셔츠', category: '상의', price: 39000, image: '👕', rating: 4.5, reviews: 456, sizes: ['S', 'M', 'L', 'XL'] },
+            { id: 4, brand: 'MLB', name: '뉴욕 양키스 볼캡', category: '액세서리', price: 49000, image: '🧢', rating: 4.9, reviews: 2341, sizes: ['FREE'] },
+            { id: 5, brand: '노스페이스', name: '눕시 패딩 자켓', category: '아우터', price: 389000, image: '🧥', rating: 4.9, reviews: 678, sizes: ['S', 'M', 'L', 'XL'] },
+            { id: 6, brand: '리바이스', name: '501 오리지널 핏 청바지', category: '하의', price: 129000, image: '👖', rating: 4.6, reviews: 1234, sizes: ['28', '30', '32', '34', '36'] },
+            { id: 7, brand: '챔피온', name: '리버스위브 후드집업', category: '상의', price: 89000, image: '👕', rating: 4.7, reviews: 567, sizes: ['M', 'L', 'XL'] },
+            { id: 8, brand: '반스', name: '올드스쿨 블랙화이트', category: '신발', price: 79000, image: '👟', rating: 4.8, reviews: 2156, sizes: ['250', '255', '260', '265', '270'] },
+            { id: 9, brand: '카르하트', name: '디트로이트 자켓', category: '아우터', price: 259000, image: '🧥', rating: 4.8, reviews: 432, sizes: ['M', 'L', 'XL'] },
+            { id: 10, brand: '뉴발란스', name: '992 그레이', category: '신발', price: 259000, image: '👟', rating: 4.9, reviews: 1823, sizes: ['250', '255', '260', '265', '270', '275', '280'] },
+            { id: 11, brand: '타미힐피거', name: '로고 스웨터', category: '상의', price: 149000, image: '👕', rating: 4.5, reviews: 234, sizes: ['S', 'M', 'L', 'XL'] },
+            { id: 12, brand: '닥터마틴', name: '1460 8홀 부츠', category: '신발', price: 229000, image: '🥾', rating: 4.7, reviews: 987, sizes: ['250', '255', '260', '265', '270'] },
+            { id: 13, brand: '폴로 랄프로렌', name: '옥스포드 셔츠', category: '상의', price: 119000, image: '👔', rating: 4.6, reviews: 456, sizes: ['S', 'M', 'L', 'XL'] },
+            { id: 14, brand: '빈폴', name: '울 블렌드 코트', category: '아우터', price: 589000, image: '🧥', rating: 4.8, reviews: 234, sizes: ['M', 'L', 'XL'] },
+            { id: 15, brand: '유니클로', name: '히트텍 긴팔티', category: '상의', price: 29000, image: '👕', rating: 4.4, reviews: 3456, sizes: ['S', 'M', 'L', 'XL', 'XXL'] },
+            { id: 16, brand: '구찌', name: '레더 벨트', category: '액세서리', price: 459000, image: '🎀', rating: 4.9, reviews: 123, sizes: ['85', '90', '95', '100'] },
+            { id: 17, brand: '지오다노', name: '슬림핏 치노팬츠', category: '하의', price: 59000, image: '👖', rating: 4.5, reviews: 789, sizes: ['28', '30', '32', '34', '36'] },
+            { id: 18, brand: '에잇세컨즈', name: '베이직 반팔티', category: '상의', price: 19900, image: '👕', rating: 4.3, reviews: 2345, sizes: ['S', 'M', 'L', 'XL'] },
+            { id: 19, brand: '휠라', name: '디스럽터2 화이트', category: '신발', price: 89000, image: '👟', rating: 4.6, reviews: 1567, sizes: ['250', '255', '260', '265', '270'] },
+            { id: 20, brand: '컨버스', name: '척테일러 올스타', category: '신발', price: 65000, image: '👟', rating: 4.7, reviews: 2890, sizes: ['250', '255', '260', '265', '270', '275'] },
+            { id: 21, brand: '푸마', name: '스웨이드 클래식', category: '신발', price: 99000, image: '👟', rating: 4.6, reviews: 678, sizes: ['250', '255', '260', '265', '270'] },
+            { id: 22, brand: '스투시', name: '베이직 로고 후드티', category: '상의', price: 159000, image: '👕', rating: 4.8, reviews: 456, sizes: ['M', 'L', 'XL'] },
+            { id: 23, brand: '아크테릭스', name: '베타 LT 자켓', category: '아우터', price: 589000, image: '🧥', rating: 4.9, reviews: 234, sizes: ['S', 'M', 'L', 'XL'] },
+            { id: 24, brand: '르꼬끄', name: '트레이닝 팬츠', category: '하의', price: 79000, image: '👖', rating: 4.5, reviews: 567, sizes: ['S', 'M', 'L', 'XL'] },
+            { id: 25, brand: '뮤이', name: '미니멀 크로스백', category: '가방', price: 129000, image: '👜', rating: 4.7, reviews: 345, sizes: ['FREE'] },
+            { id: 26, brand: 'MCM', name: '백팩 스몰', category: '가방', price: 1290000, image: '🎒', rating: 4.9, reviews: 123, sizes: ['FREE'] },
+            { id: 27, brand: '마르디메크르디', name: '플로우 백팩', category: '가방', price: 89000, image: '🎒', rating: 4.6, reviews: 890, sizes: ['FREE'] },
+            { id: 28, brand: '앤더슨벨', name: '스카치 체크 셔츠', category: '상의', price: 109000, image: '👔', rating: 4.7, reviews: 234, sizes: ['M', 'L', 'XL'] },
+            { id: 29, brand: '커버낫', name: '아치 로고 맨투맨', category: '상의', price: 79000, image: '👕', rating: 4.6, reviews: 456, sizes: ['S', 'M', 'L', 'XL'] },
+            { id: 30, brand: '우영미', name: '울 슬랙스', category: '하의', price: 289000, image: '👖', rating: 4.8, reviews: 178, sizes: ['28', '30', '32', '34'] },
+            { id: 31, brand: '아미', name: '하트 로고 가디건', category: '상의', price: 359000, image: '👕', rating: 4.8, reviews: 234, sizes: ['S', 'M', 'L'] },
+            { id: 32, brand: '메종키츠네', name: '폭스 패치 티셔츠', category: '상의', price: 129000, image: '👕', rating: 4.7, reviews: 345, sizes: ['S', 'M', 'L', 'XL'] },
+            { id: 33, brand: '아페쎄', name: '데님 트러커 자켓', category: '아우터', price: 329000, image: '🧥', rating: 4.7, reviews: 189, sizes: ['S', 'M', 'L', 'XL'] },
+            { id: 34, brand: '네이머클로딩', name: '시그니처 볼캡', category: '액세서리', price: 39000, image: '🧢', rating: 4.5, reviews: 678, sizes: ['FREE'] },
+            { id: 35, brand: '제네럴아이디어', name: '레더 스니커즈', category: '신발', price: 189000, image: '👟', rating: 4.6, reviews: 234, sizes: ['250', '255', '260', '265', '270'] },
+            { id: 36, brand: '디스이즈네버댓', name: '로고 후드집업', category: '상의', price: 119000, image: '👕', rating: 4.7, reviews: 456, sizes: ['M', 'L', 'XL'] },
+            { id: 37, brand: '마뗑킴', name: '오버사이즈 셔츠', category: '상의', price: 229000, image: '👔', rating: 4.8, reviews: 123, sizes: ['M', 'L'] },
+            { id: 38, brand: '시그니처', name: '캐시미어 머플러', category: '액세서리', price: 159000, image: '🧣', rating: 4.9, reviews: 234, sizes: ['FREE'] },
+        ];
+
+        let cart = JSON.parse(localStorage.getItem('musinsaCart') || '[]');
+        let wishlist = JSON.parse(localStorage.getItem('musinsaWishlist') || '[]');
+        let currentCategory = '전체';
+
+        function init() {
+            renderProducts();
+            updateCartCount();
+        }
+
+        function renderProducts() {
+            const container = document.getElementById('productsContainer');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            const filtered = products.filter(p => {
+                const matchCategory = currentCategory === '전체' || p.category === currentCategory;
+                const matchSearch = p.name.toLowerCase().includes(searchTerm) ||
+                                  p.brand.toLowerCase().includes(searchTerm);
+                return matchCategory && matchSearch;
+            });
+
+            container.innerHTML = filtered.map(product => `
+                <div class="product-card bg-white rounded-lg overflow-hidden cursor-pointer" onclick="showProductDetail(${product.id})">
+                    <div class="aspect-square bg-gray-100 flex items-center justify-center text-6xl">
+                        ${product.image}
+                    </div>
+                    <div class="p-3">
+                        <p class="text-xs text-gray-500 font-bold">${product.brand}</p>
+                        <p class="text-sm mt-1 line-clamp-2">${product.name}</p>
+                        <div class="flex items-center mt-2 text-xs text-gray-500">
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <span class="ml-1">${product.rating}</span>
+                            <span class="ml-2">리뷰 ${product.reviews}</span>
+                        </div>
+                        <p class="text-lg font-bold mt-2">${product.price.toLocaleString()}원</p>
+                        <button onclick="addToCart(${product.id}); event.stopPropagation();"
+                                class="w-full mt-2 bg-black text-white py-2 rounded text-sm hover:bg-gray-800">
+                            장바구니
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showProductDetail(productId) {
+            const product = products.find(p => p.id === productId);
+            const isWishlisted = wishlist.includes(productId);
+
+            document.getElementById('productDetail').innerHTML = `
+                <div class="aspect-square bg-gray-100 flex items-center justify-center text-9xl mb-6">
+                    ${product.image}
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <p class="text-sm text-gray-500 font-bold">${product.brand}</p>
+                        <h3 class="text-2xl font-bold mt-1">${product.name}</h3>
+                    </div>
+                    <div class="flex items-center text-sm">
+                        <i class="fas fa-star text-yellow-400"></i>
+                        <span class="ml-1 font-bold">${product.rating}</span>
+                        <span class="ml-2 text-gray-500">리뷰 ${product.reviews}개</span>
+                    </div>
+                    <p class="text-3xl font-bold">${product.price.toLocaleString()}원</p>
+                    <div>
+                        <p class="font-bold mb-2">사이즈 선택</p>
+                        <div class="grid grid-cols-4 gap-2">
+                            ${product.sizes.map(size => `
+                                <button class="border py-2 rounded hover:border-black">${size}</button>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="toggleWishlistItem(${product.id})"
+                                class="flex-1 border-2 ${isWishlisted ? 'border-red-500 text-red-500' : 'border-gray-300'} py-3 rounded-lg">
+                            <i class="fas fa-heart"></i> 찜
+                        </button>
+                        <button onclick="addToCart(${product.id})"
+                                class="flex-1 bg-black text-white py-3 rounded-lg">
+                            장바구니
+                        </button>
+                    </div>
+                    <div class="border-t pt-4 space-y-2 text-sm">
+                        <p><strong>배송:</strong> 무료배송 (3만원 이상)</p>
+                        <p><strong>배송기간:</strong> 1-2일 소요</p>
+                        <p><strong>반품/교환:</strong> 7일 이내 가능</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.add('hidden');
+        }
+
+        function filterCategory(category) {
+            currentCategory = category;
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            renderProducts();
+        }
+
+        function filterProducts() {
+            renderProducts();
+        }
+
+        function addToCart(productId) {
+            const existingItem = cart.find(item => item.id === productId);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ id: productId, quantity: 1 });
+            }
+            localStorage.setItem('musinsaCart', JSON.stringify(cart));
+            updateCartCount();
+            renderCart();
+            alert('장바구니에 추가되었습니다!');
+        }
+
+        function toggleCart() {
+            document.getElementById('cartModal').classList.toggle('hidden');
+            renderCart();
+        }
+
+        function toggleWishlist() {
+            document.getElementById('wishlistModal').classList.toggle('hidden');
+            renderWishlist();
+        }
+
+        function toggleWishlistItem(productId) {
+            const index = wishlist.indexOf(productId);
+            if (index > -1) {
+                wishlist.splice(index, 1);
+            } else {
+                wishlist.push(productId);
+            }
+            localStorage.setItem('musinsaWishlist', JSON.stringify(wishlist));
+            showProductDetail(productId);
+            renderWishlist();
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cartItems');
+            if (cart.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 py-10">장바구니가 비어있습니다</p>';
+                document.getElementById('totalPrice').textContent = '0원';
+                return;
+            }
+
+            let total = 0;
+            container.innerHTML = cart.map(item => {
+                const product = products.find(p => p.id === item.id);
+                total += product.price * item.quantity;
+                return `
+                    <div class="border-b pb-4 mb-4">
+                        <div class="flex items-center">
+                            <div class="w-20 h-20 bg-gray-100 flex items-center justify-center text-3xl mr-3">
+                                ${product.image}
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-xs text-gray-500">${product.brand}</p>
+                                <p class="text-sm font-semibold">${product.name}</p>
+                                <p class="text-sm font-bold mt-1">${product.price.toLocaleString()}원</p>
+                                <div class="flex items-center mt-2">
+                                    <button onclick="updateCartQuantity(${product.id}, -1)" class="border px-2 py-1 text-sm">-</button>
+                                    <span class="px-3">${item.quantity}</span>
+                                    <button onclick="updateCartQuantity(${product.id}, 1)" class="border px-2 py-1 text-sm">+</button>
+                                    <button onclick="removeFromCart(${product.id})" class="ml-auto text-red-500 text-sm">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('totalPrice').textContent = total.toLocaleString() + '원';
+        }
+
+        function renderWishlist() {
+            const container = document.getElementById('wishlistItems');
+            if (wishlist.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 py-10">찜한 상품이 없습니다</p>';
+                return;
+            }
+
+            container.innerHTML = wishlist.map(productId => {
+                const product = products.find(p => p.id === productId);
+                return `
+                    <div class="border-b pb-4 mb-4">
+                        <div class="flex items-center cursor-pointer" onclick="showProductDetail(${product.id}); toggleWishlist();">
+                            <div class="w-20 h-20 bg-gray-100 flex items-center justify-center text-3xl mr-3">
+                                ${product.image}
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-xs text-gray-500">${product.brand}</p>
+                                <p class="text-sm font-semibold">${product.name}</p>
+                                <p class="text-sm font-bold mt-1">${product.price.toLocaleString()}원</p>
+                            </div>
+                            <button onclick="toggleWishlistItem(${product.id}); event.stopPropagation();" class="text-red-500">
+                                <i class="fas fa-heart"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateCartQuantity(productId, change) {
+            const item = cart.find(i => i.id === productId);
+            if (item) {
+                item.quantity += change;
+                if (item.quantity <= 0) {
+                    removeFromCart(productId);
+                } else {
+                    localStorage.setItem('musinsaCart', JSON.stringify(cart));
+                    updateCartCount();
+                    renderCart();
+                }
+            }
+        }
+
+        function removeFromCart(productId) {
+            cart = cart.filter(item => item.id !== productId);
+            localStorage.setItem('musinsaCart', JSON.stringify(cart));
+            updateCartCount();
+            renderCart();
+        }
+
+        function updateCartCount() {
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cartCount').textContent = count;
+        }
+
+        init();
+    </script>
+</body>
+</html>

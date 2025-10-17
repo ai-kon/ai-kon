@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>카카오T - 택시 호출</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #000;
+            font-family: 'Malgun Gothic', sans-serif;
+        }
+        .kakao-yellow {
+            background-color: #FEE500;
+        }
+        .kakao-btn {
+            background-color: #FEE500;
+            color: #000;
+            font-weight: bold;
+        }
+        .kakao-btn:hover {
+            background-color: #FFD700;
+        }
+        .destination-item:hover {
+            background-color: #2a2a2a;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="max-w-md mx-auto bg-white min-h-screen">
+        <!-- Header -->
+        <div class="kakao-yellow p-4 flex items-center justify-between">
+            <button onclick="window.location.href='../'" class="text-2xl">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h1 class="text-2xl font-bold">카카오T</h1>
+            <button class="text-2xl">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+
+        <!-- Current Location -->
+        <div class="p-4 border-b-2">
+            <div class="flex items-center mb-3">
+                <div class="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
+                <div class="flex-1">
+                    <input type="text" id="currentLocation" value="현재 위치" class="w-full text-lg font-semibold" readonly>
+                    <p class="text-sm text-gray-500">서울특별시 강남구 테헤란로</p>
+                </div>
+            </div>
+            <div class="flex items-center">
+                <div class="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
+                <div class="flex-1">
+                    <input type="text" id="destination" placeholder="어디로 가시나요?" class="w-full text-lg" onfocus="showDestinations()">
+                </div>
+            </div>
+        </div>
+
+        <!-- Destination List -->
+        <div id="destinationList" class="hidden">
+            <div class="p-4 bg-gray-100">
+                <h3 class="font-bold mb-2">최근 목적지</h3>
+            </div>
+            <div id="destinations" class="overflow-y-auto" style="max-height: 400px;">
+                <!-- Destinations will be populated here -->
+            </div>
+        </div>
+
+        <!-- Taxi Selection -->
+        <div id="taxiSelection" class="p-4">
+            <h3 class="font-bold text-lg mb-4">택시 종류 선택</h3>
+            <div id="taxiTypes" class="space-y-3">
+                <!-- Taxi types will be populated here -->
+            </div>
+        </div>
+
+        <!-- Selected Destination Info -->
+        <div id="tripInfo" class="hidden p-4 bg-gray-50">
+            <div class="bg-white rounded-lg p-4 shadow-md mb-4">
+                <div class="flex justify-between items-center mb-3">
+                    <div>
+                        <p class="text-sm text-gray-500">예상 소요시간</p>
+                        <p id="eta" class="text-2xl font-bold">-</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">예상 요금</p>
+                        <p id="fare" class="text-2xl font-bold text-blue-600">-</p>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <p><i class="fas fa-map-marker-alt text-red-500 mr-2"></i><span id="selectedDest">-</span></p>
+                    <p class="mt-1"><i class="fas fa-road text-gray-500 mr-2"></i>거리: <span id="distance">-</span> km</p>
+                </div>
+            </div>
+
+            <!-- Payment Method -->
+            <div class="bg-white rounded-lg p-4 shadow-md mb-4">
+                <h4 class="font-bold mb-3">결제 수단</h4>
+                <select id="paymentMethod" class="w-full p-3 border rounded-lg">
+                    <option value="card">카드 결제</option>
+                    <option value="kakaopay">카카오페이</option>
+                    <option value="cash">현금 결제</option>
+                </select>
+            </div>
+
+            <!-- Call Taxi Button -->
+            <button onclick="callTaxi()" class="kakao-btn w-full py-4 rounded-lg text-xl">
+                <i class="fas fa-taxi mr-2"></i>택시 호출하기
+            </button>
+        </div>
+
+        <!-- Taxi Status (after calling) -->
+        <div id="taxiStatus" class="hidden p-4">
+            <div class="bg-white rounded-lg p-6 shadow-lg text-center">
+                <div class="mb-4">
+                    <i class="fas fa-taxi text-6xl kakao-yellow p-4 rounded-full"></i>
+                </div>
+                <h3 class="text-2xl font-bold mb-2">택시를 찾는 중...</h3>
+                <p class="text-gray-600 mb-4">잠시만 기다려주세요</p>
+                <div class="flex justify-center items-center space-x-2">
+                    <div class="w-3 h-3 bg-yellow-400 rounded-full animate-bounce"></div>
+                    <div class="w-3 h-3 bg-yellow-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                    <div class="w-3 h-3 bg-yellow-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                </div>
+                <button onclick="cancelTaxi()" class="mt-6 px-6 py-2 border-2 border-gray-300 rounded-lg">
+                    호출 취소
+                </button>
+            </div>
+        </div>
+
+        <!-- Driver Found -->
+        <div id="driverFound" class="hidden p-4">
+            <div class="bg-white rounded-lg p-6 shadow-lg">
+                <div class="text-center mb-4">
+                    <i class="fas fa-check-circle text-6xl text-green-500"></i>
+                    <h3 class="text-2xl font-bold mt-2">배차 완료!</h3>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span class="text-gray-600">차량번호</span>
+                        <span class="font-bold" id="carNumber">-</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span class="text-gray-600">기사님</span>
+                        <span class="font-bold" id="driverName">-</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span class="text-gray-600">도착 예정</span>
+                        <span class="font-bold text-blue-600" id="arrivalTime">-</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                        <span class="text-gray-600">평점</span>
+                        <span class="font-bold">
+                            <i class="fas fa-star text-yellow-400"></i> <span id="driverRating">-</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="mt-6 flex space-x-3">
+                    <button class="flex-1 py-3 bg-green-500 text-white rounded-lg">
+                        <i class="fas fa-phone mr-2"></i>전화하기
+                    </button>
+                    <button class="flex-1 py-3 bg-gray-200 rounded-lg">
+                        <i class="fas fa-comment mr-2"></i>메시지
+                    </button>
+                </div>
+                <button onclick="resetApp()" class="w-full mt-4 py-3 border-2 border-gray-300 rounded-lg">
+                    새로운 호출
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const destinations = [
+            { name: '강남역', addr: '서울특별시 강남구 강남대로', dist: 3.2 },
+            { name: '홍대입구역', addr: '서울특별시 마포구 양화로', dist: 8.5 },
+            { name: '서울역', addr: '서울특별시 용산구 한강대로', dist: 6.8 },
+            { name: '잠실역', addr: '서울특별시 송파구 올림픽로', dist: 12.3 },
+            { name: '명동', addr: '서울특별시 중구 명동길', dist: 7.2 },
+            { name: '이태원', addr: '서울특별시 용산구 이태원로', dist: 5.5 },
+            { name: '신촌', addr: '서울특별시 서대문구 신촌로', dist: 9.1 },
+            { name: '압구정로데오', addr: '서울특별시 강남구 압구정로', dist: 4.8 },
+            { name: '코엑스', addr: '서울특별시 강남구 영동대로', dist: 5.2 },
+            { name: '여의도', addr: '서울특별시 영등포구 여의대로', dist: 11.4 },
+            { name: '건대입구역', addr: '서울특별시 광진구 능동로', dist: 10.8 },
+            { name: '삼성역', addr: '서울특별시 강남구 테헤란로', dist: 2.1 },
+            { name: '판교역', addr: '경기도 성남시 분당구 판교역로', dist: 18.5 },
+            { name: '사당역', addr: '서울특별시 동작구 사당로', dist: 13.2 },
+            { name: '수원역', addr: '경기도 수원시 팔달구 덕영대로', dist: 42.7 },
+            { name: '인천공항', addr: '인천광역시 중구 공항로', dist: 62.5 },
+            { name: '김포공항', addr: '서울특별시 강서구 하늘길', dist: 28.3 },
+            { name: '고속터미널', addr: '서울특별시 서초구 신반포로', dist: 8.9 },
+            { name: '동대문', addr: '서울특별시 중구 을지로', dist: 9.7 },
+            { name: '광화문', addr: '서울특별시 종로구 세종대로', dist: 8.1 },
+            { name: '시청역', addr: '서울특별시 중구 세종대로', dist: 7.8 },
+            { name: '성수역', addr: '서울특별시 성동구 왕십리로', dist: 8.6 },
+            { name: '용산역', addr: '서울특별시 용산구 한강대로', dist: 6.5 },
+            { name: '선릉역', addr: '서울특별시 강남구 테헤란로', dist: 3.5 },
+            { name: '역삼역', addr: '서울특별시 강남구 테헤란로', dist: 2.8 },
+        ];
+
+        const taxiTypes = [
+            { id: 'general', name: '일반 택시', desc: '기본 요금', icon: 'fa-taxi', rate: 1.0 },
+            { id: 'premium', name: '모범 택시', desc: '편안한 승차감', icon: 'fa-taxi', rate: 1.5 },
+            { id: 'large', name: '대형 택시', desc: '짐이 많을 때', icon: 'fa-shuttle-van', rate: 1.3 },
+            { id: 'baby', name: '베이비시트', desc: '아이와 함께', icon: 'fa-baby-carriage', rate: 1.2 },
+        ];
+
+        const drivers = [
+            { name: '김철수', carNum: '12가3456', rating: 4.9 },
+            { name: '이영희', carNum: '34나5678', rating: 4.8 },
+            { name: '박민수', carNum: '56다7890', rating: 4.7 },
+            { name: '정수진', carNum: '78라1234', rating: 4.9 },
+            { name: '최동훈', carNum: '90마5678', rating: 4.6 },
+        ];
+
+        let selectedDest = null;
+        let selectedTaxiType = 'general';
+
+        function init() {
+            renderDestinations();
+            renderTaxiTypes();
+            loadRecentDestinations();
+        }
+
+        function renderDestinations() {
+            const container = document.getElementById('destinations');
+            container.innerHTML = destinations.map(dest => `
+                <div class="destination-item p-4 border-b cursor-pointer hover:bg-gray-50" onclick="selectDestination('${dest.name}', ${dest.dist})">
+                    <div class="flex items-center">
+                        <i class="fas fa-map-marker-alt text-gray-400 mr-3"></i>
+                        <div class="flex-1">
+                            <p class="font-semibold">${dest.name}</p>
+                            <p class="text-sm text-gray-500">${dest.addr}</p>
+                        </div>
+                        <p class="text-sm text-gray-400">${dest.dist}km</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderTaxiTypes() {
+            const container = document.getElementById('taxiTypes');
+            container.innerHTML = taxiTypes.map(type => `
+                <div class="taxi-type border-2 rounded-lg p-4 cursor-pointer ${type.id === 'general' ? 'border-yellow-400 bg-yellow-50' : 'border-gray-200'}"
+                     onclick="selectTaxiType('${type.id}')">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas ${type.icon} text-2xl mr-3"></i>
+                            <div>
+                                <p class="font-bold">${type.name}</p>
+                                <p class="text-sm text-gray-500">${type.desc}</p>
+                            </div>
+                        </div>
+                        <i class="fas fa-check-circle text-2xl ${type.id === 'general' ? 'text-yellow-400' : 'text-gray-300'}"></i>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showDestinations() {
+            document.getElementById('destinationList').classList.remove('hidden');
+            document.getElementById('taxiSelection').classList.add('hidden');
+            document.getElementById('tripInfo').classList.add('hidden');
+        }
+
+        function selectDestination(name, dist) {
+            selectedDest = { name, dist };
+            document.getElementById('destination').value = name;
+            document.getElementById('destinationList').classList.add('hidden');
+            document.getElementById('taxiSelection').classList.remove('hidden');
+            document.getElementById('tripInfo').classList.remove('hidden');
+            updateTripInfo();
+            saveRecentDestination(name);
+        }
+
+        function selectTaxiType(typeId) {
+            selectedTaxiType = typeId;
+            document.querySelectorAll('.taxi-type').forEach(el => {
+                el.classList.remove('border-yellow-400', 'bg-yellow-50');
+                el.classList.add('border-gray-200');
+                el.querySelector('.fa-check-circle').classList.remove('text-yellow-400');
+                el.querySelector('.fa-check-circle').classList.add('text-gray-300');
+            });
+            const selected = document.querySelector(`[onclick="selectTaxiType('${typeId}')"]`);
+            selected.classList.add('border-yellow-400', 'bg-yellow-50');
+            selected.classList.remove('border-gray-200');
+            selected.querySelector('.fa-check-circle').classList.add('text-yellow-400');
+            selected.querySelector('.fa-check-circle').classList.remove('text-gray-300');
+            updateTripInfo();
+        }
+
+        function updateTripInfo() {
+            if (!selectedDest) return;
+
+            const dist = selectedDest.dist;
+            const type = taxiTypes.find(t => t.id === selectedTaxiType);
+            const baseFare = 3800;
+            const perKmRate = 1000;
+            const fare = Math.round((baseFare + (dist * perKmRate)) * type.rate);
+            const eta = Math.round(dist * 2.5);
+
+            document.getElementById('selectedDest').textContent = selectedDest.name;
+            document.getElementById('distance').textContent = dist.toFixed(1);
+            document.getElementById('fare').textContent = fare.toLocaleString() + '원';
+            document.getElementById('eta').textContent = eta + '분';
+        }
+
+        function callTaxi() {
+            document.getElementById('tripInfo').classList.add('hidden');
+            document.getElementById('taxiSelection').classList.add('hidden');
+            document.getElementById('taxiStatus').classList.remove('hidden');
+
+            setTimeout(() => {
+                const driver = drivers[Math.floor(Math.random() * drivers.length)];
+                document.getElementById('carNumber').textContent = driver.carNum;
+                document.getElementById('driverName').textContent = driver.name;
+                document.getElementById('driverRating').textContent = driver.rating;
+                document.getElementById('arrivalTime').textContent = Math.floor(Math.random() * 3 + 2) + '분';
+
+                document.getElementById('taxiStatus').classList.add('hidden');
+                document.getElementById('driverFound').classList.remove('hidden');
+            }, 3000);
+        }
+
+        function cancelTaxi() {
+            resetApp();
+        }
+
+        function resetApp() {
+            document.getElementById('destination').value = '';
+            selectedDest = null;
+            document.getElementById('destinationList').classList.add('hidden');
+            document.getElementById('taxiSelection').classList.remove('hidden');
+            document.getElementById('tripInfo').classList.add('hidden');
+            document.getElementById('taxiStatus').classList.add('hidden');
+            document.getElementById('driverFound').classList.add('hidden');
+        }
+
+        function saveRecentDestination(name) {
+            let recent = JSON.parse(localStorage.getItem('kakaoTRecent') || '[]');
+            recent = recent.filter(d => d !== name);
+            recent.unshift(name);
+            recent = recent.slice(0, 5);
+            localStorage.setItem('kakaoTRecent', JSON.stringify(recent));
+        }
+
+        function loadRecentDestinations() {
+            // Implementation for recent destinations
+        }
+
+        init();
+    </script>
+</body>
+</html>

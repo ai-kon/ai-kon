@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord - 친구들과 대화하세요</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #36393F;
+        }
+        .discord-dark {
+            background-color: #202225;
+        }
+        .discord-darker {
+            background-color: #2F3136;
+        }
+        .discord-blue {
+            background-color: #7289DA;
+        }
+        .discord-text {
+            color: #B9BBBE;
+        }
+        .channel-item:hover {
+            background-color: #36393F;
+            color: #DCDDDE;
+        }
+        .channel-item.active {
+            background-color: #36393F;
+            color: #FFFFFF;
+        }
+        .server-icon:hover {
+            border-radius: 35%;
+            background-color: #7289DA;
+        }
+        .message-item:hover {
+            background-color: #32353B;
+        }
+        .discord-input {
+            background-color: #40444B;
+            border: none;
+            color: #DCDDDE;
+        }
+        .discord-input:focus {
+            outline: none;
+        }
+        .online-indicator {
+            width: 10px;
+            height: 10px;
+            background-color: #43B581;
+            border-radius: 50%;
+            border: 2px solid #2F3136;
+        }
+        .idle-indicator {
+            background-color: #FAA61A;
+        }
+        .dnd-indicator {
+            background-color: #F04747;
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden">
+    <div class="flex h-screen">
+        <!-- Server List -->
+        <div class="discord-darker w-18 flex flex-col items-center py-3 space-y-2 overflow-y-auto">
+            <button onclick="window.location.href='../'" class="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center text-white hover:bg-gray-600 mb-2">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div class="w-12 h-12 discord-blue rounded-full flex items-center justify-center text-white font-bold cursor-pointer server-icon transition-all duration-200" onclick="switchServer(0)">
+                D
+            </div>
+            <div class="w-full h-0.5 bg-gray-700 mx-2"></div>
+            ${generateServers()}
+        </div>
+
+        <!-- Channel List -->
+        <div class="discord-dark w-60 flex flex-col">
+            <div class="h-12 px-4 flex items-center justify-between border-b border-gray-900 shadow-md">
+                <h2 class="text-white font-bold" id="serverName">Discord 서버</h2>
+                <button class="discord-text hover:text-white">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto px-2 py-2" id="channelList">
+                <!-- Channels will be populated here -->
+            </div>
+            <div class="discord-darker p-2 flex items-center">
+                <div class="relative">
+                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%237289DA' width='100' height='100'/%3E%3Ctext x='50' y='50' dominant-baseline='middle' text-anchor='middle' font-size='40' fill='white' font-family='Arial'%3E나%3C/text%3E%3C/svg%3E" class="w-8 h-8 rounded-full">
+                    <div class="online-indicator absolute bottom-0 right-0"></div>
+                </div>
+                <div class="ml-2 flex-1">
+                    <p class="text-white text-sm font-semibold">나의계정</p>
+                    <p class="discord-text text-xs">#1234</p>
+                </div>
+                <button class="discord-text hover:text-white text-sm">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="flex-1 flex flex-col">
+            <!-- Chat Header -->
+            <div class="discord-darker h-12 px-4 flex items-center justify-between border-b border-gray-900 shadow-md">
+                <div class="flex items-center">
+                    <i class="fas fa-hashtag discord-text mr-2"></i>
+                    <h3 class="text-white font-semibold" id="channelName">일반</h3>
+                </div>
+                <div class="flex items-center space-x-4 discord-text">
+                    <button class="hover:text-white"><i class="fas fa-users"></i></button>
+                    <button class="hover:text-white"><i class="fas fa-search"></i></button>
+                    <button class="hover:text-white"><i class="fas fa-inbox"></i></button>
+                    <button class="hover:text-white"><i class="fas fa-question-circle"></i></button>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            <div class="flex-1 overflow-y-auto px-4 py-4" id="messageList">
+                <!-- Messages will be populated here -->
+            </div>
+
+            <!-- Message Input -->
+            <div class="p-4">
+                <div class="discord-input rounded-lg px-4 py-3 flex items-center">
+                    <button class="discord-text hover:text-white mr-3">
+                        <i class="fas fa-plus-circle text-xl"></i>
+                    </button>
+                    <input type="text" id="messageInput" placeholder="메시지 보내기 #일반"
+                           class="discord-input flex-1"
+                           onkeypress="if(event.key === 'Enter') sendMessage()">
+                    <button class="discord-text hover:text-white ml-3">
+                        <i class="fas fa-smile text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Member List -->
+        <div class="discord-dark w-60 overflow-y-auto py-4" id="memberList">
+            <!-- Members will be populated here -->
+        </div>
+    </div>
+
+    <script>
+        const servers = [
+            { id: 1, name: '게임친구들', icon: 'G', color: '#43B581' },
+            { id: 2, name: '학교동기', icon: '학', color: '#FAA61A' },
+            { id: 3, name: '프로젝트팀', icon: 'P', color: '#F04747' },
+            { id: 4, name: '취미모임', icon: '취', color: '#7289DA' },
+            { id: 5, name: '스터디그룹', icon: 'S', color: '#5865F2' },
+            { id: 6, name: '가족방', icon: '가', color: '#EB459E' },
+            { id: 7, name: 'K-POP팬', icon: 'K', color: '#57F287' },
+            { id: 8, name: '운동메이트', icon: '운', color: '#FEE75C' },
+        ];
+
+        const channels = {
+            text: [
+                { id: 1, name: '일반', type: 'text' },
+                { id: 2, name: '공지사항', type: 'text' },
+                { id: 3, name: '자유수다', type: 'text' },
+                { id: 4, name: '질문답변', type: 'text' },
+                { id: 5, name: '스크린샷', type: 'text' },
+            ],
+            voice: [
+                { id: 6, name: '일반 음성', type: 'voice' },
+                { id: 7, name: '게임방', type: 'voice' },
+                { id: 8, name: 'AFK', type: 'voice' },
+            ]
+        };
+
+        const members = [
+            { id: 1, name: '김민수', status: 'online', role: '관리자' },
+            { id: 2, name: '이지은', status: 'online', role: '관리자' },
+            { id: 3, name: '박준형', status: 'online', role: '멤버' },
+            { id: 4, name: '최서연', status: 'online', role: '멤버' },
+            { id: 5, name: '정우진', status: 'idle', role: '멤버' },
+            { id: 6, name: '강소희', status: 'idle', role: '멤버' },
+            { id: 7, name: '윤재혁', status: 'dnd', role: '멤버' },
+            { id: 8, name: '한유진', status: 'offline', role: '멤버' },
+            { id: 9, name: '조민재', status: 'offline', role: '멤버' },
+            { id: 10, name: '임채원', status: 'online', role: '멤버' },
+        ];
+
+        let messages = [
+            { id: 1, user: '김민수', avatar: '김', time: '오전 10:23', content: '안녕하세요! 새로운 멤버분들 환영합니다 👋', color: '#43B581' },
+            { id: 2, user: '이지은', avatar: '이', time: '오전 10:25', content: '반갑습니다~ 오늘 날씨 정말 좋네요!', color: '#FAA61A' },
+            { id: 3, user: '박준형', avatar: '박', time: '오전 10:27', content: '어제 게임 진짜 재밌었어요 ㅋㅋㅋ', color: '#F04747' },
+            { id: 4, user: '최서연', avatar: '최', time: '오전 10:30', content: '다음에 같이 또 해요!', color: '#7289DA' },
+            { id: 5, user: '정우진', avatar: '정', time: '오전 10:35', content: '저도 참여하고 싶어요 🎮', color: '#5865F2' },
+            { id: 6, user: '강소희', avatar: '강', time: '오전 10:40', content: '오늘 저녁 8시에 다같이 접속할까요?', color: '#EB459E' },
+            { id: 7, user: '윤재혁', avatar: '윤', time: '오전 10:42', content: '좋아요! 저는 참석 가능합니다', color: '#57F287' },
+            { id: 8, user: '임채원', avatar: '임', time: '오전 10:45', content: '저도 들어갈게요! 😊', color: '#FEE75C' },
+            { id: 9, user: '김민수', avatar: '김', time: '오전 10:50', content: '그럼 저녁 8시에 음성채널에서 만나요!', color: '#43B581' },
+            { id: 10, user: '박준형', avatar: '박', time: '오전 10:52', content: '네! 꼭 참석하겠습니다 ㅎㅎ', color: '#F04747' },
+        ];
+
+        let currentChannel = '일반';
+
+        function generateServers() {
+            return servers.map(server => `
+                <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold cursor-pointer server-icon transition-all duration-200"
+                     style="background-color: ${server.color}"
+                     onclick="switchServer(${server.id})">
+                    ${server.icon}
+                </div>
+            `).join('');
+        }
+
+        function init() {
+            renderChannels();
+            renderMessages();
+            renderMembers();
+        }
+
+        function switchServer(serverId) {
+            if (serverId === 0) {
+                document.getElementById('serverName').textContent = 'Discord 서버';
+            } else {
+                const server = servers.find(s => s.id === serverId);
+                document.getElementById('serverName').textContent = server.name;
+            }
+        }
+
+        function renderChannels() {
+            const container = document.getElementById('channelList');
+            container.innerHTML = `
+                <div class="mb-2">
+                    <button class="discord-text text-xs font-semibold uppercase w-full text-left px-2 py-1 flex items-center justify-between hover:text-white">
+                        <span>텍스트 채널</span>
+                        <i class="fas fa-plus text-xs"></i>
+                    </button>
+                    ${channels.text.map(channel => `
+                        <div class="channel-item px-2 py-1 rounded cursor-pointer flex items-center ${channel.name === currentChannel ? 'active' : 'discord-text'}"
+                             onclick="switchChannel('${channel.name}')">
+                            <i class="fas fa-hashtag mr-2 text-sm"></i>
+                            <span class="text-sm">${channel.name}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="mb-2">
+                    <button class="discord-text text-xs font-semibold uppercase w-full text-left px-2 py-1 flex items-center justify-between hover:text-white">
+                        <span>음성 채널</span>
+                        <i class="fas fa-plus text-xs"></i>
+                    </button>
+                    ${channels.voice.map(channel => `
+                        <div class="channel-item px-2 py-1 rounded cursor-pointer flex items-center discord-text">
+                            <i class="fas fa-volume-up mr-2 text-sm"></i>
+                            <span class="text-sm">${channel.name}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function switchChannel(channelName) {
+            currentChannel = channelName;
+            document.getElementById('channelName').textContent = channelName;
+            document.getElementById('messageInput').placeholder = `메시지 보내기 #${channelName}`;
+            renderChannels();
+            renderMessages();
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('messageList');
+            container.innerHTML = messages.map(msg => `
+                <div class="message-item py-2 px-2 rounded hover:bg-gray-800 transition-colors">
+                    <div class="flex items-start">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold mr-3 flex-shrink-0"
+                             style="background-color: ${msg.color}">
+                            ${msg.avatar}
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center mb-1">
+                                <span class="text-white font-semibold text-sm mr-2">${msg.user}</span>
+                                <span class="discord-text text-xs">${msg.time}</span>
+                            </div>
+                            <p class="discord-text text-sm">${msg.content}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function renderMembers() {
+            const container = document.getElementById('memberList');
+            const online = members.filter(m => m.status === 'online');
+            const idle = members.filter(m => m.status === 'idle');
+            const dnd = members.filter(m => m.status === 'dnd');
+            const offline = members.filter(m => m.status === 'offline');
+
+            function renderMemberGroup(title, memberList, statusClass = 'online-indicator') {
+                return `
+                    <div class="mb-4">
+                        <div class="px-4 mb-2">
+                            <span class="discord-text text-xs font-semibold uppercase">${title} — ${memberList.length}</span>
+                        </div>
+                        ${memberList.map((member, index) => `
+                            <div class="px-2 py-1 mx-2 rounded cursor-pointer hover:bg-gray-700 flex items-center">
+                                <div class="relative">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                                         style="background-color: ${getColorForMember(index)}">
+                                        ${member.name.charAt(0)}
+                                    </div>
+                                    <div class="${statusClass} absolute bottom-0 right-0"></div>
+                                </div>
+                                <span class="ml-2 text-sm discord-text">${member.name}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
+                ${renderMemberGroup('온라인', online, 'online-indicator')}
+                ${idle.length > 0 ? renderMemberGroup('자리비움', idle, 'online-indicator idle-indicator') : ''}
+                ${dnd.length > 0 ? renderMemberGroup('다른 용무중', dnd, 'online-indicator dnd-indicator') : ''}
+                ${offline.length > 0 ? renderMemberGroup('오프라인', offline, 'online-indicator bg-gray-600') : ''}
+            `;
+        }
+
+        function getColorForMember(index) {
+            const colors = ['#43B581', '#FAA61A', '#F04747', '#7289DA', '#5865F2', '#EB459E', '#57F287', '#FEE75C'];
+            return colors[index % colors.length];
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+
+            if (content === '') return;
+
+            const newMessage = {
+                id: messages.length + 1,
+                user: '나의계정',
+                avatar: '나',
+                time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: true }),
+                content: content,
+                color: '#7289DA'
+            };
+
+            messages.push(newMessage);
+            renderMessages();
+            input.value = '';
+
+            // Simulate responses
+            setTimeout(() => {
+                const responses = [
+                    { user: '김민수', avatar: '김', content: '좋은 의견이네요!', color: '#43B581' },
+                    { user: '이지은', avatar: '이', content: '동의합니다 👍', color: '#FAA61A' },
+                    { user: '박준형', avatar: '박', content: 'ㅋㅋㅋ 맞아요', color: '#F04747' },
+                    { user: '최서연', avatar: '최', content: '저도 그렇게 생각해요', color: '#7289DA' },
+                ];
+                const response = responses[Math.floor(Math.random() * responses.length)];
+                messages.push({
+                    id: messages.length + 1,
+                    user: response.user,
+                    avatar: response.avatar,
+                    time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: true }),
+                    content: response.content,
+                    color: response.color
+                });
+                renderMessages();
+            }, 1000 + Math.random() * 2000);
+        }
+
+        init();
+    </script>
+</body>
+</html>
