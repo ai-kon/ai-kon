@@ -225,6 +225,12 @@
         { id: 'chat', name: 'AI Chat', iconClass: 'icon-chat', icon: 'fas fa-comments', url: './demos/chat/' },
         { id: 'vision', name: 'Vision', iconClass: 'icon-vision', icon: 'fas fa-eye', url: './demos/vision/' },
         { id: 'code', name: 'Code', iconClass: 'icon-code', icon: 'fas fa-code', url: './demos/code/' },
+        { id: 'translation', name: 'Translation', iconClass: 'icon-world', icon: 'fas fa-language', url: './demos/translation/' },
+        { id: 'summarization', name: 'Summarization', iconClass: 'icon-chat', icon: 'fas fa-file-alt', url: './demos/summarization/' },
+        { id: 'speech', name: 'Speech', iconClass: 'icon-vision', icon: 'fas fa-microphone', url: './demos/speech/' },
+        { id: 'sentiment', name: 'Sentiment', iconClass: 'icon-about', icon: 'fas fa-smile', url: './demos/sentiment/' },
+        { id: 'detection', name: 'Detection', iconClass: 'icon-code', icon: 'fas fa-search', url: './demos/detection/' },
+        { id: 'depth', name: 'Depth', iconClass: 'icon-world', icon: 'fas fa-mountain', url: './demos/depth/' },
         { id: 'world', name: 'World', iconClass: 'icon-world', icon: 'fas fa-globe', url: './demos/world/' },
         { id: 'about', name: 'About', iconClass: 'icon-about', icon: 'fas fa-info-circle' }
     ];
@@ -382,6 +388,30 @@
                     <div class="app-icon-large icon-code"><i class="fas fa-code"></i></div>
                     <div class="app-label">Code Assistant</div>
                 </div>
+                <div class="app-card" onclick="wm.openApp('translation')">
+                    <div class="app-icon-large icon-world"><i class="fas fa-language"></i></div>
+                    <div class="app-label">Translation</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('summarization')">
+                    <div class="app-icon-large icon-chat"><i class="fas fa-file-alt"></i></div>
+                    <div class="app-label">Summarization</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('speech')">
+                    <div class="app-icon-large icon-vision"><i class="fas fa-microphone"></i></div>
+                    <div class="app-label">Speech Recognition</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('sentiment')">
+                    <div class="app-icon-large icon-about"><i class="fas fa-smile"></i></div>
+                    <div class="app-label">Sentiment Analysis</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('detection')">
+                    <div class="app-icon-large icon-code"><i class="fas fa-search"></i></div>
+                    <div class="app-label">Object Detection</div>
+                </div>
+                <div class="app-card" onclick="wm.openApp('depth')">
+                    <div class="app-icon-large icon-world"><i class="fas fa-mountain"></i></div>
+                    <div class="app-label">Depth Estimation</div>
+                </div>
                 <div class="app-card" onclick="wm.openApp('world')">
                     <div class="app-icon-large icon-world"><i class="fas fa-globe"></i></div>
                     <div class="app-label">World Model</div>
@@ -408,6 +438,12 @@
                     <li><strong>AI Chat</strong> - Conversational AI with Qwen2.5</li>
                     <li><strong>Image Analysis</strong> - Zero-shot classification with CLIP</li>
                     <li><strong>Code Assistant</strong> - AI-powered code generation</li>
+                    <li><strong>Translation</strong> - Multilingual neural translation (8 languages)</li>
+                    <li><strong>Summarization</strong> - AI text summarization with DistilBART</li>
+                    <li><strong>Speech Recognition</strong> - Whisper speech-to-text</li>
+                    <li><strong>Sentiment Analysis</strong> - Emotion detection in text</li>
+                    <li><strong>Object Detection</strong> - YOLO real-time object detection</li>
+                    <li><strong>Depth Estimation</strong> - Monocular depth perception with MiDaS</li>
                     <li><strong>World Model</strong> - Reinforcement learning demo</li>
                 </ul>
 

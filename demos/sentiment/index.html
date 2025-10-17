@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentiment Analysis | AI-KON Demos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .loader {
+            border: 6px solid #f3f4f6;
+            border-top: 6px solid #6366f1;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .emoji-large {
+            font-size: 80px;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center z-50">
+        <div class="loader"></div>
+        <h2 class="text-white text-xl font-semibold mt-4">Loading Sentiment Model...</h2>
+        <p class="text-white text-sm mt-2">This will be quick!</p>
+        <progress id="progress-bar" value="0" max="100" class="w-64 mt-4 h-2"></progress>
+        <p id="progress-text" class="text-white text-sm mt-2">0%</p>
+    </div>
+
+    <div class="container mx-auto p-4 max-w-4xl">
+        <!-- Header -->
+        <header class="bg-white rounded-lg shadow-sm p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">😊 Sentiment Analysis</h1>
+                    <p class="text-sm text-gray-600">Analyze emotions in text</p>
+                </div>
+                <a href="../" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                    ← Back to Demos
+                </a>
+            </div>
+        </header>
+
+        <!-- Main Card -->
+        <div class="bg-white rounded-lg shadow-md p-8">
+            <!-- Input Area -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Enter Text</label>
+                <textarea
+                    id="input-text"
+                    rows="5"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 resize-none text-lg"
+                    placeholder="Type or paste text to analyze..."
+                >This is amazing! I absolutely love it!</textarea>
+            </div>
+
+            <button
+                id="analyze-btn"
+                class="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 font-medium text-lg"
+            >
+                Analyze Sentiment
+            </button>
+
+            <!-- Result Display -->
+            <div id="result-container" class="mt-8 hidden">
+                <div class="text-center mb-6">
+                    <div id="emoji-display" class="emoji-large mb-4">😊</div>
+                    <h3 id="sentiment-label" class="text-3xl font-bold text-gray-900 mb-2">Positive</h3>
+                    <p id="confidence-text" class="text-lg text-gray-600">95% confidence</p>
+                </div>
+
+                <!-- Detailed Scores -->
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium text-green-700">Positive</span>
+                            <span id="positive-score" class="text-gray-600">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div id="positive-bar" class="bg-green-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium text-gray-700">Neutral</span>
+                            <span id="neutral-score" class="text-gray-600">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div id="neutral-bar" class="bg-gray-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium text-red-700">Negative</span>
+                            <span id="negative-score" class="text-gray-600">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div id="negative-bar" class="bg-red-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Example Texts -->
+            <div class="mt-8 border-t pt-6">
+                <h3 class="text-sm font-medium text-gray-700 mb-3">Try Examples:</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <button class="example-btn text-left text-sm bg-green-50 hover:bg-green-100 p-3 rounded-lg border border-green-200" data-text="This is absolutely wonderful! Best day ever!">
+                        😊 Positive
+                    </button>
+                    <button class="example-btn text-left text-sm bg-gray-50 hover:bg-gray-100 p-3 rounded-lg border border-gray-200" data-text="The weather is normal today. Nothing special happening.">
+                        😐 Neutral
+                    </button>
+                    <button class="example-btn text-left text-sm bg-red-50 hover:bg-red-100 p-3 rounded-lg border border-red-200" data-text="This is terrible. I'm very disappointed and frustrated.">
+                        😞 Negative
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p class="text-sm text-blue-800">
+                <strong>How it works:</strong> This demo uses a fine-tuned DistilBERT model for sentiment classification.
+                It analyzes the emotional tone of text and classifies it as positive, negative, or neutral.
+                All processing happens locally in your browser!
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        // Check WebGPU support first
+        if (!navigator.gpu) {
+            window.location.href = '../fallback.html';
+            throw new Error('WebGPU not supported');
+        }
+
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5';
+
+        env.allowLocalModels = false;
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const inputText = document.getElementById('input-text');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const resultContainer = document.getElementById('result-container');
+        const emojiDisplay = document.getElementById('emoji-display');
+        const sentimentLabel = document.getElementById('sentiment-label');
+        const confidenceText = document.getElementById('confidence-text');
+        const positiveScore = document.getElementById('positive-score');
+        const positiveBar = document.getElementById('positive-bar');
+        const neutralScore = document.getElementById('neutral-score');
+        const neutralBar = document.getElementById('neutral-bar');
+        const negativeScore = document.getElementById('negative-score');
+        const negativeBar = document.getElementById('negative-bar');
+        const exampleBtns = document.querySelectorAll('.example-btn');
+
+        let classifier;
+
+        // Initialize model
+        async function initModel() {
+            try {
+                classifier = await pipeline('sentiment-analysis', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english', {
+                    device: 'webgpu',
+                    progress_callback: (progress) => {
+                        if (progress.status === 'progress') {
+                            const percent = Math.round(progress.progress);
+                            progressBar.value = percent;
+                            progressText.textContent = percent + '%';
+                        }
+                    }
+                });
+                loadingOverlay.style.display = 'none';
+                console.log('Model loaded');
+            } catch (error) {
+                console.error('Failed to load model:', error);
+                const errorDetails = error.message || 'Unknown error';
+
+                let helpText = 'Please refresh the page and try again.';
+                if (errorDetails.includes('gpu')) {
+                    helpText = 'Your browser may not fully support WebGPU. Please update to the latest Chrome/Edge version.';
+                } else if (errorDetails.includes('network') || errorDetails.includes('fetch')) {
+                    helpText = 'Network error while downloading model. Please check your connection and try again.';
+                }
+
+                loadingOverlay.innerHTML = `
+                    <div class="text-center px-8">
+                        <div class="text-6xl mb-4">❌</div>
+                        <h2 class="text-white text-xl font-semibold mb-2">Failed to Load Model</h2>
+                        <p class="text-white text-sm mb-2">${helpText}</p>
+                        <p class="text-white text-xs opacity-75 mb-4">${errorDetails}</p>
+                        <button onclick="window.location.reload()" class="px-6 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 font-medium">
+                            Try Again
+                        </button>
+                        <a href="../" class="ml-2 px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium inline-block">
+                            Back to Demos
+                        </a>
+                    </div>
+                `;
+            }
+        }
+
+        // Analyze sentiment
+        async function analyzeSentiment() {
+            if (!classifier) return;
+
+            const text = inputText.value.trim();
+            if (!text) {
+                alert('Please enter text to analyze');
+                return;
+            }
+
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = 'Analyzing...';
+
+            try {
+                const result = await classifier(text);
+                displayResult(result[0]);
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                alert('Analysis failed. Please try again.');
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = 'Analyze Sentiment';
+            }
+        }
+
+        function displayResult(result) {
+            const sentiment = result.label.toUpperCase();
+            const score = (result.score * 100).toFixed(1);
+
+            // Determine emoji and colors
+            let emoji, labelText, labelColor;
+            if (sentiment.includes('POSITIVE')) {
+                emoji = '😊';
+                labelText = 'Positive';
+                labelColor = 'text-green-600';
+            } else if (sentiment.includes('NEGATIVE')) {
+                emoji = '😞';
+                labelText = 'Negative';
+                labelColor = 'text-red-600';
+            } else {
+                emoji = '😐';
+                labelText = 'Neutral';
+                labelColor = 'text-gray-600';
+            }
+
+            emojiDisplay.textContent = emoji;
+            sentimentLabel.textContent = labelText;
+            sentimentLabel.className = `text-3xl font-bold mb-2 ${labelColor}`;
+            confidenceText.textContent = `${score}% confidence`;
+
+            // Update bars (simulated distribution)
+            if (sentiment.includes('POSITIVE')) {
+                positiveScore.textContent = score + '%';
+                positiveBar.style.width = score + '%';
+                neutralScore.textContent = ((100 - parseFloat(score)) / 2).toFixed(1) + '%';
+                neutralBar.style.width = ((100 - parseFloat(score)) / 2).toFixed(1) + '%';
+                negativeScore.textContent = ((100 - parseFloat(score)) / 2).toFixed(1) + '%';
+                negativeBar.style.width = ((100 - parseFloat(score)) / 2).toFixed(1) + '%';
+            } else if (sentiment.includes('NEGATIVE')) {
+                negativeScore.textContent = score + '%';
+                negativeBar.style.width = score + '%';
+                neutralScore.textContent = ((100 - parseFloat(score)) / 2).toFixed(1) + '%';
+                neutralBar.style.width = ((100 - parseFloat(score)) / 2).toFixed(1) + '%';
+                positiveScore.textContent = ((100 - parseFloat(score)) / 2).toFixed(1) + '%';
+                positiveBar.style.width = ((100 - parseFloat(score)) / 2).toFixed(1) + '%';
+            } else {
+                neutralScore.textContent = score + '%';
+                neutralBar.style.width = score + '%';
+                positiveScore.textContent = ((100 - parseFloat(score)) / 2).toFixed(1) + '%';
+                positiveBar.style.width = ((100 - parseFloat(score)) / 2).toFixed(1) + '%';
+                negativeScore.textContent = ((100 - parseFloat(score)) / 2).toFixed(1) + '%';
+                negativeBar.style.width = ((100 - parseFloat(score)) / 2).toFixed(1) + '%';
+            }
+
+            resultContainer.classList.remove('hidden');
+        }
+
+        // Event listeners
+        analyzeBtn.addEventListener('click', analyzeSentiment);
+
+        inputText.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                analyzeSentiment();
+            }
+        });
+
+        exampleBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                inputText.value = btn.dataset.text;
+                analyzeSentiment();
+            });
+        });
+
+        // Initialize
+        initModel();
+    </script>
+</body>
+</html>

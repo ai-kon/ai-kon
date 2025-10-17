@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Depth Estimation | AI-KON Demos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .loader {
+            border: 6px solid #f3f4f6;
+            border-top: 6px solid #6366f1;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .image-container {
+            position: relative;
+            max-width: 100%;
+        }
+        .image-container img, .image-container canvas {
+            max-width: 100%;
+            border-radius: 8px;
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center z-50">
+        <div class="loader"></div>
+        <h2 class="text-white text-xl font-semibold mt-4">Loading Depth Model...</h2>
+        <p class="text-white text-sm mt-2">This may take a few minutes</p>
+        <progress id="progress-bar" value="0" max="100" class="w-64 mt-4 h-2"></progress>
+        <p id="progress-text" class="text-white text-sm mt-2">0%</p>
+    </div>
+
+    <div class="container mx-auto p-4 max-w-6xl">
+        <!-- Header -->
+        <header class="bg-white rounded-lg shadow-sm p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">🏔️ Depth Estimation</h1>
+                    <p class="text-sm text-gray-600">Monocular depth perception</p>
+                </div>
+                <a href="../" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                    ← Back to Demos
+                </a>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Left: Upload -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Upload Image</h2>
+
+                <div
+                    id="drop-area"
+                    class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition mb-4"
+                >
+                    <div id="placeholder">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <p class="mt-2 text-sm text-gray-600">
+                            <span class="font-semibold text-indigo-600">Click to upload</span> or drag and drop
+                        </p>
+                        <p class="text-xs text-gray-500">PNG, JPG, WEBP</p>
+                    </div>
+                    <input type="file" id="file-input" class="hidden" accept="image/*" />
+                </div>
+
+                <!-- Original Image -->
+                <div id="original-container" class="image-container hidden mb-4">
+                    <h3 class="text-sm font-medium text-gray-700 mb-2">Original Image</h3>
+                    <img id="preview-img" />
+                </div>
+
+                <button
+                    id="estimate-btn"
+                    class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 font-medium"
+                    disabled
+                >
+                    Estimate Depth
+                </button>
+
+                <!-- Example Images -->
+                <div class="mt-6">
+                    <h3 class="text-sm font-medium text-gray-700 mb-2">Or try examples:</h3>
+                    <div class="grid grid-cols-3 gap-2">
+                        <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300"
+                             class="example-img cursor-pointer rounded border hover:border-indigo-500 w-full h-24 object-cover"
+                             alt="Mountain" />
+                        <img src="https://images.unsplash.com/photo-1449034446853-66c86144b0ad?w=300"
+                             class="example-img cursor-pointer rounded border hover:border-indigo-500 w-full h-24 object-cover"
+                             alt="City" />
+                        <img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300"
+                             class="example-img cursor-pointer rounded border hover:border-indigo-500 w-full h-24 object-cover"
+                             alt="Forest" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Depth Map -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Depth Map</h2>
+
+                <div id="depth-placeholder" class="text-center text-gray-500 py-12 bg-gray-50 rounded-lg">
+                    Upload an image to see depth map
+                </div>
+
+                <div id="depth-container" class="image-container hidden">
+                    <canvas id="depth-canvas"></canvas>
+                </div>
+
+                <div id="loading-depth" class="hidden text-center py-12">
+                    <div class="inline-block w-8 h-8 border-4 border-gray-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                    <p class="text-gray-600 mt-2">Estimating depth...</p>
+                </div>
+
+                <!-- Legend -->
+                <div id="legend" class="hidden mt-4 p-4 bg-gradient-to-r from-blue-900 via-green-500 to-yellow-200 rounded-lg">
+                    <div class="flex justify-between text-xs font-medium text-white">
+                        <span class="drop-shadow">Far</span>
+                        <span class="drop-shadow">Medium</span>
+                        <span class="text-gray-800 drop-shadow">Near</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p class="text-sm text-blue-800">
+                <strong>How it works:</strong> This demo uses deep learning to estimate depth from a single 2D image (monocular depth estimation).
+                The depth map visualizes distance: <span class="font-semibold">dark blue = far away</span>, <span class="font-semibold">yellow = close up</span>.
+                All processing happens in your browser!
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        // Check WebGPU support first
+        if (!navigator.gpu) {
+            window.location.href = '../fallback.html';
+            throw new Error('WebGPU not supported');
+        }
+
+        import { pipeline, env, RawImage } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5';
+
+        env.allowLocalModels = false;
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const dropArea = document.getElementById('drop-area');
+        const placeholder = document.getElementById('placeholder');
+        const originalContainer = document.getElementById('original-container');
+        const previewImg = document.getElementById('preview-img');
+        const fileInput = document.getElementById('file-input');
+        const estimateBtn = document.getElementById('estimate-btn');
+        const depthPlaceholder = document.getElementById('depth-placeholder');
+        const depthContainer = document.getElementById('depth-container');
+        const depthCanvas = document.getElementById('depth-canvas');
+        const loadingDepth = document.getElementById('loading-depth');
+        const legend = document.getElementById('legend');
+        const exampleImgs = document.querySelectorAll('.example-img');
+
+        let depthEstimator;
+        let currentImage = null;
+
+        // Initialize model
+        async function initModel() {
+            try {
+                depthEstimator = await pipeline('depth-estimation', 'Xenova/dpt-hybrid-midas', {
+                    device: 'webgpu',
+                    progress_callback: (progress) => {
+                        if (progress.status === 'progress') {
+                            const percent = Math.round(progress.progress);
+                            progressBar.value = percent;
+                            progressText.textContent = percent + '%';
+                        }
+                    }
+                });
+                loadingOverlay.style.display = 'none';
+                console.log('Model loaded');
+            } catch (error) {
+                console.error('Failed to load model:', error);
+                const errorDetails = error.message || 'Unknown error';
+
+                let helpText = 'Please refresh the page and try again.';
+                if (errorDetails.includes('gpu')) {
+                    helpText = 'Your browser may not fully support WebGPU. Please update to the latest Chrome/Edge version.';
+                } else if (errorDetails.includes('network') || errorDetails.includes('fetch')) {
+                    helpText = 'Network error while downloading model. Please check your connection and try again.';
+                }
+
+                loadingOverlay.innerHTML = `
+                    <div class="text-center px-8">
+                        <div class="text-6xl mb-4">❌</div>
+                        <h2 class="text-white text-xl font-semibold mb-2">Failed to Load Model</h2>
+                        <p class="text-white text-sm mb-2">${helpText}</p>
+                        <p class="text-white text-xs opacity-75 mb-4">${errorDetails}</p>
+                        <button onclick="window.location.reload()" class="px-6 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 font-medium">
+                            Try Again
+                        </button>
+                        <a href="../" class="ml-2 px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium inline-block">
+                            Back to Demos
+                        </a>
+                    </div>
+                `;
+            }
+        }
+
+        // Handle image selection
+        function handleImage(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentImage = e.target.result;
+                previewImg.src = currentImage;
+                placeholder.classList.add('hidden');
+                originalContainer.classList.remove('hidden');
+                estimateBtn.disabled = false;
+
+                // Clear previous results
+                depthContainer.classList.add('hidden');
+                depthPlaceholder.classList.remove('hidden');
+                legend.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Estimate depth
+        async function estimateDepth() {
+            if (!depthEstimator || !currentImage) return;
+
+            depthPlaceholder.classList.add('hidden');
+            depthContainer.classList.add('hidden');
+            loadingDepth.classList.remove('hidden');
+            legend.classList.add('hidden');
+
+            try {
+                const result = await depthEstimator(currentImage);
+                renderDepthMap(result);
+
+            } catch (error) {
+                console.error('Depth estimation error:', error);
+                loadingDepth.classList.add('hidden');
+                depthPlaceholder.classList.remove('hidden');
+                depthPlaceholder.textContent = 'Depth estimation failed. Please try again.';
+            }
+        }
+
+        function renderDepthMap(result) {
+            const { depth, predicted_depth } = result;
+
+            // Get depth data
+            const depthData = depth.data || predicted_depth.data;
+            const [height, width] = depth.dims || predicted_depth.dims;
+
+            // Set canvas size
+            depthCanvas.width = width;
+            depthCanvas.height = height;
+
+            const ctx = depthCanvas.getContext('2d');
+            const imageData = ctx.createImageData(width, height);
+
+            // Normalize depth values to 0-255 range
+            const min = Math.min(...depthData);
+            const max = Math.max(...depthData);
+            const range = max - min;
+
+            // Apply colormap (blue = far, yellow = near)
+            for (let i = 0; i < depthData.length; i++) {
+                const normalized = (depthData[i] - min) / range;
+                const pixel = i * 4;
+
+                // Jet colormap
+                let r, g, b;
+                if (normalized < 0.25) {
+                    r = 0;
+                    g = normalized * 4 * 255;
+                    b = 255;
+                } else if (normalized < 0.5) {
+                    r = 0;
+                    g = 255;
+                    b = (0.5 - normalized) * 4 * 255;
+                } else if (normalized < 0.75) {
+                    r = (normalized - 0.5) * 4 * 255;
+                    g = 255;
+                    b = 0;
+                } else {
+                    r = 255;
+                    g = (1 - normalized) * 4 * 255;
+                    b = 0;
+                }
+
+                imageData.data[pixel] = r;
+                imageData.data[pixel + 1] = g;
+                imageData.data[pixel + 2] = b;
+                imageData.data[pixel + 3] = 255;
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            loadingDepth.classList.add('hidden');
+            depthContainer.classList.remove('hidden');
+            legend.classList.remove('hidden');
+        }
+
+        // Event listeners
+        dropArea.addEventListener('click', () => fileInput.click());
+
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('border-indigo-500', 'bg-indigo-50');
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('border-indigo-500', 'bg-indigo-50');
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('border-indigo-500', 'bg-indigo-50');
+            if (e.dataTransfer.files[0]) {
+                handleImage(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                handleImage(e.target.files[0]);
+            }
+        });
+
+        estimateBtn.addEventListener('click', estimateDepth);
+
+        exampleImgs.forEach(img => {
+            img.addEventListener('click', async () => {
+                try {
+                    const response = await fetch(img.src);
+                    const blob = await response.blob();
+                    handleImage(blob);
+                } catch (error) {
+                    console.error('Failed to load example image:', error);
+                }
+            });
+        });
+
+        // Initialize
+        initModel();
+    </script>
+</body>
+</html>

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Translation | AI-KON Demos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .loader {
+            border: 6px solid #f3f4f6;
+            border-top: 6px solid #6366f1;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center z-50">
+        <div class="loader"></div>
+        <h2 class="text-white text-xl font-semibold mt-4">Loading Translation Model...</h2>
+        <p class="text-white text-sm mt-2">This may take a minute</p>
+        <progress id="progress-bar" value="0" max="100" class="w-64 mt-4 h-2"></progress>
+        <p id="progress-text" class="text-white text-sm mt-2">0%</p>
+    </div>
+
+    <div class="container mx-auto p-4 max-w-6xl">
+        <!-- Header -->
+        <header class="bg-white rounded-lg shadow-sm p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">🌐 AI Translation</h1>
+                    <p class="text-sm text-gray-600">Multilingual neural translation</p>
+                </div>
+                <a href="../" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                    ← Back to Demos
+                </a>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Left: Source -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold">Source</h2>
+                    <select id="source-lang" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                        <option value="en">English</option>
+                        <option value="ko">한국어</option>
+                        <option value="ja">日本語</option>
+                        <option value="zh">中文</option>
+                        <option value="es">Español</option>
+                        <option value="fr">Français</option>
+                        <option value="de">Deutsch</option>
+                        <option value="ru">Русский</option>
+                    </select>
+                </div>
+
+                <textarea
+                    id="source-text"
+                    rows="10"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 resize-none"
+                    placeholder="Enter text to translate..."
+                >Hello! How are you today? AI translation is amazing.</textarea>
+
+                <button
+                    id="translate-btn"
+                    class="w-full mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 font-medium"
+                >
+                    Translate →
+                </button>
+
+                <div class="mt-4 grid grid-cols-2 gap-2">
+                    <button class="example-btn text-sm bg-gray-100 hover:bg-gray-200 p-2 rounded" data-text="The weather is beautiful today.">Example 1</button>
+                    <button class="example-btn text-sm bg-gray-100 hover:bg-gray-200 p-2 rounded" data-text="I love learning new languages!">Example 2</button>
+                </div>
+            </div>
+
+            <!-- Right: Target -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold">Translation</h2>
+                    <select id="target-lang" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                        <option value="ko">한국어</option>
+                        <option value="en">English</option>
+                        <option value="ja">日本語</option>
+                        <option value="zh">中文</option>
+                        <option value="es">Español</option>
+                        <option value="fr">Français</option>
+                        <option value="de">Deutsch</option>
+                        <option value="ru">Русский</option>
+                    </select>
+                </div>
+
+                <div id="translation-result" class="w-full h-64 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 overflow-auto">
+                    <p class="text-gray-500 text-center mt-20">Translation will appear here...</p>
+                </div>
+
+                <div class="mt-4 flex gap-2">
+                    <button id="copy-btn" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium hidden">
+                        📋 Copy
+                    </button>
+                    <button id="swap-btn" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">
+                        🔄 Swap Languages
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p class="text-sm text-blue-800">
+                <strong>Note:</strong> This demo uses Xenova's multilingual translation models.
+                Translation quality may vary depending on language pair. All processing happens in your browser!
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        // Check WebGPU support first
+        if (!navigator.gpu) {
+            window.location.href = '../fallback.html';
+            throw new Error('WebGPU not supported');
+        }
+
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5';
+
+        env.allowLocalModels = false;
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const sourceLang = document.getElementById('source-lang');
+        const targetLang = document.getElementById('target-lang');
+        const sourceText = document.getElementById('source-text');
+        const translationResult = document.getElementById('translation-result');
+        const translateBtn = document.getElementById('translate-btn');
+        const copyBtn = document.getElementById('copy-btn');
+        const swapBtn = document.getElementById('swap-btn');
+        const exampleBtns = document.querySelectorAll('.example-btn');
+
+        let translator;
+
+        // Initialize model
+        async function initModel() {
+            try {
+                translator = await pipeline('translation', 'Xenova/nllb-200-distilled-600M', {
+                    device: 'webgpu',
+                    progress_callback: (progress) => {
+                        if (progress.status === 'progress') {
+                            const percent = Math.round(progress.progress);
+                            progressBar.value = percent;
+                            progressText.textContent = percent + '%';
+                        }
+                    }
+                });
+                loadingOverlay.style.display = 'none';
+                console.log('Model loaded');
+            } catch (error) {
+                console.error('Failed to load model:', error);
+                const errorDetails = error.message || 'Unknown error';
+
+                let helpText = 'Please refresh the page and try again.';
+                if (errorDetails.includes('gpu')) {
+                    helpText = 'Your browser may not fully support WebGPU. Please update to the latest Chrome/Edge version.';
+                } else if (errorDetails.includes('network') || errorDetails.includes('fetch')) {
+                    helpText = 'Network error while downloading model. Please check your connection and try again.';
+                }
+
+                loadingOverlay.innerHTML = `
+                    <div class="text-center px-8">
+                        <div class="text-6xl mb-4">❌</div>
+                        <h2 class="text-white text-xl font-semibold mb-2">Failed to Load Model</h2>
+                        <p class="text-white text-sm mb-2">${helpText}</p>
+                        <p class="text-white text-xs opacity-75 mb-4">${errorDetails}</p>
+                        <button onclick="window.location.reload()" class="px-6 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 font-medium">
+                            Try Again
+                        </button>
+                        <a href="../" class="ml-2 px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium inline-block">
+                            Back to Demos
+                        </a>
+                    </div>
+                `;
+            }
+        }
+
+        // Language code mapping for NLLB
+        const langMap = {
+            'en': 'eng_Latn',
+            'ko': 'kor_Hang',
+            'ja': 'jpn_Jpan',
+            'zh': 'zho_Hans',
+            'es': 'spa_Latn',
+            'fr': 'fra_Latn',
+            'de': 'deu_Latn',
+            'ru': 'rus_Cyrl'
+        };
+
+        // Translate text
+        async function translate() {
+            if (!translator) return;
+
+            const text = sourceText.value.trim();
+            if (!text) {
+                alert('Please enter text to translate');
+                return;
+            }
+
+            const srcLang = langMap[sourceLang.value];
+            const tgtLang = langMap[targetLang.value];
+
+            if (srcLang === tgtLang) {
+                alert('Source and target languages must be different');
+                return;
+            }
+
+            translateBtn.disabled = true;
+            translateBtn.textContent = 'Translating...';
+            translationResult.innerHTML = '<div class="text-center mt-20"><div class="inline-block w-8 h-8 border-4 border-gray-200 border-t-indigo-600 rounded-full animate-spin"></div><p class="text-gray-600 mt-2">Translating...</p></div>';
+            copyBtn.classList.add('hidden');
+
+            try {
+                const result = await translator(text, {
+                    src_lang: srcLang,
+                    tgt_lang: tgtLang
+                });
+
+                const translatedText = result[0].translation_text;
+                translationResult.innerHTML = `<p class="text-gray-800 whitespace-pre-wrap">${translatedText}</p>`;
+                copyBtn.classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Translation error:', error);
+                translationResult.innerHTML = '<p class="text-red-600 text-center mt-20">Translation failed. Please try again.</p>';
+            } finally {
+                translateBtn.disabled = false;
+                translateBtn.textContent = 'Translate →';
+            }
+        }
+
+        // Event listeners
+        translateBtn.addEventListener('click', translate);
+
+        copyBtn.addEventListener('click', () => {
+            const text = translationResult.textContent;
+            navigator.clipboard.writeText(text);
+            copyBtn.textContent = '✓ Copied!';
+            setTimeout(() => {
+                copyBtn.textContent = '📋 Copy';
+            }, 2000);
+        });
+
+        swapBtn.addEventListener('click', () => {
+            const srcLang = sourceLang.value;
+            const tgtLang = targetLang.value;
+            sourceLang.value = tgtLang;
+            targetLang.value = srcLang;
+
+            const srcText = sourceText.value;
+            const tgtText = translationResult.textContent;
+            if (tgtText && tgtText !== 'Translation will appear here...') {
+                sourceText.value = tgtText;
+                translationResult.innerHTML = '<p class="text-gray-500 text-center mt-20">Translation will appear here...</p>';
+                copyBtn.classList.add('hidden');
+            }
+        });
+
+        exampleBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                sourceText.value = btn.dataset.text;
+            });
+        });
+
+        // Initialize
+        initModel();
+    </script>
+</body>
+</html>
