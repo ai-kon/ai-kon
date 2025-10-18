@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ebook Reader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #8B7355 0%, #D2B48C 100%); }
+        .night-mode { background: #1a1a1a; color: #e0e0e0; }
+        .sepia-mode { background: #f4ecd8; color: #5b4636; }
+        .reader-page { line-height: 1.8; text-align: justify; }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="bg-amber-900 text-amber-50 p-4 rounded-t-lg shadow-lg flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <a href="../" class="hover:text-amber-200"><i class="fas fa-arrow-left"></i></a>
+                <i class="fas fa-book-open text-2xl"></i>
+                <h1 class="text-2xl font-bold">Ebook Reader</h1>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="showView('library')" class="px-3 py-1 bg-amber-700 hover:bg-amber-600 rounded">
+                    <i class="fas fa-books"></i> Library
+                </button>
+                <button onclick="showView('stats')" class="px-3 py-1 bg-amber-700 hover:bg-amber-600 rounded">
+                    <i class="fas fa-chart-bar"></i> Stats
+                </button>
+            </div>
+        </div>
+
+        <!-- Library View -->
+        <div id="libraryView" class="bg-amber-50 p-6 rounded-b-lg shadow-lg">
+            <div class="mb-4">
+                <label class="block mb-2 font-semibold text-amber-900">
+                    <i class="fas fa-upload"></i> Upload Book (.txt)
+                </label>
+                <input type="file" id="fileInput" accept=".txt" class="w-full p-2 border-2 border-amber-300 rounded">
+            </div>
+            <div class="grid md:grid-cols-3 gap-4" id="bookList"></div>
+        </div>
+
+        <!-- Reader View -->
+        <div id="readerView" class="bg-white rounded-b-lg shadow-lg hidden">
+            <div class="p-4 bg-amber-100 border-b flex justify-between items-center flex-wrap gap-2">
+                <button onclick="showView('library')" class="px-3 py-2 bg-amber-700 text-white rounded hover:bg-amber-600">
+                    <i class="fas fa-arrow-left"></i> Back to Library
+                </button>
+                <div class="flex gap-2 items-center flex-wrap">
+                    <select id="fontFamily" class="p-1 border rounded" onchange="updateReaderSettings()">
+                        <option value="Georgia">Georgia</option>
+                        <option value="Arial">Arial</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Courier New">Courier New</option>
+                    </select>
+                    <select id="fontSize" class="p-1 border rounded" onchange="updateReaderSettings()">
+                        <option value="14">14px</option>
+                        <option value="16">16px</option>
+                        <option value="18" selected>18px</option>
+                        <option value="20">20px</option>
+                        <option value="24">24px</option>
+                    </select>
+                    <button onclick="setTheme('normal')" class="px-2 py-1 bg-white border rounded" title="Normal">
+                        <i class="fas fa-sun"></i>
+                    </button>
+                    <button onclick="setTheme('sepia')" class="px-2 py-1 bg-amber-100 border rounded" title="Sepia">
+                        <i class="fas fa-leaf"></i>
+                    </button>
+                    <button onclick="setTheme('night')" class="px-2 py-1 bg-gray-800 text-white border rounded" title="Night">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button onclick="toggleBookmark()" id="bookmarkBtn" class="px-2 py-1 bg-amber-500 text-white rounded">
+                        <i class="fas fa-bookmark"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="readerContent" class="p-8 reader-page min-h-[500px]"></div>
+            <div class="p-4 bg-amber-100 border-t flex justify-between items-center">
+                <button onclick="prevPage()" class="px-4 py-2 bg-amber-700 text-white rounded hover:bg-amber-600">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </button>
+                <div class="text-center">
+                    <div class="font-semibold" id="pageInfo"></div>
+                    <div class="text-sm text-gray-600" id="progressBar"></div>
+                </div>
+                <button onclick="nextPage()" class="px-4 py-2 bg-amber-700 text-white rounded hover:bg-amber-600">
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats View -->
+        <div id="statsView" class="bg-amber-50 p-6 rounded-b-lg shadow-lg hidden">
+            <h2 class="text-2xl font-bold mb-4 text-amber-900"><i class="fas fa-chart-line"></i> Reading Statistics</h2>
+            <div class="grid md:grid-cols-3 gap-4" id="statsContent"></div>
+            <button onclick="showView('library')" class="mt-4 px-4 py-2 bg-amber-700 text-white rounded hover:bg-amber-600">
+                <i class="fas fa-arrow-left"></i> Back to Library
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let books = JSON.parse(localStorage.getItem('ebookLibrary') || '[]');
+        let currentBook = null;
+        let currentPage = 0;
+        let pages = [];
+        const WORDS_PER_PAGE = 300;
+
+        // Initialize with sample books
+        if (books.length === 0) {
+            books = [
+                { id: 1, title: "The Art of Reading", content: "In the quiet corners of our minds, where thoughts dance like fireflies in the twilight, we find the true magic of reading. Each word is a stepping stone across the river of imagination, leading us to lands unseen and adventures untold. The art of reading is not merely the decoding of symbols on a page, but the transformation of ink into emotion, of letters into life. When we read, we become explorers of infinite worlds, travelers through time, and companions to characters who live forever in the chambers of our hearts. A book is a doorway, and the reader holds the key. Turn the page, and step through into wonder. The greatest journeys begin with a single word, and the most profound transformations happen in the space between what is written and what is understood. Reading is the quiet revolution of the soul.", bookmarks: [], progress: 0 },
+                { id: 2, title: "Meditations on Silence", content: "Silence is not the absence of sound, but the presence of peace. In our modern world, filled with the cacophony of notifications, conversations, and endless noise, we have forgotten the power of quiet contemplation. Silence teaches us to listen not just with our ears, but with our entire being. It is in silence that we hear the whispers of wisdom, the gentle guidance of intuition, and the profound truth of our own existence. The ancient philosophers knew this secret: that in stillness, we find clarity; in quiet, we discover strength. When we embrace silence, we create space for creativity to flourish, for understanding to deepen, and for the soul to speak. Silence is not emptiness but fullness, not loneliness but communion with the deepest parts of ourselves.", bookmarks: [], progress: 0 },
+                { id: 3, title: "Journey of a Thousand Steps", content: "Every great journey begins with a single step, but it is sustained by a thousand more. The path ahead may seem daunting, the destination distant, but each step forward is a victory in itself. We often wait for the perfect moment, the ideal conditions, the complete plan before we begin. But life teaches us that perfection is found not in the preparation, but in the walking. Along the way, we stumble and fall, we question and doubt, but we also discover and grow. The journey transforms us more than the destination ever could. Each obstacle overcome adds strength to our spirit, each challenge faced adds wisdom to our mind. Do not fear the long road ahead; embrace it. For in the journey of a thousand steps, we find not just our destination, but ourselves.", bookmarks: [], progress: 0 }
+            ];
+            localStorage.setItem('ebookLibrary', JSON.stringify(books));
+        }
+
+        // File upload handler
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const book = {
+                        id: Date.now(),
+                        title: file.name.replace('.txt', ''),
+                        content: event.target.result,
+                        bookmarks: [],
+                        progress: 0
+                    };
+                    books.push(book);
+                    localStorage.setItem('ebookLibrary', JSON.stringify(books));
+                    renderLibrary();
+                    e.target.value = '';
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function renderLibrary() {
+            const list = document.getElementById('bookList');
+            list.innerHTML = books.map(book => `
+                <div class="bg-white p-4 rounded-lg shadow-md border-2 border-amber-200 hover:border-amber-400 transition">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg text-amber-900 flex-1">${book.title}</h3>
+                        <button onclick="deleteBook(${book.id})" class="text-red-600 hover:text-red-800">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="text-sm text-gray-600 mb-2">
+                        ${Math.ceil(book.content.split(' ').length / WORDS_PER_PAGE)} pages
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                        <div class="bg-amber-600 h-2 rounded-full" style="width: ${book.progress}%"></div>
+                    </div>
+                    <button onclick="openBook(${book.id})" class="w-full px-3 py-2 bg-amber-700 text-white rounded hover:bg-amber-600">
+                        <i class="fas fa-book-reader"></i> ${book.progress > 0 ? 'Continue' : 'Start'} Reading
+                    </button>
+                    ${book.bookmarks.length > 0 ? `<div class="mt-2 text-xs text-amber-700"><i class="fas fa-bookmark"></i> ${book.bookmarks.length} bookmark(s)</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function openBook(id) {
+            currentBook = books.find(b => b.id === id);
+            const words = currentBook.content.split(' ');
+            pages = [];
+            for (let i = 0; i < words.length; i += WORDS_PER_PAGE) {
+                pages.push(words.slice(i, i + WORDS_PER_PAGE).join(' '));
+            }
+            currentPage = Math.floor((currentBook.progress / 100) * pages.length);
+            showPage();
+            showView('reader');
+        }
+
+        function showPage() {
+            document.getElementById('readerContent').innerHTML = `<h2 class="text-2xl font-bold mb-4 text-amber-900">${currentBook.title}</h2><p>${pages[currentPage]}</p>`;
+            document.getElementById('pageInfo').textContent = `Page ${currentPage + 1} of ${pages.length}`;
+            document.getElementById('progressBar').innerHTML = `<div class="w-48 bg-gray-200 rounded-full h-2 mx-auto"><div class="bg-amber-600 h-2 rounded-full" style="width: ${((currentPage + 1) / pages.length * 100).toFixed(1)}%"></div></div>`;
+            updateProgress();
+            updateBookmarkBtn();
+        }
+
+        function nextPage() {
+            if (currentPage < pages.length - 1) {
+                currentPage++;
+                showPage();
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                showPage();
+            }
+        }
+
+        function updateProgress() {
+            currentBook.progress = Math.round((currentPage + 1) / pages.length * 100);
+            const idx = books.findIndex(b => b.id === currentBook.id);
+            books[idx] = currentBook;
+            localStorage.setItem('ebookLibrary', JSON.stringify(books));
+        }
+
+        function toggleBookmark() {
+            const idx = currentBook.bookmarks.indexOf(currentPage);
+            if (idx > -1) {
+                currentBook.bookmarks.splice(idx, 1);
+            } else {
+                currentBook.bookmarks.push(currentPage);
+            }
+            const bookIdx = books.findIndex(b => b.id === currentBook.id);
+            books[bookIdx] = currentBook;
+            localStorage.setItem('ebookLibrary', JSON.stringify(books));
+            updateBookmarkBtn();
+        }
+
+        function updateBookmarkBtn() {
+            const btn = document.getElementById('bookmarkBtn');
+            if (currentBook.bookmarks.includes(currentPage)) {
+                btn.innerHTML = '<i class="fas fa-bookmark"></i> Bookmarked';
+                btn.classList.add('bg-amber-700');
+            } else {
+                btn.innerHTML = '<i class="far fa-bookmark"></i> Bookmark';
+                btn.classList.remove('bg-amber-700');
+            }
+        }
+
+        function updateReaderSettings() {
+            const content = document.getElementById('readerContent');
+            content.style.fontFamily = document.getElementById('fontFamily').value;
+            content.style.fontSize = document.getElementById('fontSize').value + 'px';
+        }
+
+        function setTheme(theme) {
+            const content = document.getElementById('readerContent');
+            content.className = 'p-8 reader-page min-h-[500px]';
+            if (theme === 'night') content.classList.add('night-mode');
+            else if (theme === 'sepia') content.classList.add('sepia-mode');
+        }
+
+        function deleteBook(id) {
+            if (confirm('Delete this book?')) {
+                books = books.filter(b => b.id !== id);
+                localStorage.setItem('ebookLibrary', JSON.stringify(books));
+                renderLibrary();
+            }
+        }
+
+        function showView(view) {
+            document.getElementById('libraryView').classList.add('hidden');
+            document.getElementById('readerView').classList.add('hidden');
+            document.getElementById('statsView').classList.add('hidden');
+            if (view === 'library') {
+                document.getElementById('libraryView').classList.remove('hidden');
+                renderLibrary();
+            } else if (view === 'reader') {
+                document.getElementById('readerView').classList.remove('hidden');
+            } else if (view === 'stats') {
+                document.getElementById('statsView').classList.remove('hidden');
+                renderStats();
+            }
+        }
+
+        function renderStats() {
+            const totalBooks = books.length;
+            const completedBooks = books.filter(b => b.progress === 100).length;
+            const inProgress = books.filter(b => b.progress > 0 && b.progress < 100).length;
+            const totalBookmarks = books.reduce((sum, b) => sum + b.bookmarks.length, 0);
+            const avgProgress = totalBooks > 0 ? (books.reduce((sum, b) => sum + b.progress, 0) / totalBooks).toFixed(1) : 0;
+
+            document.getElementById('statsContent').innerHTML = `
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <i class="fas fa-books text-4xl text-amber-700 mb-2"></i>
+                    <div class="text-3xl font-bold text-amber-900">${totalBooks}</div>
+                    <div class="text-gray-600">Total Books</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <i class="fas fa-check-circle text-4xl text-green-600 mb-2"></i>
+                    <div class="text-3xl font-bold text-green-700">${completedBooks}</div>
+                    <div class="text-gray-600">Completed</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <i class="fas fa-book-reader text-4xl text-blue-600 mb-2"></i>
+                    <div class="text-3xl font-bold text-blue-700">${inProgress}</div>
+                    <div class="text-gray-600">In Progress</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <i class="fas fa-bookmark text-4xl text-purple-600 mb-2"></i>
+                    <div class="text-3xl font-bold text-purple-700">${totalBookmarks}</div>
+                    <div class="text-gray-600">Total Bookmarks</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <i class="fas fa-percentage text-4xl text-amber-600 mb-2"></i>
+                    <div class="text-3xl font-bold text-amber-700">${avgProgress}%</div>
+                    <div class="text-gray-600">Avg Progress</div>
+                </div>
+            `;
+        }
+
+        renderLibrary();
+    </script>
+</body>
+</html>

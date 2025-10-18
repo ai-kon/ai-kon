@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Collection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); }
+        .card { backdrop-filter: blur(10px); background: rgba(255,255,255,0.95); }
+        .recipe-card:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(255,107,53,0.3); }
+        .difficulty-easy { color: #10B981; }
+        .difficulty-medium { color: #F59E0B; }
+        .difficulty-hard { color: #EF4444; }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="card rounded-lg shadow-xl p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <button onclick="window.location.href='../'" class="text-orange-600 hover:text-orange-800">
+                    <i class="fas fa-arrow-left mr-2"></i>Back
+                </button>
+                <h1 class="text-3xl font-bold text-orange-600 flex items-center">
+                    <i class="fas fa-utensils mr-3"></i>Recipe Collection
+                </h1>
+                <button onclick="showShoppingList()" class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700">
+                    <i class="fas fa-shopping-cart mr-2"></i>Shopping List
+                </button>
+            </div>
+
+            <!-- Search -->
+            <div class="relative">
+                <input type="text" id="searchInput" placeholder="Search recipes..."
+                    class="w-full px-4 py-3 pl-12 border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-600"
+                    oninput="searchRecipes()">
+                <i class="fas fa-search absolute left-4 top-4 text-gray-400"></i>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="card rounded-lg shadow-lg p-4 text-center">
+                <i class="fas fa-book-open text-3xl text-orange-600 mb-2"></i>
+                <div class="text-2xl font-bold text-gray-800" id="totalRecipes">0</div>
+                <div class="text-sm text-gray-600">Recipes</div>
+            </div>
+            <div class="card rounded-lg shadow-lg p-4 text-center">
+                <i class="fas fa-clock text-3xl text-blue-600 mb-2"></i>
+                <div class="text-2xl font-bold text-gray-800" id="avgTime">0</div>
+                <div class="text-sm text-gray-600">Avg Time (min)</div>
+            </div>
+            <div class="card rounded-lg shadow-lg p-4 text-center">
+                <i class="fas fa-fire text-3xl text-red-600 mb-2"></i>
+                <div class="text-2xl font-bold text-gray-800" id="easyRecipes">0</div>
+                <div class="text-sm text-gray-600">Easy</div>
+            </div>
+            <div class="card rounded-lg shadow-lg p-4 text-center">
+                <i class="fas fa-shopping-basket text-3xl text-green-600 mb-2"></i>
+                <div class="text-2xl font-bold text-gray-800" id="shoppingItems">0</div>
+                <div class="text-sm text-gray-600">Shopping Items</div>
+            </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="card rounded-lg shadow-xl p-4 mb-6">
+            <div class="flex gap-3 flex-wrap">
+                <button onclick="filterCategory('all')" class="cat-btn px-4 py-2 rounded-full bg-orange-600 text-white font-semibold">All</button>
+                <button onclick="filterCategory('Korean')" class="cat-btn px-4 py-2 rounded-full bg-gray-200 hover:bg-orange-600 hover:text-white">Korean</button>
+                <button onclick="filterCategory('Western')" class="cat-btn px-4 py-2 rounded-full bg-gray-200 hover:bg-orange-600 hover:text-white">Western</button>
+                <button onclick="filterCategory('Asian')" class="cat-btn px-4 py-2 rounded-full bg-gray-200 hover:bg-orange-600 hover:text-white">Asian</button>
+                <button onclick="filterCategory('Dessert')" class="cat-btn px-4 py-2 rounded-full bg-gray-200 hover:bg-orange-600 hover:text-white">Dessert</button>
+            </div>
+        </div>
+
+        <!-- Recipes Grid -->
+        <div id="recipesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+
+    <!-- Recipe Detail Modal -->
+    <div id="recipeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style="z-index: 1000;">
+        <div class="card rounded-lg shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start mb-4">
+                <h2 id="modalTitle" class="text-3xl font-bold text-orange-600"></h2>
+                <button onclick="closeRecipeModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <!-- Shopping List Modal -->
+    <div id="shoppingModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style="z-index: 1000;">
+        <div class="card rounded-lg shadow-2xl p-6 max-w-md w-full">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-2xl font-bold text-orange-600">Shopping List</h2>
+                <button onclick="closeShoppingModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="shoppingContent" class="space-y-2 mb-4"></div>
+            <button onclick="clearShoppingList()" class="w-full bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                Clear List
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const DEFAULT_RECIPES = [
+            { name: "Kimchi Fried Rice", category: "Korean", time: 20, difficulty: "Easy", servings: 2, ingredients: ["Rice (2 cups)", "Kimchi (1 cup)", "Eggs (2)", "Sesame oil (1 tbsp)", "Green onions"], steps: ["Heat sesame oil in pan", "Add kimchi and stir-fry 2 mins", "Add rice and mix well", "Fry eggs separately", "Serve rice topped with egg"] },
+            { name: "Bulgogi", category: "Korean", time: 40, difficulty: "Medium", servings: 4, ingredients: ["Beef (500g)", "Soy sauce (1/4 cup)", "Sugar (2 tbsp)", "Garlic (4 cloves)", "Pear juice (1/4 cup)"], steps: ["Slice beef thinly", "Mix marinade ingredients", "Marinate beef 30 mins", "Grill or pan-fry beef", "Serve with rice"] },
+            { name: "Tteokbokki", category: "Korean", time: 25, difficulty: "Easy", servings: 3, ingredients: ["Rice cakes (300g)", "Gochujang (2 tbsp)", "Sugar (1 tbsp)", "Fish cakes", "Green onions"], steps: ["Boil water with sauce", "Add rice cakes", "Cook 10 mins until soft", "Add fish cakes", "Garnish with onions"] },
+            { name: "Bibimbap", category: "Korean", time: 35, difficulty: "Medium", servings: 2, ingredients: ["Rice (2 cups)", "Mixed vegetables", "Beef (200g)", "Egg (2)", "Gochujang sauce"], steps: ["Cook rice", "Prepare vegetables separately", "Cook beef with soy sauce", "Fry eggs sunny-side up", "Arrange all in bowl, mix"] },
+            { name: "Samgyeopsal", category: "Korean", time: 15, difficulty: "Easy", servings: 3, ingredients: ["Pork belly (500g)", "Lettuce leaves", "Garlic", "Ssamjang sauce", "Salt"], steps: ["Slice pork belly", "Grill on high heat", "Flip when golden", "Serve with lettuce", "Wrap with garlic and sauce"] },
+            { name: "Spaghetti Carbonara", category: "Western", time: 25, difficulty: "Medium", servings: 4, ingredients: ["Spaghetti (400g)", "Bacon (200g)", "Eggs (3)", "Parmesan (1 cup)", "Black pepper"], steps: ["Boil pasta al dente", "Fry bacon until crispy", "Mix eggs and cheese", "Combine hot pasta with egg mix", "Add bacon and serve"] },
+            { name: "Caesar Salad", category: "Western", time: 15, difficulty: "Easy", servings: 2, ingredients: ["Romaine lettuce", "Croutons (1 cup)", "Parmesan cheese", "Caesar dressing", "Chicken (optional)"], steps: ["Wash and chop lettuce", "Toss with dressing", "Add croutons", "Shave parmesan on top", "Add grilled chicken if desired"] },
+            { name: "Beef Steak", category: "Western", time: 30, difficulty: "Medium", servings: 2, ingredients: ["Ribeye steak (2)", "Salt", "Black pepper", "Butter (2 tbsp)", "Garlic (2 cloves)"], steps: ["Season steak with salt/pepper", "Heat pan until very hot", "Sear steak 3-4 mins each side", "Add butter and garlic", "Rest 5 mins before serving"] },
+            { name: "Fish and Chips", category: "Western", time: 40, difficulty: "Medium", servings: 4, ingredients: ["White fish (4 fillets)", "Potatoes (4 large)", "Flour (1 cup)", "Beer (1 cup)", "Oil for frying"], steps: ["Cut potatoes into chips", "Make beer batter", "Coat fish in batter", "Deep fry chips until golden", "Fry fish 5-6 mins"] },
+            { name: "Chicken Burrito", category: "Western", time: 30, difficulty: "Easy", servings: 4, ingredients: ["Tortillas (4)", "Chicken (300g)", "Rice (2 cups)", "Beans (1 can)", "Cheese, salsa"], steps: ["Cook chicken with spices", "Prepare rice", "Warm tortillas", "Add chicken, rice, beans", "Roll up and serve"] },
+            { name: "Pad Thai", category: "Asian", time: 30, difficulty: "Medium", servings: 3, ingredients: ["Rice noodles (200g)", "Shrimp (200g)", "Eggs (2)", "Peanuts (1/4 cup)", "Tamarind sauce"], steps: ["Soak noodles in water", "Scramble eggs", "Stir-fry shrimp", "Add noodles and sauce", "Top with peanuts"] },
+            { name: "Ramen", category: "Asian", time: 20, difficulty: "Easy", servings: 2, ingredients: ["Ramen noodles (2 packs)", "Eggs (2)", "Pork slices", "Green onions", "Nori seaweed"], steps: ["Boil broth", "Cook noodles 3 mins", "Boil eggs 6 mins", "Assemble in bowl", "Add toppings"] },
+            { name: "Spring Rolls", category: "Asian", time: 35, difficulty: "Medium", servings: 4, ingredients: ["Rice paper (12)", "Shrimp (300g)", "Vermicelli noodles", "Lettuce", "Mint leaves"], steps: ["Cook shrimp and noodles", "Soften rice paper in water", "Add filling to center", "Roll tightly", "Serve with sauce"] },
+            { name: "Fried Rice", category: "Asian", time: 20, difficulty: "Easy", servings: 3, ingredients: ["Rice (3 cups)", "Eggs (2)", "Mixed vegetables (2 cups)", "Soy sauce (3 tbsp)", "Garlic"], steps: ["Heat oil in wok", "Scramble eggs, set aside", "Stir-fry vegetables", "Add rice and soy sauce", "Mix in eggs"] },
+            { name: "Pho", category: "Asian", time: 45, difficulty: "Hard", servings: 4, ingredients: ["Rice noodles (400g)", "Beef broth (8 cups)", "Beef slices (300g)", "Bean sprouts", "Herbs (basil, cilantro)"], steps: ["Simmer broth with spices", "Cook noodles", "Blanch beef in hot broth", "Assemble bowls", "Add fresh herbs"] },
+            { name: "Chocolate Cake", category: "Dessert", time: 60, difficulty: "Medium", servings: 8, ingredients: ["Flour (2 cups)", "Cocoa powder (3/4 cup)", "Eggs (3)", "Sugar (2 cups)", "Butter (1 cup)"], steps: ["Mix dry ingredients", "Cream butter and sugar", "Add eggs one at a time", "Combine wet and dry", "Bake at 350°F for 30 mins"] },
+            { name: "Tiramisu", category: "Dessert", time: 40, difficulty: "Medium", servings: 6, ingredients: ["Ladyfinger cookies (24)", "Mascarpone (500g)", "Eggs (4)", "Coffee (2 cups)", "Cocoa powder"], steps: ["Brew strong coffee", "Mix mascarpone and egg yolks", "Dip cookies in coffee", "Layer cookies and cream", "Dust with cocoa, refrigerate"] },
+            { name: "Ice Cream Sundae", category: "Dessert", time: 10, difficulty: "Easy", servings: 2, ingredients: ["Ice cream (4 scoops)", "Chocolate sauce", "Whipped cream", "Cherries", "Nuts"], steps: ["Scoop ice cream in bowl", "Drizzle chocolate sauce", "Add whipped cream", "Top with cherry", "Sprinkle nuts"] },
+            { name: "Brownies", category: "Dessert", time: 45, difficulty: "Easy", servings: 12, ingredients: ["Chocolate (200g)", "Butter (1 cup)", "Sugar (1.5 cups)", "Eggs (4)", "Flour (1 cup)"], steps: ["Melt chocolate and butter", "Mix in sugar", "Add eggs one by one", "Fold in flour", "Bake 25 mins at 350°F"] },
+            { name: "Panna Cotta", category: "Dessert", time: 30, difficulty: "Medium", servings: 4, ingredients: ["Heavy cream (2 cups)", "Sugar (1/3 cup)", "Gelatin (2 tsp)", "Vanilla extract", "Berry sauce"], steps: ["Heat cream and sugar", "Dissolve gelatin", "Mix into cream", "Pour into molds", "Refrigerate 4 hours"] }
+        ];
+
+        let recipes = [];
+        let shoppingList = [];
+        let currentCategory = 'all';
+
+        function init() {
+            const stored = localStorage.getItem('recipes');
+            const storedShopping = localStorage.getItem('shoppingList');
+
+            recipes = stored ? JSON.parse(stored) : DEFAULT_RECIPES;
+            shoppingList = storedShopping ? JSON.parse(storedShopping) : [];
+
+            if (!stored) {
+                localStorage.setItem('recipes', JSON.stringify(recipes));
+            }
+
+            updateStats();
+            renderRecipes();
+        }
+
+        function updateStats() {
+            document.getElementById('totalRecipes').textContent = recipes.length;
+            const avgTime = Math.round(recipes.reduce((sum, r) => sum + r.time, 0) / recipes.length);
+            document.getElementById('avgTime').textContent = avgTime;
+            const easy = recipes.filter(r => r.difficulty === 'Easy').length;
+            document.getElementById('easyRecipes').textContent = easy;
+            document.getElementById('shoppingItems').textContent = shoppingList.length;
+        }
+
+        function renderRecipes() {
+            const container = document.getElementById('recipesList');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            let display = currentCategory === 'all'
+                ? recipes
+                : recipes.filter(r => r.category === currentCategory);
+
+            if (searchTerm) {
+                display = display.filter(r => r.name.toLowerCase().includes(searchTerm));
+            }
+
+            container.innerHTML = display.map(recipe => `
+                <div class="recipe-card card rounded-lg shadow-lg overflow-hidden transition-all cursor-pointer" onclick='showRecipe(${JSON.stringify(recipe)})'>
+                    <div class="bg-gradient-to-r from-orange-500 to-orange-600 p-4 text-white">
+                        <h3 class="text-xl font-bold mb-2">${recipe.name}</h3>
+                        <div class="flex gap-2 text-sm">
+                            <span class="bg-white bg-opacity-20 px-2 py-1 rounded">${recipe.category}</span>
+                            <span class="difficulty-${recipe.difficulty.toLowerCase()}">${recipe.difficulty}</span>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex justify-between mb-3">
+                            <div class="flex items-center gap-2 text-gray-600">
+                                <i class="fas fa-clock"></i>
+                                <span>${recipe.time} min</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-gray-600">
+                                <i class="fas fa-users"></i>
+                                <span>${recipe.servings} servings</span>
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            <i class="fas fa-list"></i> ${recipe.ingredients.length} ingredients
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function searchRecipes() {
+            renderRecipes();
+        }
+
+        function filterCategory(category) {
+            currentCategory = category;
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.classList.remove('bg-orange-600', 'text-white');
+                btn.classList.add('bg-gray-200');
+            });
+            event.target.classList.add('bg-orange-600', 'text-white');
+            event.target.classList.remove('bg-gray-200');
+            renderRecipes();
+        }
+
+        function showRecipe(recipe) {
+            document.getElementById('modalTitle').textContent = recipe.name;
+            document.getElementById('modalContent').innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex gap-4 text-sm text-gray-600">
+                        <span><i class="fas fa-clock"></i> ${recipe.time} mins</span>
+                        <span><i class="fas fa-users"></i> ${recipe.servings} servings</span>
+                        <span class="difficulty-${recipe.difficulty.toLowerCase()}">${recipe.difficulty}</span>
+                    </div>
+
+                    <div>
+                        <h3 class="font-bold text-lg mb-2 flex items-center justify-between">
+                            <span><i class="fas fa-shopping-basket mr-2"></i>Ingredients</span>
+                            <button onclick='addToShopping(${JSON.stringify(recipe.ingredients)})' class="text-sm bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">
+                                Add to Shopping List
+                            </button>
+                        </h3>
+                        <ul class="list-disc list-inside space-y-1">
+                            ${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="font-bold text-lg mb-2"><i class="fas fa-list-ol mr-2"></i>Steps</h3>
+                        <ol class="list-decimal list-inside space-y-2">
+                            ${recipe.steps.map(step => `<li class="text-gray-700">${step}</li>`).join('')}
+                        </ol>
+                    </div>
+                </div>
+            `;
+            document.getElementById('recipeModal').classList.remove('hidden');
+        }
+
+        function closeRecipeModal() {
+            document.getElementById('recipeModal').classList.add('hidden');
+        }
+
+        function addToShopping(ingredients) {
+            ingredients.forEach(ing => {
+                if (!shoppingList.includes(ing)) {
+                    shoppingList.push(ing);
+                }
+            });
+            localStorage.setItem('shoppingList', JSON.stringify(shoppingList));
+            updateStats();
+            alert('Added to shopping list!');
+        }
+
+        function showShoppingList() {
+            const content = document.getElementById('shoppingContent');
+            if (shoppingList.length === 0) {
+                content.innerHTML = '<p class="text-gray-500 text-center py-4">Your shopping list is empty</p>';
+            } else {
+                content.innerHTML = shoppingList.map((item, idx) => `
+                    <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <span>${item}</span>
+                        <button onclick="removeFromShopping(${idx})" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('shoppingModal').classList.remove('hidden');
+        }
+
+        function closeShoppingModal() {
+            document.getElementById('shoppingModal').classList.add('hidden');
+        }
+
+        function removeFromShopping(index) {
+            shoppingList.splice(index, 1);
+            localStorage.setItem('shoppingList', JSON.stringify(shoppingList));
+            updateStats();
+            showShoppingList();
+        }
+
+        function clearShoppingList() {
+            if (confirm('Clear entire shopping list?')) {
+                shoppingList = [];
+                localStorage.setItem('shoppingList', JSON.stringify(shoppingList));
+                updateStats();
+                closeShoppingModal();
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

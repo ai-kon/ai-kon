@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comics Reader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); }
+        .panel { min-height: 300px; border: 4px solid #581c87; }
+        .comic-title { text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="bg-purple-900 text-white p-4 rounded-t-lg shadow-lg flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <a href="../" class="hover:text-purple-200"><i class="fas fa-arrow-left"></i></a>
+                <i class="fas fa-book-open text-2xl"></i>
+                <h1 class="text-2xl font-bold comic-title">Comics Reader</h1>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="showView('library')" class="px-3 py-1 bg-purple-700 hover:bg-purple-600 rounded">
+                    <i class="fas fa-th"></i> Library
+                </button>
+                <button onclick="showView('stats')" class="px-3 py-1 bg-purple-700 hover:bg-purple-600 rounded">
+                    <i class="fas fa-chart-bar"></i> Stats
+                </button>
+            </div>
+        </div>
+
+        <!-- Library View -->
+        <div id="libraryView" class="bg-purple-50 p-6 rounded-b-lg shadow-lg">
+            <h2 class="text-2xl font-bold mb-4 text-purple-900"><i class="fas fa-books"></i> Your Comics</h2>
+            <div class="grid md:grid-cols-2 gap-4" id="comicsList"></div>
+        </div>
+
+        <!-- Reader View -->
+        <div id="readerView" class="bg-purple-50 rounded-b-lg shadow-lg hidden">
+            <div class="p-4 bg-purple-100 border-b flex justify-between items-center">
+                <button onclick="showView('library')" class="px-3 py-2 bg-purple-700 text-white rounded hover:bg-purple-600">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+                <h2 class="text-xl font-bold text-purple-900 comic-title" id="comicTitle"></h2>
+                <button onclick="toggleFavorite()" id="favBtn" class="px-3 py-2 bg-pink-500 text-white rounded hover:bg-pink-600">
+                    <i class="far fa-heart"></i>
+                </button>
+            </div>
+
+            <div id="panelsContainer" class="p-6 space-y-4 max-h-[600px] overflow-y-auto"></div>
+
+            <div class="p-4 bg-purple-100 border-t">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="font-semibold text-purple-900" id="episodeInfo"></span>
+                    <div class="flex gap-2">
+                        <button onclick="prevEpisode()" class="px-3 py-2 bg-purple-700 text-white rounded hover:bg-purple-600">
+                            <i class="fas fa-chevron-left"></i> Prev
+                        </button>
+                        <button onclick="nextEpisode()" class="px-3 py-2 bg-purple-700 text-white rounded hover:bg-purple-600">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg">
+                    <h3 class="font-bold mb-2 text-purple-900">Comments</h3>
+                    <div id="commentsList" class="space-y-2 mb-3 max-h-32 overflow-y-auto"></div>
+                    <div class="flex gap-2">
+                        <input type="text" id="commentInput" placeholder="Add a comment..." class="flex-1 p-2 border-2 border-purple-300 rounded">
+                        <button onclick="addComment()" class="px-4 py-2 bg-purple-700 text-white rounded hover:bg-purple-600">
+                            <i class="fas fa-comment"></i> Post
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats View -->
+        <div id="statsView" class="bg-purple-50 p-6 rounded-b-lg shadow-lg hidden">
+            <h2 class="text-2xl font-bold mb-4 text-purple-900"><i class="fas fa-chart-line"></i> Reading Statistics</h2>
+            <div class="grid md:grid-cols-3 gap-4" id="statsContent"></div>
+            <button onclick="showView('library')" class="mt-4 px-4 py-2 bg-purple-700 text-white rounded hover:bg-purple-600">
+                <i class="fas fa-arrow-left"></i> Back to Library
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let comics = JSON.parse(localStorage.getItem('comicsLibrary') || '[]');
+        let currentComic = null;
+        let currentEpisode = 0;
+
+        // Initialize sample comics
+        if (comics.length === 0) {
+            comics = [
+                {
+                    id: 1,
+                    title: "Space Cats Adventure",
+                    cover: "🚀🐱",
+                    episodes: [
+                        {
+                            title: "Launch Day",
+                            panels: [
+                                { bg: "#1e3a8a", text: "Captain Whiskers gazed at the stars...", emoji: "🐱🌟" },
+                                { bg: "#312e81", text: "The mission was clear: Find the Galaxy Tuna", emoji: "🐟✨" },
+                                { bg: "#1e40af", text: "3... 2... 1... BLAST OFF!", emoji: "🚀💨" },
+                                { bg: "#1e293b", text: "The crew held on tight as they left Earth", emoji: "🌍➡️🌌" },
+                                { bg: "#0f172a", text: "Space... the final frontier for cats", emoji: "🐱🌠" }
+                            ]
+                        },
+                        {
+                            title: "Asteroid Field",
+                            panels: [
+                                { bg: "#7c2d12", text: "BEEP BEEP! Asteroids ahead!", emoji: "⚠️🪨" },
+                                { bg: "#991b1b", text: "Captain Whiskers took the controls", emoji: "🐱🎮" },
+                                { bg: "#b91c1c", text: "Dodge left! Dodge right!", emoji: "⬅️🚀➡️" },
+                                { bg: "#dc2626", text: "A close call! Fur was flying!", emoji: "😱💨" },
+                                { bg: "#7c2d12", text: "They made it through safely!", emoji: "🎉🐱" }
+                            ]
+                        }
+                    ],
+                    favorite: false,
+                    history: [],
+                    comments: {}
+                },
+                {
+                    id: 2,
+                    title: "Ninja School",
+                    cover: "🥷📚",
+                    episodes: [
+                        {
+                            title: "First Day",
+                            panels: [
+                                { bg: "#14532d", text: "Welcome to Ninja Academy!", emoji: "🏯🎌" },
+                                { bg: "#166534", text: "Master Sensei bowed deeply", emoji: "🧓🙇" },
+                                { bg: "#15803d", text: "Your training begins... NOW!", emoji: "⚔️✨" },
+                                { bg: "#16a34a", text: "Students practiced stealth moves", emoji: "🥷💨" },
+                                { bg: "#22c55e", text: "By sunset, they were exhausted but happy", emoji: "🌅😊" }
+                            ]
+                        },
+                        {
+                            title: "Shuriken Practice",
+                            panels: [
+                                { bg: "#134e4a", text: "Today we learn the art of shuriken", emoji: "⭐🎯" },
+                                { bg: "#115e59", text: "Focus... breathe... throw!", emoji: "🧘‍♂️➡️" },
+                                { bg: "#0f766e", text: "THUNK! Direct hit!", emoji: "🎯✨" },
+                                { bg: "#0d9488", text: "The students cheered!", emoji: "🎊👏" },
+                                { bg: "#14b8a6", text: "Master Sensei smiled proudly", emoji: "🧓😊" }
+                            ]
+                        }
+                    ],
+                    favorite: false,
+                    history: [],
+                    comments: {}
+                },
+                {
+                    id: 3,
+                    title: "Coffee Quest",
+                    cover: "☕🗺️",
+                    episodes: [
+                        {
+                            title: "The Legend",
+                            panels: [
+                                { bg: "#78350f", text: "They say the Perfect Coffee exists...", emoji: "☕✨" },
+                                { bg: "#92400e", text: "Hidden in the Mountains of Java", emoji: "⛰️🗺️" },
+                                { bg: "#a16207", text: "Our hero packed their bags", emoji: "🎒👋" },
+                                { bg: "#b45309", text: "And set off on a journey", emoji: "🚶‍♀️🌄" },
+                                { bg: "#d97706", text: "Nothing would stop them now!", emoji: "💪😤" }
+                            ]
+                        },
+                        {
+                            title: "The Cafe",
+                            panels: [
+                                { bg: "#831843", text: "After days of travel, a small cafe appeared", emoji: "🏠☕" },
+                                { bg: "#9f1239", text: "The door creaked open...", emoji: "🚪✨" },
+                                { bg: "#be123c", text: "Inside, the aroma was incredible!", emoji: "😮💫🌸" },
+                                { bg: "#e11d48", text: "One Perfect Coffee, please!", emoji: "☕😊" },
+                                { bg: "#f43f5e", text: "The first sip... pure bliss!", emoji: "😌🌈" }
+                            ]
+                        }
+                    ],
+                    favorite: false,
+                    history: [],
+                    comments: {}
+                }
+            ];
+            localStorage.setItem('comicsLibrary', JSON.stringify(comics));
+        }
+
+        function renderLibrary() {
+            document.getElementById('comicsList').innerHTML = comics.map(comic => {
+                const totalEpisodes = comic.episodes.length;
+                const readEpisodes = comic.history.length;
+                const progress = totalEpisodes > 0 ? Math.round((readEpisodes / totalEpisodes) * 100) : 0;
+
+                return `
+                    <div class="bg-white p-4 rounded-lg shadow-md border-2 border-purple-300 hover:border-purple-500 transition">
+                        <div class="flex items-start gap-3">
+                            <div class="text-6xl">${comic.cover}</div>
+                            <div class="flex-1">
+                                <div class="flex justify-between items-start mb-2">
+                                    <h3 class="font-bold text-xl text-purple-900">${comic.title}</h3>
+                                    ${comic.favorite ? '<i class="fas fa-heart text-pink-500 text-xl"></i>' : ''}
+                                </div>
+                                <div class="text-sm text-gray-600 mb-2">
+                                    ${totalEpisodes} Episode${totalEpisodes !== 1 ? 's' : ''}
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2 mb-3">
+                                    <div class="bg-purple-600 h-2 rounded-full transition-all" style="width: ${progress}%"></div>
+                                </div>
+                                <button onclick="openComic(${comic.id})" class="w-full px-3 py-2 bg-purple-700 text-white rounded hover:bg-purple-600">
+                                    <i class="fas fa-book-reader"></i> ${readEpisodes > 0 ? 'Continue Reading' : 'Start Reading'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openComic(id) {
+            currentComic = comics.find(c => c.id === id);
+            currentEpisode = currentComic.history.length > 0 ?
+                Math.max(...currentComic.history) : 0;
+
+            document.getElementById('comicTitle').textContent = currentComic.title;
+            renderEpisode();
+            updateFavoriteBtn();
+            showView('reader');
+        }
+
+        function renderEpisode() {
+            const episode = currentComic.episodes[currentEpisode];
+            document.getElementById('episodeInfo').textContent =
+                `Episode ${currentEpisode + 1}/${currentComic.episodes.length}: ${episode.title}`;
+
+            document.getElementById('panelsContainer').innerHTML = episode.panels.map((panel, idx) => `
+                <div class="panel rounded-lg p-8 text-white shadow-lg" style="background: ${panel.bg}">
+                    <div class="text-6xl text-center mb-4">${panel.emoji}</div>
+                    <p class="text-xl text-center font-semibold">${panel.text}</p>
+                    <div class="text-center text-sm mt-4 opacity-75">Panel ${idx + 1}</div>
+                </div>
+            `).join('');
+
+            // Mark as read
+            if (!currentComic.history.includes(currentEpisode)) {
+                currentComic.history.push(currentEpisode);
+                saveComics();
+            }
+
+            renderComments();
+        }
+
+        function renderComments() {
+            const episodeKey = `ep${currentEpisode}`;
+            const comments = currentComic.comments[episodeKey] || [];
+
+            document.getElementById('commentsList').innerHTML = comments.map((comment, idx) => `
+                <div class="bg-purple-50 p-2 rounded flex justify-between items-center">
+                    <span class="text-sm">${comment}</span>
+                    <button onclick="deleteComment(${idx})" class="text-red-500 hover:text-red-700 text-xs">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `).join('') || '<p class="text-sm text-gray-500">No comments yet</p>';
+        }
+
+        function addComment() {
+            const input = document.getElementById('commentInput');
+            const comment = input.value.trim();
+            if (!comment) return;
+
+            const episodeKey = `ep${currentEpisode}`;
+            if (!currentComic.comments[episodeKey]) {
+                currentComic.comments[episodeKey] = [];
+            }
+            currentComic.comments[episodeKey].push(comment);
+            saveComics();
+            renderComments();
+            input.value = '';
+        }
+
+        function deleteComment(idx) {
+            const episodeKey = `ep${currentEpisode}`;
+            currentComic.comments[episodeKey].splice(idx, 1);
+            saveComics();
+            renderComments();
+        }
+
+        function nextEpisode() {
+            if (currentEpisode < currentComic.episodes.length - 1) {
+                currentEpisode++;
+                renderEpisode();
+                document.getElementById('panelsContainer').scrollTop = 0;
+            }
+        }
+
+        function prevEpisode() {
+            if (currentEpisode > 0) {
+                currentEpisode--;
+                renderEpisode();
+                document.getElementById('panelsContainer').scrollTop = 0;
+            }
+        }
+
+        function toggleFavorite() {
+            currentComic.favorite = !currentComic.favorite;
+            saveComics();
+            updateFavoriteBtn();
+        }
+
+        function updateFavoriteBtn() {
+            const btn = document.getElementById('favBtn');
+            if (currentComic.favorite) {
+                btn.innerHTML = '<i class="fas fa-heart"></i> Favorited';
+            } else {
+                btn.innerHTML = '<i class="far fa-heart"></i> Favorite';
+            }
+        }
+
+        function saveComics() {
+            const idx = comics.findIndex(c => c.id === currentComic.id);
+            comics[idx] = currentComic;
+            localStorage.setItem('comicsLibrary', JSON.stringify(comics));
+        }
+
+        function renderStats() {
+            const totalComics = comics.length;
+            const favorites = comics.filter(c => c.favorite).length;
+            const totalEpisodes = comics.reduce((sum, c) => sum + c.episodes.length, 0);
+            const readEpisodes = comics.reduce((sum, c) => sum + c.history.length, 0);
+            const totalComments = comics.reduce((sum, c) =>
+                sum + Object.values(c.comments).reduce((s, arr) => s + arr.length, 0), 0);
+            const completedComics = comics.filter(c => c.history.length === c.episodes.length).length;
+
+            document.getElementById('statsContent').innerHTML = `
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <i class="fas fa-book text-4xl text-purple-700 mb-2"></i>
+                    <div class="text-3xl font-bold text-purple-900">${totalComics}</div>
+                    <div class="text-gray-600">Total Comics</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <i class="fas fa-heart text-4xl text-pink-600 mb-2"></i>
+                    <div class="text-3xl font-bold text-pink-700">${favorites}</div>
+                    <div class="text-gray-600">Favorites</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <i class="fas fa-book-open text-4xl text-blue-600 mb-2"></i>
+                    <div class="text-3xl font-bold text-blue-700">${readEpisodes}/${totalEpisodes}</div>
+                    <div class="text-gray-600">Episodes Read</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <i class="fas fa-check-circle text-4xl text-green-600 mb-2"></i>
+                    <div class="text-3xl font-bold text-green-700">${completedComics}</div>
+                    <div class="text-gray-600">Completed</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <i class="fas fa-comments text-4xl text-purple-600 mb-2"></i>
+                    <div class="text-3xl font-bold text-purple-700">${totalComments}</div>
+                    <div class="text-gray-600">Total Comments</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <i class="fas fa-percentage text-4xl text-orange-600 mb-2"></i>
+                    <div class="text-3xl font-bold text-orange-700">${totalEpisodes > 0 ? Math.round(readEpisodes/totalEpisodes*100) : 0}%</div>
+                    <div class="text-gray-600">Overall Progress</div>
+                </div>
+            `;
+        }
+
+        function showView(view) {
+            document.getElementById('libraryView').classList.add('hidden');
+            document.getElementById('readerView').classList.add('hidden');
+            document.getElementById('statsView').classList.add('hidden');
+
+            if (view === 'library') {
+                document.getElementById('libraryView').classList.remove('hidden');
+                renderLibrary();
+            } else if (view === 'reader') {
+                document.getElementById('readerView').classList.remove('hidden');
+            } else if (view === 'stats') {
+                document.getElementById('statsView').classList.remove('hidden');
+                renderStats();
+            }
+        }
+
+        renderLibrary();
+    </script>
+</body>
+</html>

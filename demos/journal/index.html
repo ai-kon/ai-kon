@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Journal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #0d9488 0%, #5eead4 100%); }
+        .calendar-day { aspect-ratio: 1; }
+        .has-entry { background-color: #14b8a6; color: white; font-weight: bold; }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="bg-teal-800 text-white p-4 rounded-t-lg shadow-lg flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <a href="../" class="hover:text-teal-200"><i class="fas fa-arrow-left"></i></a>
+                <i class="fas fa-book text-2xl"></i>
+                <h1 class="text-2xl font-bold">Personal Journal</h1>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="showView('calendar')" class="px-3 py-1 bg-teal-600 hover:bg-teal-500 rounded">
+                    <i class="fas fa-calendar"></i> Calendar
+                </button>
+                <button onclick="showView('list')" class="px-3 py-1 bg-teal-600 hover:bg-teal-500 rounded">
+                    <i class="fas fa-list"></i> Entries
+                </button>
+                <button onclick="showView('stats')" class="px-3 py-1 bg-teal-600 hover:bg-teal-500 rounded">
+                    <i class="fas fa-chart-bar"></i> Stats
+                </button>
+            </div>
+        </div>
+
+        <!-- Calendar View -->
+        <div id="calendarView" class="bg-teal-50 p-6 rounded-b-lg shadow-lg">
+            <div class="flex justify-between items-center mb-4">
+                <button onclick="changeMonth(-1)" class="px-3 py-2 bg-teal-700 text-white rounded hover:bg-teal-600">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <h2 class="text-2xl font-bold text-teal-900" id="monthYear"></h2>
+                <button onclick="changeMonth(1)" class="px-3 py-2 bg-teal-700 text-white rounded hover:bg-teal-600">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="grid grid-cols-7 gap-2" id="calendarGrid"></div>
+        </div>
+
+        <!-- Entry Editor -->
+        <div id="editorView" class="bg-teal-50 p-6 rounded-b-lg shadow-lg hidden">
+            <div class="mb-4 flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-teal-900" id="entryDate"></h2>
+                <button onclick="showView('calendar')" class="px-3 py-2 bg-teal-700 text-white rounded hover:bg-teal-600">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow mb-4">
+                <label class="block mb-2 font-semibold text-teal-900">How are you feeling?</label>
+                <div class="flex gap-3 mb-4" id="moodSelector">
+                    <button onclick="setMood('happy')" class="mood-btn text-4xl hover:scale-110 transition" data-mood="happy">😊</button>
+                    <button onclick="setMood('sad')" class="mood-btn text-4xl hover:scale-110 transition" data-mood="sad">😢</button>
+                    <button onclick="setMood('neutral')" class="mood-btn text-4xl hover:scale-110 transition" data-mood="neutral">😐</button>
+                    <button onclick="setMood('excited')" class="mood-btn text-4xl hover:scale-110 transition" data-mood="excited">🤩</button>
+                    <button onclick="setMood('angry')" class="mood-btn text-4xl hover:scale-110 transition" data-mood="angry">😠</button>
+                </div>
+                <label class="block mb-2 font-semibold text-teal-900">Tags</label>
+                <input type="text" id="tags" placeholder="work, personal, health (comma-separated)" class="w-full p-2 border-2 border-teal-300 rounded mb-4">
+                <label class="block mb-2 font-semibold text-teal-900">Your thoughts...</label>
+                <textarea id="entryContent" rows="12" class="w-full p-3 border-2 border-teal-300 rounded resize-none focus:border-teal-500 focus:outline-none" placeholder="Dear diary..."></textarea>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="saveEntry()" class="flex-1 px-4 py-3 bg-teal-700 text-white rounded-lg hover:bg-teal-600 font-semibold">
+                    <i class="fas fa-save"></i> Save Entry
+                </button>
+                <button onclick="deleteEntry()" class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-500">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+
+        <!-- List View -->
+        <div id="listView" class="bg-teal-50 p-6 rounded-b-lg shadow-lg hidden">
+            <div class="mb-4 flex gap-2">
+                <input type="text" id="searchBox" placeholder="Search entries..." class="flex-1 p-2 border-2 border-teal-300 rounded" oninput="renderList()">
+                <button onclick="exportEntries('txt')" class="px-3 py-2 bg-teal-700 text-white rounded hover:bg-teal-600">
+                    <i class="fas fa-download"></i> TXT
+                </button>
+                <button onclick="exportEntries('json')" class="px-3 py-2 bg-teal-700 text-white rounded hover:bg-teal-600">
+                    <i class="fas fa-download"></i> JSON
+                </button>
+            </div>
+            <div id="entriesList" class="space-y-3"></div>
+        </div>
+
+        <!-- Stats View -->
+        <div id="statsView" class="bg-teal-50 p-6 rounded-b-lg shadow-lg hidden">
+            <h2 class="text-2xl font-bold mb-4 text-teal-900"><i class="fas fa-chart-line"></i> Journal Statistics</h2>
+            <div class="grid md:grid-cols-3 gap-4 mb-6" id="statsContent"></div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <h3 class="font-bold text-lg mb-3 text-teal-900">Mood Distribution</h3>
+                <div id="moodChart"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let entries = JSON.parse(localStorage.getItem('journalEntries') || '[]');
+        let currentDate = new Date();
+        let viewingDate = '';
+        let currentMood = '';
+
+        const moods = {
+            happy: '😊',
+            sad: '😢',
+            neutral: '😐',
+            excited: '🤩',
+            angry: '😠'
+        };
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            document.getElementById('monthYear').textContent = new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day =>
+                `<div class="text-center font-bold text-teal-800 p-2">${day}</div>`
+            ).join('');
+
+            for (let i = 0; i < firstDay; i++) {
+                grid.innerHTML += '<div></div>';
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const entry = entries.find(e => e.date === dateStr);
+                const isToday = dateStr === new Date().toISOString().split('T')[0];
+                grid.innerHTML += `
+                    <button onclick="openEditor('${dateStr}')"
+                        class="calendar-day p-2 rounded hover:bg-teal-200 transition ${entry ? 'has-entry' : 'bg-white'} ${isToday ? 'ring-2 ring-teal-600' : ''}"
+                        title="${entry ? entry.mood : ''}">
+                        ${day}
+                        ${entry ? '<div class="text-xs">' + moods[entry.mood] + '</div>' : ''}
+                    </button>
+                `;
+            }
+        }
+
+        function changeMonth(delta) {
+            currentDate.setMonth(currentDate.getMonth() + delta);
+            renderCalendar();
+        }
+
+        function openEditor(dateStr) {
+            viewingDate = dateStr;
+            const entry = entries.find(e => e.date === dateStr);
+            document.getElementById('entryDate').textContent = new Date(dateStr).toLocaleDateString('en-US', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+
+            if (entry) {
+                document.getElementById('entryContent').value = entry.content;
+                document.getElementById('tags').value = entry.tags.join(', ');
+                currentMood = entry.mood;
+            } else {
+                document.getElementById('entryContent').value = '';
+                document.getElementById('tags').value = '';
+                currentMood = '';
+            }
+
+            updateMoodSelection();
+            showView('editor');
+        }
+
+        function setMood(mood) {
+            currentMood = mood;
+            updateMoodSelection();
+        }
+
+        function updateMoodSelection() {
+            document.querySelectorAll('.mood-btn').forEach(btn => {
+                if (btn.dataset.mood === currentMood) {
+                    btn.classList.add('ring-4', 'ring-teal-500');
+                } else {
+                    btn.classList.remove('ring-4', 'ring-teal-500');
+                }
+            });
+        }
+
+        function saveEntry() {
+            const content = document.getElementById('entryContent').value.trim();
+            if (!content || !currentMood) {
+                alert('Please select a mood and write something!');
+                return;
+            }
+
+            const tags = document.getElementById('tags').value.split(',').map(t => t.trim()).filter(t => t);
+            const entryIdx = entries.findIndex(e => e.date === viewingDate);
+
+            const entry = {
+                date: viewingDate,
+                content: content,
+                mood: currentMood,
+                tags: tags,
+                timestamp: Date.now()
+            };
+
+            if (entryIdx > -1) {
+                entries[entryIdx] = entry;
+            } else {
+                entries.push(entry);
+            }
+
+            localStorage.setItem('journalEntries', JSON.stringify(entries));
+            showView('calendar');
+        }
+
+        function deleteEntry() {
+            if (confirm('Delete this entry?')) {
+                entries = entries.filter(e => e.date !== viewingDate);
+                localStorage.setItem('journalEntries', JSON.stringify(entries));
+                showView('calendar');
+            }
+        }
+
+        function renderList() {
+            const search = document.getElementById('searchBox').value.toLowerCase();
+            const filtered = entries.filter(e =>
+                e.content.toLowerCase().includes(search) ||
+                e.tags.some(t => t.toLowerCase().includes(search))
+            ).sort((a, b) => b.date.localeCompare(a.date));
+
+            document.getElementById('entriesList').innerHTML = filtered.map(entry => `
+                <div class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition cursor-pointer" onclick="openEditor('${entry.date}')">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <div class="font-bold text-teal-900">${new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                            <div class="text-2xl">${moods[entry.mood]}</div>
+                        </div>
+                        <div class="flex gap-1 flex-wrap">
+                            ${entry.tags.map(tag => `<span class="px-2 py-1 bg-teal-100 text-teal-700 text-xs rounded">${tag}</span>`).join('')}
+                        </div>
+                    </div>
+                    <p class="text-gray-700 line-clamp-3">${entry.content}</p>
+                </div>
+            `).join('') || '<p class="text-center text-gray-500 py-8">No entries found</p>';
+        }
+
+        function renderStats() {
+            const totalEntries = entries.length;
+            const uniqueTags = [...new Set(entries.flatMap(e => e.tags))].length;
+            const currentStreak = calculateStreak();
+            const moodCounts = {};
+            entries.forEach(e => moodCounts[e.mood] = (moodCounts[e.mood] || 0) + 1);
+
+            document.getElementById('statsContent').innerHTML = `
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <i class="fas fa-book text-4xl text-teal-700 mb-2"></i>
+                    <div class="text-3xl font-bold text-teal-900">${totalEntries}</div>
+                    <div class="text-gray-600">Total Entries</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <i class="fas fa-fire text-4xl text-orange-600 mb-2"></i>
+                    <div class="text-3xl font-bold text-orange-700">${currentStreak}</div>
+                    <div class="text-gray-600">Day Streak</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md text-center">
+                    <i class="fas fa-tags text-4xl text-purple-600 mb-2"></i>
+                    <div class="text-3xl font-bold text-purple-700">${uniqueTags}</div>
+                    <div class="text-gray-600">Unique Tags</div>
+                </div>
+            `;
+
+            const moodChart = document.getElementById('moodChart');
+            const maxCount = Math.max(...Object.values(moodCounts), 1);
+            moodChart.innerHTML = Object.entries(moodCounts).map(([mood, count]) => `
+                <div class="mb-3">
+                    <div class="flex justify-between mb-1">
+                        <span class="text-2xl">${moods[mood]} ${mood}</span>
+                        <span class="font-semibold">${count}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div class="bg-teal-600 h-3 rounded-full transition-all" style="width: ${(count / maxCount * 100)}%"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function calculateStreak() {
+            if (entries.length === 0) return 0;
+            const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date));
+            let streak = 1;
+            let currentCheck = new Date(sorted[0].date);
+
+            for (let i = 1; i < sorted.length; i++) {
+                const prevDate = new Date(currentCheck);
+                prevDate.setDate(prevDate.getDate() - 1);
+                const checkDate = prevDate.toISOString().split('T')[0];
+
+                if (sorted[i].date === checkDate) {
+                    streak++;
+                    currentCheck = new Date(sorted[i].date);
+                } else {
+                    break;
+                }
+            }
+            return streak;
+        }
+
+        function exportEntries(format) {
+            if (format === 'json') {
+                const data = JSON.stringify(entries, null, 2);
+                download('journal_export.json', data, 'application/json');
+            } else {
+                const data = entries.map(e =>
+                    `Date: ${e.date}\nMood: ${moods[e.mood]} ${e.mood}\nTags: ${e.tags.join(', ')}\n\n${e.content}\n\n${'='.repeat(50)}\n\n`
+                ).join('');
+                download('journal_export.txt', data, 'text/plain');
+            }
+        }
+
+        function download(filename, content, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function showView(view) {
+            document.getElementById('calendarView').classList.add('hidden');
+            document.getElementById('editorView').classList.add('hidden');
+            document.getElementById('listView').classList.add('hidden');
+            document.getElementById('statsView').classList.add('hidden');
+
+            if (view === 'calendar') {
+                document.getElementById('calendarView').classList.remove('hidden');
+                renderCalendar();
+            } else if (view === 'editor') {
+                document.getElementById('editorView').classList.remove('hidden');
+            } else if (view === 'list') {
+                document.getElementById('listView').classList.remove('hidden');
+                renderList();
+            } else if (view === 'stats') {
+                document.getElementById('statsView').classList.remove('hidden');
+                renderStats();
+            }
+        }
+
+        renderCalendar();
+    </script>
+</body>
+</html>

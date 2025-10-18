@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wiki - AI-KON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #00A495 0%, #00CDB8 100%); }
+        .wiki-content a { color: #00A495; text-decoration: underline; cursor: pointer; }
+        .wiki-content a:hover { color: #008577; }
+        .wiki-content h2 { font-size: 1.5rem; font-weight: bold; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+        .wiki-content h3 { font-size: 1.25rem; font-weight: bold; margin-top: 1.25rem; margin-bottom: 0.5rem; }
+        .wiki-content p { margin-bottom: 1rem; line-height: 1.7; }
+        .wiki-content ul { margin-left: 1.5rem; margin-bottom: 1rem; list-style: disc; }
+        .wiki-content code { background: #f5f5f5; padding: 0.2rem 0.4rem; border-radius: 3px; font-family: monospace; }
+        .toc-link { cursor: pointer; color: #00A495; }
+        .toc-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <div class="bg-white rounded-lg shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-teal-600 to-teal-500 text-white p-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold"><i class="fas fa-book mr-2"></i>AI-KON Wiki</h1>
+                    <button onclick="window.location.href='../'" class="px-4 py-2 bg-white text-teal-600 rounded-lg hover:bg-gray-100 transition-colors">뒤로가기</button>
+                </div>
+                <div class="mt-3">
+                    <input type="text" id="searchInput" placeholder="문서 검색..." class="w-full px-4 py-2 rounded-lg text-gray-800" oninput="searchArticles()">
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row">
+                <!-- Sidebar -->
+                <div class="w-full md:w-64 bg-gray-50 p-4 border-r">
+                    <div class="mb-4">
+                        <button onclick="showRandomArticle()" class="w-full px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 mb-2">
+                            <i class="fas fa-random mr-2"></i>랜덤 문서
+                        </button>
+                        <button onclick="showRecentChanges()" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mb-2">
+                            <i class="fas fa-history mr-2"></i>최근 변경
+                        </button>
+                        <button onclick="showNewArticle()" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                            <i class="fas fa-plus mr-2"></i>새 문서
+                        </button>
+                    </div>
+
+                    <h3 class="font-bold text-gray-700 mb-2">카테고리</h3>
+                    <div id="categoryList" class="space-y-1 text-sm"></div>
+
+                    <h3 class="font-bold text-gray-700 mb-2 mt-4">인기 문서</h3>
+                    <div id="popularList" class="space-y-1 text-sm"></div>
+                </div>
+
+                <!-- Main Content -->
+                <div class="flex-1 p-6">
+                    <div id="articleView">
+                        <div class="text-center py-20">
+                            <i class="fas fa-book-open text-6xl text-teal-600 mb-4"></i>
+                            <h2 class="text-2xl font-bold text-gray-700 mb-2">AI-KON Wiki에 오신 것을 환영합니다</h2>
+                            <p class="text-gray-600">검색하거나 사이드바에서 문서를 선택하세요</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Sidebar (TOC) -->
+                <div id="tocSidebar" class="hidden md:block w-64 bg-gray-50 p-4 border-l">
+                    <h3 class="font-bold text-gray-700 mb-3">목차</h3>
+                    <div id="tocContent" class="space-y-1 text-sm"></div>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="bg-gray-100 p-4 grid grid-cols-4 gap-4 text-center border-t">
+                <div>
+                    <div class="text-sm text-gray-600">총 문서</div>
+                    <div class="text-xl font-bold" id="totalArticles">0</div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-600">편집 횟수</div>
+                    <div class="text-xl font-bold" id="totalEdits">0</div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-600">조회수</div>
+                    <div class="text-xl font-bold" id="totalViews">0</div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-600">카테고리</div>
+                    <div class="text-xl font-bold" id="totalCategories">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <h2 class="text-2xl font-bold mb-4">문서 편집</h2>
+            <input type="text" id="editTitle" placeholder="제목" class="w-full px-4 py-2 border rounded mb-3">
+            <textarea id="editContent" placeholder="내용 (마크다운 스타일 지원)" class="w-full px-4 py-3 border rounded mb-3 font-mono" rows="15"></textarea>
+            <input type="text" id="editCategories" placeholder="카테고리 (쉼표로 구분)" class="w-full px-4 py-2 border rounded mb-3">
+            <div class="flex gap-2">
+                <button onclick="saveArticle()" class="flex-1 px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700">저장</button>
+                <button onclick="closeEditModal()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const defaultArticles = {
+            '인공지능': {
+                content: `인공지능(人工知能, Artificial Intelligence, AI)은 인간의 학습능력, 추론능력, 지각능력을 인공적으로 구현한 컴퓨터 프로그램 또는 이를 포함한 컴퓨터 시스템이다.
+
+## 개요
+인공지능은 1956년 다트머스 회의에서 존 매카시가 처음 제안한 용어이다. 현대에는 머신러닝과 딥러닝 기술의 발전으로 급격한 성장을 이루고 있다.
+
+## 역사
+- 1950년대: 앨런 튜링의 튜링 테스트 제안
+- 1980년대: 전문가 시스템의 부상
+- 2010년대: 딥러닝 혁명
+- 2020년대: GPT, ChatGPT 등 거대 언어 모델의 등장
+
+## 응용 분야
+- 자연어 처리
+- 컴퓨터 비전
+- 음성 인식
+- 자율 주행
+- 의료 진단
+- 게임 AI
+
+## 관련 문서
+[[머신러닝]] [[딥러닝]] [[GPT]] [[신경망]]`,
+                categories: ['기술', '과학', 'AI'],
+                created: Date.now(),
+                views: 1523,
+                edits: 5
+            },
+            '대한민국': {
+                content: `대한민국(大韓民國, Republic of Korea)은 동아시아의 한반도 남부에 위치한 민주공화국이다.
+
+## 개요
+수도는 서울특별시이며, 인구는 약 5,200만 명이다. 1948년 8월 15일 정부 수립을 선포했다.
+
+## 역사
+- 고조선 (기원전 2333년~)
+- 삼국시대 (고구려, 백제, 신라)
+- 고려 (918~1392)
+- 조선 (1392~1897)
+- 대한제국 (1897~1910)
+- 일제강점기 (1910~1945)
+- 대한민국 정부 수립 (1948)
+
+## 경제
+세계 10위권의 경제 대국으로, IT, 자동차, 조선, 반도체 등이 주력 산업이다.
+
+## 문화
+K-POP, K-드라마, 한식 등 한류(韓流)가 전 세계적으로 인기를 얻고 있다.
+
+## 관련 문서
+[[서울]] [[한국어]] [[K-POP]] [[한식]]`,
+                categories: ['국가', '역사', '아시아'],
+                created: Date.now(),
+                views: 2341,
+                edits: 12
+            },
+            'ChatGPT': {
+                content: `ChatGPT는 OpenAI가 개발한 대화형 인공지능 챗봇이다. GPT-3.5 및 GPT-4 언어 모델을 기반으로 한다.
+
+## 개요
+2022년 11월 출시 이후 전 세계적으로 폭발적인 인기를 얻었으며, 2개월 만에 1억 사용자를 돌파했다.
+
+## 기능
+- 자연스러운 대화
+- 코드 작성 및 디버깅
+- 번역
+- 요약
+- 창의적 글쓰기
+- 수학 문제 풀이
+
+## 영향
+ChatGPT의 등장은 AI 산업에 혁명을 가져왔으며, Microsoft, Google 등 주요 기술 기업들이 경쟁적으로 유사한 서비스를 출시했다.
+
+## 한계
+- 2021년 9월 이후 데이터 부족
+- 환각(Hallucination) 현상
+- 수학적 계산 오류 가능성
+
+## 관련 문서
+[[인공지능]] [[OpenAI]] [[GPT]] [[머신러닝]]`,
+                categories: ['AI', '기술', '챗봇'],
+                created: Date.now(),
+                views: 3421,
+                edits: 8
+            },
+            'K-POP': {
+                content: `K-POP(Korean Pop)은 대한민국의 대중음악을 가리키는 용어이다.
+
+## 개요
+1990년대 서태지와 아이들의 등장 이후 빠르게 발전했으며, 2000년대 후반부터 전 세계적인 한류 열풍을 주도하고 있다.
+
+## 특징
+- 강렬한 칼군무
+- 중독성 있는 후크송
+- 화려한 비주얼
+- 체계적인 연습생 시스템
+- 팬덤 문화
+
+## 주요 아티스트
+- BTS (방탄소년단)
+- BLACKPINK
+- EXO
+- TWICE
+- NewJeans
+- Stray Kids
+
+## 글로벌 영향
+빌보드 차트 진입, 그래미 시상식 무대, 코첼라 공연 등 K-POP은 전 세계 음악 산업에 큰 영향을 미치고 있다.
+
+## 관련 문서
+[[BTS]] [[BLACKPINK]] [[한류]] [[대한민국]]`,
+                categories: ['음악', '문화', '한류'],
+                created: Date.now(),
+                views: 1876,
+                edits: 6
+            },
+            '블록체인': {
+                content: `블록체인(Blockchain)은 관리 대상 데이터를 '블록'이라고 하는 소규모 데이터들이 P2P 방식을 기반으로 생성된 체인 형태의 연결고리 기반 분산 데이터 저장 환경에 저장하여 누구라도 임의로 수정할 수 없고 누구나 변경의 결과를 열람할 수 있는 분산 컴퓨팅 기술 기반의 원장 관리 기술이다.
+
+## 구조
+블록체인은 여러 개의 블록이 체인처럼 연결된 구조로, 각 블록은 이전 블록의 해시값을 포함한다.
+
+## 특징
+- 탈중앙화
+- 투명성
+- 불변성
+- 보안성
+
+## 응용 분야
+- 암호화폐 (비트코인, 이더리움)
+- 스마트 컨트랙트
+- NFT (대체 불가능 토큰)
+- 공급망 관리
+- 의료 기록 관리
+
+## 관련 문서
+[[비트코인]] [[이더리움]] [[암호화폐]] [[NFT]]`,
+                categories: ['기술', '암호화폐', '분산시스템'],
+                created: Date.now(),
+                views: 1234,
+                edits: 4
+            },
+            '한글': {
+                content: `한글은 대한민국의 공식 문자이자 조선민주주의인민공화국에서 쓰이는 문자로, 1443년 조선 제4대 국왕 세종대왕이 훈민정음(訓民正音)이라는 이름으로 창제했다.
+
+## 특징
+- 자음 14자, 모음 10자로 구성
+- 과학적이고 독창적인 문자 체계
+- 배우기 쉬움
+- 표음문자
+
+## 우수성
+유네스코는 세종대왕상을 제정하여 한글의 우수성을 인정했다. 언어학자들은 한글을 가장 과학적인 문자 중 하나로 평가한다.
+
+## 한글날
+10월 9일은 한글날로, 한글의 창제를 기념하는 대한민국의 국경일이다.
+
+## 디지털 시대의 한글
+한글은 컴퓨터 자판에서 매우 효율적으로 입력할 수 있으며, 모바일 환경에서도 빠른 입력이 가능하다.
+
+## 관련 문서
+[[세종대왕]] [[훈민정음]] [[한국어]] [[대한민국]]`,
+                categories: ['언어', '문화', '역사'],
+                created: Date.now(),
+                views: 2987,
+                edits: 7
+            },
+            '양자컴퓨터': {
+                content: `양자컴퓨터(Quantum Computer)는 양자역학적 중첩과 얽힘 현상을 활용하여 정보를 처리하는 컴퓨터이다.
+
+## 원리
+기존 컴퓨터가 비트(0 또는 1)를 사용하는 반면, 양자컴퓨터는 큐비트(qubit)를 사용한다. 큐비트는 0과 1을 동시에 나타낼 수 있다.
+
+## 장점
+특정 문제(암호 해독, 최적화, 시뮬레이션)에서 기존 컴퓨터보다 압도적으로 빠른 속도
+
+## 현황
+- IBM, Google, Microsoft 등 주요 기업들이 개발 중
+- 2019년 Google이 양자 우월성 달성 발표
+- 아직 실용화 단계는 아님
+
+## 과제
+- 큐비트의 불안정성
+- 오류 정정
+- 확장성
+
+## 관련 문서
+[[양자역학]] [[컴퓨터과학]] [[암호학]]`,
+                categories: ['기술', '과학', '컴퓨터'],
+                created: Date.now(),
+                views: 876,
+                edits: 3
+            }
+        };
+
+        let articles = JSON.parse(localStorage.getItem('wiki_articles')) || defaultArticles;
+        let stats = JSON.parse(localStorage.getItem('wiki_stats')) || {totalViews: 0, totalEdits: 0};
+        let currentArticle = null;
+
+        function saveToStorage() {
+            localStorage.setItem('wiki_articles', JSON.stringify(articles));
+            localStorage.setItem('wiki_stats', JSON.stringify(stats));
+        }
+
+        function searchArticles() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const results = Object.keys(articles).filter(title => title.toLowerCase().includes(query));
+
+            if (results.length > 0 && query) {
+                showArticle(results[0]);
+            }
+        }
+
+        function showArticle(title) {
+            if (!articles[title]) return;
+
+            currentArticle = title;
+            const article = articles[title];
+            article.views = (article.views || 0) + 1;
+            stats.totalViews++;
+            saveToStorage();
+
+            let content = article.content;
+
+            // Convert markdown-style to HTML
+            content = content.replace(/## (.+)/g, '<h2>$1</h2>');
+            content = content.replace(/### (.+)/g, '<h3>$1</h3>');
+            content = content.replace(/\[\[(.+?)\]\]/g, '<a onclick="showArticle(\'$1\')">$1</a>');
+            content = content.replace(/`(.+?)`/g, '<code>$1</code>');
+            content = content.replace(/\n\n/g, '</p><p>');
+            content = content.replace(/^(.+)$/gm, '<p>$1</p>');
+            content = content.replace(/- (.+)/g, '<li>$1</li>');
+
+            document.getElementById('articleView').innerHTML = `
+                <div class="mb-4 flex justify-between items-start">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-800 mb-2">${title}</h1>
+                        <div class="flex gap-2 mb-3">
+                            ${article.categories.map(cat => `<span class="px-2 py-1 bg-teal-100 text-teal-700 text-xs rounded">${cat}</span>`).join('')}
+                        </div>
+                    </div>
+                    <button onclick="editArticle('${title}')" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        <i class="fas fa-edit mr-1"></i>편집
+                    </button>
+                </div>
+                <div class="wiki-content text-gray-700 leading-relaxed">
+                    ${content}
+                </div>
+                <div class="mt-6 pt-4 border-t text-sm text-gray-500">
+                    <div>조회수: ${article.views} | 편집: ${article.edits} | 생성: ${new Date(article.created).toLocaleDateString()}</div>
+                </div>
+            `;
+
+            // Generate TOC
+            const headings = article.content.match(/## (.+)/g) || [];
+            if (headings.length > 0) {
+                const tocHTML = headings.map(h => {
+                    const text = h.replace('## ', '');
+                    return `<div class="toc-link hover:text-teal-700" onclick="scrollToHeading('${text}')">${text}</div>`;
+                }).join('');
+                document.getElementById('tocContent').innerHTML = tocHTML;
+            } else {
+                document.getElementById('tocContent').innerHTML = '<div class="text-gray-500 text-xs">목차 없음</div>';
+            }
+
+            updateStats();
+        }
+
+        function editArticle(title) {
+            currentArticle = title;
+            const article = articles[title] || {content: '', categories: []};
+
+            document.getElementById('editTitle').value = title;
+            document.getElementById('editContent').value = article.content || '';
+            document.getElementById('editCategories').value = article.categories?.join(', ') || '';
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function showNewArticle() {
+            currentArticle = null;
+            document.getElementById('editTitle').value = '';
+            document.getElementById('editContent').value = '';
+            document.getElementById('editCategories').value = '';
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        function saveArticle() {
+            const title = document.getElementById('editTitle').value.trim();
+            const content = document.getElementById('editContent').value.trim();
+            const categories = document.getElementById('editCategories').value.split(',').map(c => c.trim()).filter(c => c);
+
+            if (!title || !content) {
+                alert('제목과 내용을 입력하세요.');
+                return;
+            }
+
+            const isNew = !articles[title];
+            articles[title] = {
+                content: content,
+                categories: categories,
+                created: articles[title]?.created || Date.now(),
+                views: articles[title]?.views || 0,
+                edits: (articles[title]?.edits || 0) + 1
+            };
+
+            stats.totalEdits++;
+            saveToStorage();
+            closeEditModal();
+            showArticle(title);
+            renderSidebars();
+        }
+
+        function showRandomArticle() {
+            const titles = Object.keys(articles);
+            const randomTitle = titles[Math.floor(Math.random() * titles.length)];
+            showArticle(randomTitle);
+        }
+
+        function showRecentChanges() {
+            const sorted = Object.entries(articles).sort((a, b) => b[1].created - a[1].created);
+            const html = `
+                <h1 class="text-2xl font-bold mb-4">최근 변경</h1>
+                <div class="space-y-2">
+                    ${sorted.slice(0, 20).map(([title, article]) => `
+                        <div class="p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer" onclick="showArticle('${title}')">
+                            <div class="font-bold">${title}</div>
+                            <div class="text-sm text-gray-600">${new Date(article.created).toLocaleString()} | 편집 ${article.edits}회</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            document.getElementById('articleView').innerHTML = html;
+        }
+
+        function renderSidebars() {
+            // Categories
+            const allCategories = {};
+            Object.values(articles).forEach(article => {
+                article.categories?.forEach(cat => {
+                    allCategories[cat] = (allCategories[cat] || 0) + 1;
+                });
+            });
+
+            const categoryHTML = Object.entries(allCategories)
+                .sort((a, b) => b[1] - a[1])
+                .map(([cat, count]) => `
+                    <div class="text-teal-700 hover:underline cursor-pointer" onclick="showCategory('${cat}')">
+                        ${cat} (${count})
+                    </div>
+                `).join('');
+            document.getElementById('categoryList').innerHTML = categoryHTML || '<div class="text-gray-400">없음</div>';
+
+            // Popular articles
+            const popular = Object.entries(articles)
+                .sort((a, b) => (b[1].views || 0) - (a[1].views || 0))
+                .slice(0, 10);
+
+            const popularHTML = popular.map(([title, article]) => `
+                <div class="text-teal-700 hover:underline cursor-pointer" onclick="showArticle('${title}')">
+                    ${title} (${article.views})
+                </div>
+            `).join('');
+            document.getElementById('popularList').innerHTML = popularHTML;
+        }
+
+        function showCategory(category) {
+            const filtered = Object.entries(articles).filter(([_, article]) => article.categories?.includes(category));
+            const html = `
+                <h1 class="text-2xl font-bold mb-4">카테고리: ${category}</h1>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    ${filtered.map(([title, article]) => `
+                        <div class="p-4 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer" onclick="showArticle('${title}')">
+                            <div class="font-bold text-lg">${title}</div>
+                            <div class="text-sm text-gray-600">조회 ${article.views} | 편집 ${article.edits}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            document.getElementById('articleView').innerHTML = html;
+        }
+
+        function updateStats() {
+            document.getElementById('totalArticles').textContent = Object.keys(articles).length;
+            document.getElementById('totalEdits').textContent = stats.totalEdits;
+            document.getElementById('totalViews').textContent = stats.totalViews;
+
+            const allCategories = new Set();
+            Object.values(articles).forEach(article => {
+                article.categories?.forEach(cat => allCategories.add(cat));
+            });
+            document.getElementById('totalCategories').textContent = allCategories.size;
+        }
+
+        // Initialize
+        renderSidebars();
+        updateStats();
+
+        // Show first article on load
+        const firstArticle = Object.keys(articles)[0];
+        if (firstArticle) showArticle(firstArticle);
+    </script>
+</body>
+</html>

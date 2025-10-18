@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
+        .editor-container { background: rgba(255, 255, 255, 0.95); }
+        canvas { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        input[type="range"] { accent-color: #ec4899; }
+        .active-filter { background: #ec4899 !important; color: white !important; }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-6xl mx-auto">
+        <div class="mb-4 flex items-center justify-between">
+            <a href="../" class="text-white hover:text-pink-200 transition"><i class="fas fa-arrow-left mr-2"></i>Back</a>
+            <h1 class="text-3xl font-bold text-white"><i class="fas fa-image mr-2"></i>Photo Editor</h1>
+            <div></div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div class="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-4 text-white">
+                <i class="fas fa-palette text-2xl mb-2"></i>
+                <div class="text-sm opacity-80">Filters Applied</div>
+                <div class="text-2xl font-bold" id="filterCount">0</div>
+            </div>
+            <div class="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-4 text-white">
+                <i class="fas fa-expand-arrows-alt text-2xl mb-2"></i>
+                <div class="text-sm opacity-80">Dimensions</div>
+                <div class="text-lg font-bold" id="dimensions">-</div>
+            </div>
+            <div class="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-4 text-white">
+                <i class="fas fa-undo text-2xl mb-2"></i>
+                <div class="text-sm opacity-80">Rotation</div>
+                <div class="text-2xl font-bold" id="rotation">0°</div>
+            </div>
+            <div class="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-4 text-white">
+                <i class="fas fa-clock text-2xl mb-2"></i>
+                <div class="text-sm opacity-80">Edits</div>
+                <div class="text-2xl font-bold" id="editsCount">0</div>
+            </div>
+        </div>
+
+        <div class="editor-container rounded-lg shadow-2xl p-6">
+            <div class="mb-4 flex flex-wrap gap-2">
+                <label class="px-4 py-2 bg-pink-600 text-white rounded-lg cursor-pointer hover:bg-pink-700 transition">
+                    <i class="fas fa-upload mr-2"></i>Upload Photo
+                    <input type="file" id="upload" accept="image/*" class="hidden">
+                </label>
+                <button id="reset" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"><i class="fas fa-redo mr-2"></i>Reset</button>
+                <button id="download" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"><i class="fas fa-download mr-2"></i>Download</button>
+                <button id="rotateLeft" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"><i class="fas fa-undo mr-2"></i>Rotate Left</button>
+                <button id="rotateRight" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"><i class="fas fa-redo mr-2"></i>Rotate Right</button>
+                <button id="flipH" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"><i class="fas fa-arrows-alt-h mr-2"></i>Flip H</button>
+                <button id="flipV" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"><i class="fas fa-arrows-alt-v mr-2"></i>Flip V</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2">
+                    <div class="bg-gray-100 rounded-lg p-4 flex items-center justify-center min-h-96">
+                        <canvas id="canvas" class="max-w-full"></canvas>
+                        <div id="placeholder" class="text-gray-400 text-center">
+                            <i class="fas fa-image text-6xl mb-4"></i>
+                            <p class="text-lg">Upload an image to start editing</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold mb-3 text-pink-700 text-lg"><i class="fas fa-sliders-h mr-2"></i>Filters & Adjustments</h3>
+
+                    <div class="space-y-4">
+                        <div class="flex gap-2 mb-4">
+                            <button data-filter="none" class="filter-btn flex-1 px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition text-sm">Original</button>
+                            <button data-filter="grayscale" class="filter-btn flex-1 px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition text-sm">B&W</button>
+                            <button data-filter="sepia" class="filter-btn flex-1 px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition text-sm">Sepia</button>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Brightness</label>
+                            <input type="range" id="brightness" min="0" max="200" value="100" class="w-full">
+                            <div class="text-xs text-gray-600 text-right" id="brightnessVal">100%</div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Contrast</label>
+                            <input type="range" id="contrast" min="0" max="200" value="100" class="w-full">
+                            <div class="text-xs text-gray-600 text-right" id="contrastVal">100%</div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Saturation</label>
+                            <input type="range" id="saturate" min="0" max="200" value="100" class="w-full">
+                            <div class="text-xs text-gray-600 text-right" id="saturateVal">100%</div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Blur</label>
+                            <input type="range" id="blur" min="0" max="10" value="0" class="w-full">
+                            <div class="text-xs text-gray-600 text-right" id="blurVal">0px</div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Hue Rotate</label>
+                            <input type="range" id="hueRotate" min="0" max="360" value="0" class="w-full">
+                            <div class="text-xs text-gray-600 text-right" id="hueRotateVal">0°</div>
+                        </div>
+
+                        <div class="pt-4">
+                            <label class="block text-sm font-medium mb-2"><i class="fas fa-font mr-2"></i>Add Text</label>
+                            <input type="text" id="textInput" placeholder="Enter text..." class="w-full px-3 py-2 border rounded-lg mb-2">
+                            <button id="addText" class="w-full px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition">Add Text</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const placeholder = document.getElementById('placeholder');
+        const upload = document.getElementById('upload');
+
+        let originalImage = null;
+        let currentRotation = 0;
+        let filters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, hueRotate: 0, filter: 'none' };
+        let flipH = 1, flipV = 1;
+        let edits = 0;
+
+        const updateStats = () => {
+            document.getElementById('dimensions').textContent = originalImage ? `${canvas.width}×${canvas.height}` : '-';
+            document.getElementById('rotation').textContent = `${currentRotation}°`;
+            const activeFilters = Object.values(filters).filter((v, i) => i < 5 && v !== 100 || i === 5 && v !== 0).length;
+            document.getElementById('filterCount').textContent = activeFilters + (filters.filter !== 'none' ? 1 : 0);
+            document.getElementById('editsCount').textContent = edits;
+        };
+
+        const applyFilters = () => {
+            if (!originalImage) return;
+
+            canvas.width = originalImage.width;
+            canvas.height = originalImage.height;
+
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(currentRotation * Math.PI / 180);
+            ctx.scale(flipH, flipV);
+
+            let filterStr = `brightness(${filters.brightness}%) contrast(${filters.contrast}%) saturate(${filters.saturate}%) blur(${filters.blur}px) hue-rotate(${filters.hueRotate}deg)`;
+            if (filters.filter === 'grayscale') filterStr += ' grayscale(100%)';
+            if (filters.filter === 'sepia') filterStr += ' sepia(100%)';
+
+            ctx.filter = filterStr;
+            ctx.drawImage(originalImage, -originalImage.width / 2, -originalImage.height / 2);
+            ctx.restore();
+            updateStats();
+        };
+
+        upload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    originalImage = img;
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    placeholder.style.display = 'none';
+                    canvas.style.display = 'block';
+                    applyFilters();
+                    edits++;
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('reset').addEventListener('click', () => {
+            filters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, hueRotate: 0, filter: 'none' };
+            currentRotation = 0;
+            flipH = flipV = 1;
+            document.getElementById('brightness').value = 100;
+            document.getElementById('contrast').value = 100;
+            document.getElementById('saturate').value = 100;
+            document.getElementById('blur').value = 0;
+            document.getElementById('hueRotate').value = 0;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active-filter'));
+            document.querySelector('[data-filter="none"]').classList.add('active-filter');
+            applyFilters();
+            edits++;
+        });
+
+        document.getElementById('download').addEventListener('click', () => {
+            if (!originalImage) return;
+            const link = document.createElement('a');
+            link.download = 'edited-photo.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+
+        document.getElementById('rotateLeft').addEventListener('click', () => {
+            currentRotation = (currentRotation - 90) % 360;
+            applyFilters();
+            edits++;
+        });
+
+        document.getElementById('rotateRight').addEventListener('click', () => {
+            currentRotation = (currentRotation + 90) % 360;
+            applyFilters();
+            edits++;
+        });
+
+        document.getElementById('flipH').addEventListener('click', () => {
+            flipH *= -1;
+            applyFilters();
+            edits++;
+        });
+
+        document.getElementById('flipV').addEventListener('click', () => {
+            flipV *= -1;
+            applyFilters();
+            edits++;
+        });
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active-filter'));
+                btn.classList.add('active-filter');
+                filters.filter = btn.dataset.filter;
+                applyFilters();
+                edits++;
+            });
+        });
+
+        ['brightness', 'contrast', 'saturate', 'blur', 'hueRotate'].forEach(filter => {
+            const input = document.getElementById(filter);
+            const display = document.getElementById(filter + 'Val');
+            input.addEventListener('input', () => {
+                filters[filter] = input.value;
+                const unit = filter === 'blur' ? 'px' : filter === 'hueRotate' ? '°' : '%';
+                display.textContent = input.value + unit;
+                applyFilters();
+                edits++;
+            });
+        });
+
+        document.getElementById('addText').addEventListener('click', () => {
+            const text = document.getElementById('textInput').value;
+            if (!text || !originalImage) return;
+
+            ctx.font = '40px Arial';
+            ctx.fillStyle = 'white';
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            ctx.textAlign = 'center';
+            ctx.strokeText(text, canvas.width / 2, canvas.height - 50);
+            ctx.fillText(text, canvas.width / 2, canvas.height - 50);
+            document.getElementById('textInput').value = '';
+            edits++;
+            updateStats();
+        });
+
+        document.querySelector('[data-filter="none"]').classList.add('active-filter');
+        updateStats();
+    </script>
+</body>
+</html>

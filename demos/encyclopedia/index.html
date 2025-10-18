@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encyclopedia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%); }
+        .card { backdrop-filter: blur(10px); background: rgba(255,255,255,0.95); }
+        .entry-card:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(139,0,0,0.3); }
+        .gold-accent { color: #FFD700; }
+        .burgundy-text { color: #8B0000; }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="card rounded-lg shadow-xl p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <button onclick="window.location.href='../'" class="text-red-800 hover:text-red-900">
+                    <i class="fas fa-arrow-left mr-2"></i>Back
+                </button>
+                <h1 class="text-3xl font-bold burgundy-text flex items-center">
+                    <i class="fas fa-university mr-3 gold-accent"></i>Encyclopedia Universalis
+                </h1>
+                <div class="w-16"></div>
+            </div>
+
+            <!-- Search -->
+            <div class="relative">
+                <input type="text" id="searchInput" placeholder="Search encyclopedia entries..."
+                    class="w-full px-4 py-3 pl-12 border-2 border-red-200 rounded-lg focus:ring-2 focus:ring-red-800"
+                    oninput="searchEntries()">
+                <i class="fas fa-search absolute left-4 top-4 text-gray-400"></i>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="card rounded-lg shadow-lg p-4 text-center">
+                <i class="fas fa-book text-3xl burgundy-text mb-2"></i>
+                <div class="text-2xl font-bold text-gray-800" id="totalEntries">0</div>
+                <div class="text-sm text-gray-600">Total Entries</div>
+            </div>
+            <div class="card rounded-lg shadow-lg p-4 text-center">
+                <i class="fas fa-bookmark text-3xl gold-accent mb-2"></i>
+                <div class="text-2xl font-bold text-gray-800" id="bookmarks">0</div>
+                <div class="text-sm text-gray-600">Bookmarked</div>
+            </div>
+            <div class="card rounded-lg shadow-lg p-4 text-center">
+                <i class="fas fa-layer-group text-3xl text-blue-600 mb-2"></i>
+                <div class="text-2xl font-bold text-gray-800" id="categories">0</div>
+                <div class="text-sm text-gray-600">Categories</div>
+            </div>
+            <div class="card rounded-lg shadow-lg p-4 text-center">
+                <i class="fas fa-eye text-3xl text-green-600 mb-2"></i>
+                <div class="text-2xl font-bold text-gray-800" id="viewsToday">0</div>
+                <div class="text-sm text-gray-600">Views Today</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Sidebar -->
+            <div class="lg:col-span-1">
+                <!-- Categories -->
+                <div class="card rounded-lg shadow-xl p-4 mb-4">
+                    <h3 class="font-bold burgundy-text mb-3 flex items-center">
+                        <i class="fas fa-folder-open mr-2 gold-accent"></i>Categories
+                    </h3>
+                    <div id="categoriesList" class="space-y-2"></div>
+                </div>
+
+                <!-- Alphabetical Index -->
+                <div class="card rounded-lg shadow-xl p-4">
+                    <h3 class="font-bold burgundy-text mb-3 flex items-center">
+                        <i class="fas fa-font mr-2 gold-accent"></i>Index
+                    </h3>
+                    <div id="alphabetIndex" class="grid grid-cols-5 gap-2"></div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="lg:col-span-3">
+                <div class="card rounded-lg shadow-xl p-6">
+                    <div class="flex gap-4 border-b mb-4">
+                        <button onclick="showTab('all')" id="tabAll" class="tab-btn px-4 py-2 font-semibold border-b-2 border-red-800 burgundy-text">
+                            All Entries
+                        </button>
+                        <button onclick="showTab('bookmarks')" id="tabBookmarks" class="tab-btn px-4 py-2 font-semibold text-gray-600 hover:text-red-800">
+                            Bookmarks
+                        </button>
+                    </div>
+
+                    <div id="entriesList" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DEFAULT_ENTRIES = [
+            { title: "Artificial Intelligence", category: "Technology", content: "The simulation of human intelligence by machines, especially computer systems. AI includes learning, reasoning, and self-correction.", year: "1956" },
+            { title: "Black Hole", category: "Science", content: "A region of spacetime where gravity is so strong that nothing, not even light, can escape from it. Formed from collapsed massive stars.", year: "1967" },
+            { title: "Democracy", category: "Politics", content: "A system of government where power is vested in the people, who rule either directly or through elected representatives.", year: "508 BC" },
+            { title: "Evolution", category: "Science", content: "The change in heritable characteristics of biological populations over successive generations, driven by natural selection.", year: "1859" },
+            { title: "French Revolution", category: "History", content: "A period of radical political and social change in France from 1789-1799 that profoundly shaped modern history.", year: "1789" },
+            { title: "Gravity", category: "Science", content: "The force by which a planet or celestial body draws objects toward its center. Described by Newton and refined by Einstein.", year: "1687" },
+            { title: "Internet", category: "Technology", content: "A global network of interconnected computers that communicate using standardized protocols, revolutionizing communication.", year: "1969" },
+            { title: "Jazz", category: "Arts", content: "A music genre that originated in African-American communities, characterized by swing, blue notes, and improvisation.", year: "1895" },
+            { title: "Magna Carta", category: "History", content: "A charter of rights agreed to by King John of England in 1215, establishing the principle that everyone is subject to law.", year: "1215" },
+            { title: "Photosynthesis", category: "Science", content: "The process by which green plants use sunlight to synthesize nutrients from carbon dioxide and water.", year: "1779" },
+            { title: "Quantum Mechanics", category: "Science", content: "The branch of physics dealing with the behavior of matter and light on atomic and subatomic scales.", year: "1900" },
+            { title: "Renaissance", category: "History", content: "A cultural movement spanning the 14th-17th centuries, marking the transition from medieval to modern Europe.", year: "1300" },
+            { title: "Shakespeare", category: "Arts", content: "William Shakespeare (1564-1616), English playwright and poet, widely regarded as the greatest writer in English literature.", year: "1564" },
+            { title: "Theory of Relativity", category: "Science", content: "Einstein's theory describing gravity as a geometric property of space and time, fundamentally changing physics.", year: "1915" },
+            { title: "World Wide Web", category: "Technology", content: "An information system of interlinked hypertext documents accessed via the Internet, invented by Tim Berners-Lee.", year: "1989" }
+        ];
+
+        let entries = [];
+        let bookmarks = [];
+        let currentTab = 'all';
+        let currentCategory = 'all';
+        let currentLetter = 'all';
+
+        function init() {
+            const stored = localStorage.getItem('encyclopediaEntries');
+            const storedBookmarks = localStorage.getItem('encyclopediaBookmarks');
+
+            entries = stored ? JSON.parse(stored) : DEFAULT_ENTRIES;
+            bookmarks = storedBookmarks ? JSON.parse(storedBookmarks) : [];
+
+            if (!stored) {
+                localStorage.setItem('encyclopediaEntries', JSON.stringify(entries));
+            }
+
+            updateStats();
+            renderCategories();
+            renderAlphabet();
+            renderEntries();
+        }
+
+        function updateStats() {
+            document.getElementById('totalEntries').textContent = entries.length;
+            document.getElementById('bookmarks').textContent = bookmarks.length;
+
+            const categories = [...new Set(entries.map(e => e.category))];
+            document.getElementById('categories').textContent = categories.length;
+
+            let views = parseInt(localStorage.getItem('viewsToday') || '0');
+            const lastView = localStorage.getItem('lastViewDate');
+            const today = new Date().toDateString();
+
+            if (lastView !== today) {
+                views = 1;
+                localStorage.setItem('lastViewDate', today);
+            } else {
+                views++;
+            }
+            localStorage.setItem('viewsToday', views);
+            document.getElementById('viewsToday').textContent = views;
+        }
+
+        function renderCategories() {
+            const categories = [...new Set(entries.map(e => e.category))];
+            const container = document.getElementById('categoriesList');
+
+            container.innerHTML = `
+                <button onclick="filterCategory('all')" class="w-full text-left px-3 py-2 rounded hover:bg-red-100 ${currentCategory === 'all' ? 'bg-red-100 font-bold' : ''}">
+                    All Categories
+                </button>
+                ${categories.map(cat => `
+                    <button onclick="filterCategory('${cat}')" class="w-full text-left px-3 py-2 rounded hover:bg-red-100 ${currentCategory === cat ? 'bg-red-100 font-bold' : ''}">
+                        ${cat}
+                    </button>
+                `).join('')}
+            `;
+        }
+
+        function renderAlphabet() {
+            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+            const container = document.getElementById('alphabetIndex');
+
+            container.innerHTML = alphabet.map(letter => `
+                <button onclick="filterLetter('${letter}')" class="px-2 py-1 rounded text-sm font-bold hover:bg-red-100 ${currentLetter === letter ? 'bg-red-800 text-white' : 'burgundy-text'}">
+                    ${letter}
+                </button>
+            `).join('');
+        }
+
+        function renderEntries() {
+            const container = document.getElementById('entriesList');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            let displayEntries = currentTab === 'bookmarks'
+                ? entries.filter(e => bookmarks.includes(e.title))
+                : entries;
+
+            if (currentCategory !== 'all') {
+                displayEntries = displayEntries.filter(e => e.category === currentCategory);
+            }
+
+            if (currentLetter !== 'all') {
+                displayEntries = displayEntries.filter(e => e.title[0].toUpperCase() === currentLetter);
+            }
+
+            if (searchTerm) {
+                displayEntries = displayEntries.filter(e =>
+                    e.title.toLowerCase().includes(searchTerm) ||
+                    e.content.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            container.innerHTML = displayEntries.map(entry => `
+                <div class="entry-card card rounded-lg shadow-lg p-5 transition-all border-l-4 border-red-800">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h3 class="text-2xl font-bold burgundy-text">${entry.title}</h3>
+                            <div class="flex gap-3 mt-1">
+                                <span class="text-sm bg-red-100 burgundy-text px-2 py-1 rounded">${entry.category}</span>
+                                <span class="text-sm text-gray-500"><i class="fas fa-calendar mr-1"></i>${entry.year}</span>
+                            </div>
+                        </div>
+                        <button onclick="toggleBookmark('${entry.title}')" class="text-2xl ${bookmarks.includes(entry.title) ? 'text-yellow-500' : 'text-gray-300'} hover:text-yellow-500">
+                            <i class="fas fa-bookmark"></i>
+                        </button>
+                    </div>
+                    <p class="text-gray-700 leading-relaxed">${entry.content}</p>
+                </div>
+            `).join('');
+        }
+
+        function searchEntries() {
+            renderEntries();
+        }
+
+        function showTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-red-800', 'burgundy-text');
+                btn.classList.add('text-gray-600');
+            });
+            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('border-red-800', 'burgundy-text');
+            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove('text-gray-600');
+            renderEntries();
+        }
+
+        function filterCategory(category) {
+            currentCategory = category;
+            currentLetter = 'all';
+            renderCategories();
+            renderEntries();
+        }
+
+        function filterLetter(letter) {
+            currentLetter = letter;
+            currentCategory = 'all';
+            renderCategories();
+            renderAlphabet();
+            renderEntries();
+        }
+
+        function toggleBookmark(title) {
+            const index = bookmarks.indexOf(title);
+            if (index > -1) {
+                bookmarks.splice(index, 1);
+            } else {
+                bookmarks.push(title);
+            }
+            localStorage.setItem('encyclopediaBookmarks', JSON.stringify(bookmarks));
+            updateStats();
+            renderEntries();
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Tester</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .editor-container { background: rgba(255, 255, 255, 0.95); }
+        .method-btn { transition: all 0.2s; }
+        .method-btn.active { transform: scale(1.05); box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .json-view { font-family: 'Courier New', monospace; white-space: pre-wrap; }
+        .status-200 { color: #10b981; }
+        .status-300 { color: #3b82f6; }
+        .status-400 { color: #f59e0b; }
+        .status-500 { color: #ef4444; }
+        .tab { cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid transparent; }
+        .tab.active { border-bottom-color: #f59e0b; font-weight: 600; }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+        <div class="mb-4 flex items-center justify-between">
+            <a href="../" class="text-white hover:text-orange-200 transition"><i class="fas fa-arrow-left mr-2"></i>Back</a>
+            <h1 class="text-3xl font-bold text-white"><i class="fas fa-code mr-2"></i>API Tester</h1>
+            <div></div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div class="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-4 text-white">
+                <i class="fas fa-paper-plane text-2xl mb-2"></i>
+                <div class="text-sm opacity-80">Requests Sent</div>
+                <div class="text-2xl font-bold" id="requestCount">0</div>
+            </div>
+            <div class="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-4 text-white">
+                <i class="fas fa-save text-2xl mb-2"></i>
+                <div class="text-sm opacity-80">Saved Collections</div>
+                <div class="text-2xl font-bold" id="collectionCount">0</div>
+            </div>
+            <div class="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-4 text-white">
+                <i class="fas fa-clock text-2xl mb-2"></i>
+                <div class="text-sm opacity-80">Last Response Time</div>
+                <div class="text-2xl font-bold" id="responseTime">-</div>
+            </div>
+            <div class="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-4 text-white">
+                <i class="fas fa-history text-2xl mb-2"></i>
+                <div class="text-sm opacity-80">History Items</div>
+                <div class="text-2xl font-bold" id="historyCount">0</div>
+            </div>
+        </div>
+
+        <div class="editor-container rounded-lg shadow-2xl p-6 mb-4">
+            <div class="flex flex-wrap gap-2 mb-4">
+                <button data-method="GET" class="method-btn active px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">GET</button>
+                <button data-method="POST" class="method-btn px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">POST</button>
+                <button data-method="PUT" class="method-btn px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">PUT</button>
+                <button data-method="DELETE" class="method-btn px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">DELETE</button>
+                <button data-method="PATCH" class="method-btn px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">PATCH</button>
+            </div>
+
+            <div class="mb-4 flex gap-2">
+                <input type="text" id="url" placeholder="https://api.example.com/endpoint" class="flex-1 px-4 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                <button id="send" class="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-semibold"><i class="fas fa-paper-plane mr-2"></i>Send</button>
+            </div>
+
+            <div class="mb-4">
+                <div class="flex border-b mb-4">
+                    <div class="tab active" data-tab="headers">Headers</div>
+                    <div class="tab" data-tab="body">Body</div>
+                    <div class="tab" data-tab="snippet">Code Snippet</div>
+                </div>
+
+                <div id="headersTab" class="tab-content">
+                    <textarea id="headers" class="w-full h-32 p-3 border border-gray-300 rounded-lg font-mono text-sm" placeholder='{"Content-Type": "application/json"}'></textarea>
+                </div>
+
+                <div id="bodyTab" class="tab-content hidden">
+                    <textarea id="body" class="w-full h-32 p-3 border border-gray-300 rounded-lg font-mono text-sm" placeholder='{"key": "value"}'></textarea>
+                </div>
+
+                <div id="snippetTab" class="tab-content hidden">
+                    <div class="mb-2 flex gap-2">
+                        <button data-snippet="curl" class="snippet-btn px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm">cURL</button>
+                        <button data-snippet="fetch" class="snippet-btn px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm">JavaScript Fetch</button>
+                        <button id="copySnippet" class="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 text-sm ml-auto"><i class="fas fa-copy mr-1"></i>Copy</button>
+                    </div>
+                    <pre id="codeSnippet" class="p-4 bg-gray-100 rounded-lg overflow-x-auto text-sm"></pre>
+                </div>
+            </div>
+
+            <div class="flex gap-2 mb-4">
+                <button id="saveRequest" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"><i class="fas fa-save mr-2"></i>Save Request</button>
+                <button id="loadRequest" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"><i class="fas fa-folder-open mr-2"></i>Load Saved</button>
+                <button id="clearHistory" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition ml-auto"><i class="fas fa-trash mr-2"></i>Clear History</button>
+            </div>
+        </div>
+
+        <div class="editor-container rounded-lg shadow-2xl p-6">
+            <h3 class="font-semibold text-lg mb-4 text-orange-700"><i class="fas fa-chart-line mr-2"></i>Response</h3>
+            <div id="response" class="mb-4">
+                <div class="text-gray-400 text-center py-8">
+                    <i class="fas fa-inbox text-4xl mb-2"></i>
+                    <p>No response yet. Send a request to see results.</p>
+                </div>
+            </div>
+
+            <div id="historySection" class="mt-6">
+                <h3 class="font-semibold text-lg mb-3 text-orange-700"><i class="fas fa-history mr-2"></i>Recent Requests</h3>
+                <div id="history" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMethod = 'GET';
+        let currentSnippet = 'curl';
+        let requestsCount = 0;
+        let history = JSON.parse(localStorage.getItem('apiHistory') || '[]');
+        let collections = JSON.parse(localStorage.getItem('apiCollections') || '{}');
+
+        const updateStats = () => {
+            document.getElementById('requestCount').textContent = requestsCount;
+            document.getElementById('collectionCount').textContent = Object.keys(collections).length;
+            document.getElementById('historyCount').textContent = history.length;
+        };
+
+        const generateSnippet = () => {
+            const url = document.getElementById('url').value;
+            const headers = document.getElementById('headers').value;
+            const body = document.getElementById('body').value;
+
+            if (currentSnippet === 'curl') {
+                let cmd = `curl -X ${currentMethod} "${url}"`;
+                try {
+                    const h = JSON.parse(headers || '{}');
+                    Object.entries(h).forEach(([k, v]) => cmd += `\n  -H "${k}: ${v}"`);
+                } catch (e) {}
+                if (body && currentMethod !== 'GET') cmd += `\n  -d '${body}'`;
+                return cmd;
+            } else {
+                let code = `fetch("${url}", {\n  method: "${currentMethod}"`;
+                try {
+                    const h = JSON.parse(headers || '{}');
+                    if (Object.keys(h).length) code += `,\n  headers: ${JSON.stringify(h, null, 2).split('\n').join('\n  ')}`;
+                } catch (e) {}
+                if (body && currentMethod !== 'GET') code += `,\n  body: JSON.stringify(${body})`;
+                code += '\n})\n  .then(res => res.json())\n  .then(data => console.log(data));';
+                return code;
+            }
+        };
+
+        document.querySelectorAll('.method-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMethod = btn.dataset.method;
+                document.getElementById('codeSnippet').textContent = generateSnippet();
+            });
+        });
+
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(tc => tc.classList.add('hidden'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab + 'Tab').classList.remove('hidden');
+                if (tab.dataset.tab === 'snippet') document.getElementById('codeSnippet').textContent = generateSnippet();
+            });
+        });
+
+        document.querySelectorAll('.snippet-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentSnippet = btn.dataset.snippet;
+                document.getElementById('codeSnippet').textContent = generateSnippet();
+            });
+        });
+
+        document.getElementById('copySnippet').addEventListener('click', () => {
+            navigator.clipboard.writeText(document.getElementById('codeSnippet').textContent);
+            alert('Copied to clipboard!');
+        });
+
+        document.getElementById('send').addEventListener('click', async () => {
+            const url = document.getElementById('url').value;
+            if (!url) return alert('Please enter a URL');
+
+            const startTime = Date.now();
+            const headersText = document.getElementById('headers').value;
+            const bodyText = document.getElementById('body').value;
+
+            try {
+                const headers = headersText ? JSON.parse(headersText) : {};
+                const options = { method: currentMethod, headers };
+                if (bodyText && currentMethod !== 'GET') options.body = bodyText;
+
+                const res = await fetch(url, options);
+                const duration = Date.now() - startTime;
+                const data = await res.json().catch(() => res.text());
+
+                document.getElementById('responseTime').textContent = duration + 'ms';
+
+                const statusClass = res.status < 300 ? 'status-200' : res.status < 400 ? 'status-300' : res.status < 500 ? 'status-400' : 'status-500';
+
+                document.getElementById('response').innerHTML = `
+                    <div class="mb-3 flex items-center gap-4">
+                        <div class="font-semibold ${statusClass}">Status: ${res.status} ${res.statusText}</div>
+                        <div class="text-sm text-gray-600">Time: ${duration}ms</div>
+                    </div>
+                    <div class="mb-2 font-semibold text-sm">Response Body:</div>
+                    <div class="json-view p-4 bg-gray-50 rounded-lg overflow-x-auto border">${JSON.stringify(data, null, 2)}</div>
+                `;
+
+                history.unshift({ method: currentMethod, url, status: res.status, time: duration, timestamp: new Date().toISOString() });
+                if (history.length > 10) history.pop();
+                localStorage.setItem('apiHistory', JSON.stringify(history));
+                renderHistory();
+                requestsCount++;
+                updateStats();
+
+            } catch (err) {
+                document.getElementById('response').innerHTML = `<div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">Error: ${err.message}</div>`;
+            }
+        });
+
+        const renderHistory = () => {
+            const historyEl = document.getElementById('history');
+            historyEl.innerHTML = history.map((item, i) => `
+                <div class="p-3 bg-gray-50 rounded-lg border cursor-pointer hover:bg-gray-100 transition" onclick="loadHistory(${i})">
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-1 bg-gray-200 rounded text-xs font-semibold">${item.method}</span>
+                        <span class="text-sm truncate flex-1">${item.url}</span>
+                        <span class="text-xs text-gray-500">${item.time}ms</span>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        window.loadHistory = (i) => {
+            const item = history[i];
+            document.getElementById('url').value = item.url;
+            document.querySelectorAll('.method-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.method === item.method);
+            });
+            currentMethod = item.method;
+        };
+
+        document.getElementById('saveRequest').addEventListener('click', () => {
+            const name = prompt('Collection name:');
+            if (!name) return;
+            collections[name] = {
+                method: currentMethod,
+                url: document.getElementById('url').value,
+                headers: document.getElementById('headers').value,
+                body: document.getElementById('body').value
+            };
+            localStorage.setItem('apiCollections', JSON.stringify(collections));
+            updateStats();
+            alert('Saved!');
+        });
+
+        document.getElementById('loadRequest').addEventListener('click', () => {
+            const names = Object.keys(collections);
+            if (!names.length) return alert('No saved collections');
+            const name = prompt('Load collection:\n' + names.join('\n'));
+            if (!collections[name]) return;
+            const c = collections[name];
+            document.getElementById('url').value = c.url;
+            document.getElementById('headers').value = c.headers;
+            document.getElementById('body').value = c.body;
+            document.querySelectorAll('.method-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.method === c.method);
+            });
+            currentMethod = c.method;
+        });
+
+        document.getElementById('clearHistory').addEventListener('click', () => {
+            if (confirm('Clear all history?')) {
+                history = [];
+                localStorage.setItem('apiHistory', JSON.stringify(history));
+                renderHistory();
+                updateStats();
+            }
+        });
+
+        renderHistory();
+        updateStats();
+        document.getElementById('codeSnippet').textContent = generateSnippet();
+    </script>
+</body>
+</html>
